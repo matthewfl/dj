@@ -17,11 +17,12 @@ class Manager (config : Config, mainJar : String) {
     val cls = loader.loadClass("edu.berkeley.dj.internal.PreMain")
     val ri = new RunningInterface(config)
     cls.getDeclaredMethods.foreach(m => {
+      // HACK: some complication with using getDeclaredMethod from scala
       if(m.getName == "premain") {
         m.invoke(null, ri.asInstanceOf[java.lang.Object], mainClass, args)
       }
     })
-    //cls.getMethod("premain", Array[java.lang.Class[_]](classOf[edu.berkeley.dj.internal.InternalInterface], classOf[String], classOf[Array[String]])).invoke(null, ri, mainClass, args)
+    //cls.getDeclaredMethod("premain", classOf[java.lang.Object], classOf[String], classOf[Array[String]).invoke(null, ri, mainClass, args)
     //loader.run(mainClass, args)
   }
 }

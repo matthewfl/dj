@@ -5,8 +5,20 @@ package edu.berkeley.dj.rt
  */
 class RunningInterface (private val config : Config) {
 
+  private var callIn : Object = null
+  private var callInCls : java.lang.Class[_] = null
+
   override def toString = "RunningInterface (" + config.uuid + ")"
 
   def getUUID = config.uuid
 
+  def setCallIn(obj : Object) = {
+    if(obj.getClass.getName != "edu.berkeley.dj.internal.InternalInterfaceWrap") {
+      throw new RuntimeException("must use internal interface for call in")
+    }
+    if(callIn != null)
+      throw new RuntimeException("can only set the call in interface once")
+    callIn = obj
+    callInCls = obj.getClass
+  }
 }

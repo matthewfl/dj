@@ -45,6 +45,12 @@ class InternalInterfaceWrap extends  InternalInterface {
     InternalInterfaceWrap(Object o) {
         base = o;
         cls = base.getClass();
+
+        try {
+            invoke("setCallIn", new Class[]{Object.class}, this);
+        } catch(InterfaceException e) {
+            throw new RuntimeException("setting call in failed");
+        }
     }
 
     private Object invoke(String name, Class[] sig, Object... obj) throws InterfaceException {
@@ -73,5 +79,13 @@ class InternalInterfaceWrap extends  InternalInterface {
         } catch(InterfaceException e) {
             return "interface exception";
         }
+    }
+
+    public Object callIn(int action, Object[] args) {
+        switch(action) {
+            case 0:
+                return "this works";
+        }
+        return null;
     }
 }

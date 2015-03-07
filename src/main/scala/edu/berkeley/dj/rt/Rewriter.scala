@@ -16,8 +16,7 @@ class Rewriter (private val config : Config, private val basePool : ClassPool) {
   def createCtClass(classname : String) : CtClass = {
     if(classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
-      //throw new ClassNotFoundException(classname)
-      return null
+      throw new ClassNotFoundException(classname)
     }
     /*if(classname == "edu.berkeley.dj.internal.InternalInterfaceFactory") {
       // HACK: make the InternalInterfaceFactory be shared between the internal code

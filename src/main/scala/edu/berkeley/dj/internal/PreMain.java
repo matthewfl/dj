@@ -13,7 +13,7 @@ public class PreMain {
         //InternalInterface.ii = (InternalInterface) ii;
         //String ts = (String)ii.getClass().getMethod("toString", new Class[]{}).invoke(ii);
         InternalInterface.setInternalInterface(ii);
-        System.out.println("hello world early ");//+ts);
+        //System.out.println("hello world early ");//+ts);
         Class cls = PreMain.class.getClassLoader().loadClass(maincls);
         cls.getMethod("main", new Class[]{ String[].class }).invoke(null, new Object[] {args});
     }
