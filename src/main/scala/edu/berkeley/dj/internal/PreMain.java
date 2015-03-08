@@ -15,6 +15,6 @@ public class PreMain {
         InternalInterface.setInternalInterface(ii);
         //System.out.println("hello world early ");//+ts);
         Class cls = PreMain.class.getClassLoader().loadClass(maincls);
-        cls.getMethod("main", new Class[]{ String[].class }).invoke(null, new Object[] {args});
+        cls.getDeclaredMethod("main", new Class[]{ String[].class }).invoke(null, new Object[] {args});
     }
 }

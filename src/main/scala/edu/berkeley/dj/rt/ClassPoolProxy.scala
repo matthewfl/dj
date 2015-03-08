@@ -8,7 +8,9 @@ import scala.collection.mutable
 /**
  * Created by matthewfl
  */
-class ClassPoolProxy (private val rewriter : Rewriter) extends javassist.ClassPool {
+class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewriter) extends javassist.ClassPool(false) {
+
+  childFirstLookup = true
 
   private val cache = new mutable.HashMap[String, CtClass]
 
@@ -24,12 +26,34 @@ class ClassPoolProxy (private val rewriter : Rewriter) extends javassist.ClassPo
     cache remove classname orNull
   }
 
-  override protected def createCtClass(classname : String, useCache : Boolean) = {
-    val ret = super.createCtClass(classname, useCache)
+  override protected def createCtClass(classname : String, useCache : Boolean) : CtClass = {
+    val res = rewriter.createCtClass(classname)
+    if(res != null)
+      res
+    else {
+      println("we failed")
+      null
+    }
+      //super.createCtClass(classname, useCache)
+    /*val ret = super.createCtClass(classname, useCache)
     if(ret == null)
       rewriter.createCtClass(classname)
     else
       ret
+      */
+  }
+
+  override def get(classname : String) : CtClass = {
+    cache get classname match {
+      case Some(c) => return c
+      case None => {}
+    }
+    val cc = createCtClass(classname, false)
+    if(cc != null) {
+      cache += (classname -> cc)
+      return cc
+    }
+    throw new ClassNotFoundException(classname)
   }
 
 }
