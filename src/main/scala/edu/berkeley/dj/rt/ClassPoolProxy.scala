@@ -10,7 +10,7 @@ import scala.collection.mutable
  */
 class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewriter) extends javassist.ClassPool(false) {
 
-  childFirstLookup = true
+  childFirstLookup = false
 
   private val cache = new mutable.HashMap[String, CtClass]
 
@@ -27,6 +27,9 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
   }
 
   override protected def createCtClass(classname : String, useCache : Boolean) : CtClass = {
+    if(!canRewrite(classname)) {
+      return manager.pool.get(classname)
+    }
     val res = rewriter.createCtClass(classname)
     if(res != null)
       res
@@ -54,6 +57,10 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
       return cc
     }
     throw new ClassNotFoundException(classname)
+  }
+
+  def canRewrite(classname : String) = {
+    classname != "java.lang.Object"
   }
 
 }

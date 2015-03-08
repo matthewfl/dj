@@ -21,14 +21,22 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
 
   private val rewriteNamespace = "edu.berkeley.dj.internal2"//."+config.uuid
 
+  def canRewrite (classname : String) = {
+    !classname.equals("java.lang.Object")
+    // TODO: a lot more base class and packages
+  }
+
   private lazy val objectBase = {
     //val base = basePool.get("edu.berkeley.dj.internal.ObjectBase")
-    val ob = runningPool.makeClass(rewriteNamespace+".ObjectBase")
-    val fsettings = CtField.make("public int "+config.fieldPrefix+"settings = 0;", ob)
-    ob.addField(fsettings)
-    val fmanager = CtField.make("public edu.berkeley.dj.internal.Manager "+config.fieldPrefix+"manager = null;", ob)
-    ob.addField(fmanager)
+    //val ob = runningPool.makeClass(rewriteNamespace+".ObjectBase")
+    //val fsettings = CtField.make("public int "+config.fieldPrefix+"settings = 0;", ob)
+    //ob.addField(fsettings)
+    //val fmanager = CtField.make("public edu.berkeley.dj.internal.Manager "+config.fieldPrefix+"manager = null;", ob)
+    //ob.addField(fmanager)
+    //ob
+    val ob = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
     ob
+
     //base
   }
 
@@ -39,8 +47,8 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       throw new ClassNotFoundException(classname)
     }
 
-    if(classname == rewriteNamespace + ".ObjectBase") {
-      return objectBase
+    if(classname == "edu.berkeley.dj.internal.ObjectBase") {
+      //return objectBase
     }
 
 
@@ -48,11 +56,12 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     if(cls == null)
       return null
 
+    // is this necessary???, doesn't seem like it....
     cls = manager.runningPool.makeClass(new ByteArrayInputStream(cls.toBytecode()))
 
     //cls.detach
     if(!classname.startsWith("edu.berkeley.dj.internal")) {
-      cls.addInterface(moveInterface)
+      //cls.addInterface(moveInterface)
       println("rewriting class: "+classname)
       val sc = cls.getSuperclass
       if(sc.getName == "java.lang.Object") {
@@ -62,7 +71,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     }
     println("done rewriting: "+classname)
     //cls.toClass(manager.loader, manager.protectionDomain)
-    cls.detach
+    //cls.detach
     cls
   }
 

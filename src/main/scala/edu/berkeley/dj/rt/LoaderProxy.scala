@@ -23,9 +23,10 @@ class LoaderTranslator extends Translator {
   println("constructed")
 }*/
 
-class LoaderProxy(private val manager : Manager, private val pool : ClassPoolProxy) extends Loader(pool) {
+class LoaderProxy(private val manager : Manager, private val pool : ClassPoolProxy)
+  extends Loader(null, pool) {
 
-  //addTranslator(pool, new LoaderTranslator)
+  addTranslator(pool, new LoaderTranslator)
 
 
   // TODO: make this check that the class that is getting loaded is some basic class

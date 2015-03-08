@@ -31,10 +31,22 @@ private[rt] class Manager (val config : Config, mainJar : String) {
     val ri = new RunningInterface(config)
     // HACK: some complication with using getDeclaredMethod from scala
     val premain = cls.getDeclaredMethods.filter(_.getName == "premain")(0)
-    try {
-      premain.invoke(null, ri.asInstanceOf[java.lang.Object], mainClass, args)
-    } catch {
-      case e : InvocationTargetException => { throw e.getTargetException }
-    }
+    //try {
+      try {
+        premain.invoke(null, ri.asInstanceOf[java.lang.Object], mainClass, args)
+      } catch {
+        case e: InvocationTargetException => {
+          val en = e.getTargetException.getClass.getName
+          if(en == "java.lang.IncompatibleClassChangeError") {
+            println("gaaaa")
+          }
+          throw e
+        }
+      }
+    /*} catch {
+      case e : IncompatibleClassChangeError => {
+        println("Problem changing class: "+e.getClass.getName)
+      }
+    }*/
   }
 }
