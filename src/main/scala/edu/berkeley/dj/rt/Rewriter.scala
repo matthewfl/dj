@@ -26,7 +26,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     // TODO: a lot more base class and packages
   }
 
-  private lazy val objectBase = {
+  private lazy val objectBaseRaw = {
     //val base = basePool.get("edu.berkeley.dj.internal.ObjectBase")
     //val ob = runningPool.makeClass(rewriteNamespace+".ObjectBase")
     //val fsettings = CtField.make("public int "+config.fieldPrefix+"settings = 0;", ob)
@@ -34,12 +34,13 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     //val fmanager = CtField.make("public edu.berkeley.dj.internal.Manager "+config.fieldPrefix+"manager = null;", ob)
     //ob.addField(fmanager)
     //ob
-    val ob = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
+    val ob = basePool.get("edu.berkeley.dj.internal.ObjectBase")
     ob
 
     //base
   }
 
+  private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
   def createCtClass(classname : String) : CtClass = {
     if(classname.startsWith("edu.berkeley.dj.rt")) {
@@ -48,7 +49,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     }
 
     if(classname == "edu.berkeley.dj.internal.ObjectBase") {
-      //return objectBase
+      return objectBaseRaw
     }
 
 
@@ -63,10 +64,13 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     if(!classname.startsWith("edu.berkeley.dj.internal")) {
       //cls.addInterface(moveInterface)
       println("rewriting class: "+classname)
+      val mods = cls.getModifiers
+      println("modifiers: "+Modifier.toString(mods))
       val sc = cls.getSuperclass
-      if(sc.getName == "java.lang.Object") {
+      if(sc.getName == "java.lang.Object" && !Modifier.isInterface(mods)) {
         // this comes directly off the object class
-        //cls.setSuperclass(objectBase)
+
+        cls.setSuperclass(objectBase)
       }
     }
     println("done rewriting: "+classname)

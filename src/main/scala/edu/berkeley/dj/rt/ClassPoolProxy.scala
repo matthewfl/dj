@@ -46,7 +46,7 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
       */
   }
 
-  override def get(classname : String) : CtClass = {
+  /*override def get(classname : String) : CtClass = {
     cache get classname match {
       case Some(c) => return c
       case None => {}
@@ -57,7 +57,7 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
       return cc
     }
     throw new ClassNotFoundException(classname)
-  }
+  }*/
 
   def canRewrite(classname : String) = {
     classname != "java.lang.Object"

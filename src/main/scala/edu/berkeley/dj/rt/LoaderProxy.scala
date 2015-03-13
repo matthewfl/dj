@@ -15,7 +15,7 @@ class LoaderTranslator extends Translator {
   override def start(pool : ClassPool) = {}
 
   override def onLoad(pool : ClassPool, classname : String) = {
-    println("loading class: "+classname)
+    println("on loading class: "+classname)
   }
 }
 
@@ -40,6 +40,33 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
   }
 
 
+  override protected def findClass(classname : String) : Class[_] = {
+    var clazz : Array[Byte] = null;
+    val cls = pool get classname
+    if(cls != null) {
+      cls.detach()
+      clazz = cls.toBytecode()
+    }
+    try {
+      val pkgname = classname.substring(0, classname.lastIndexOf("."))
+      if(getPackage(pkgname) == null)
+        definePackage(pkgname, null, null, null, null, null, null, null)
+      val dcls = defineClass(classname, clazz, 0, clazz.length, manager.protectionDomain)
+      resolveClass(dcls)
+      dcls
+    } catch {
+      case e : IncompatibleClassChangeError => {
+        println("=======================failed to redefine the class "+classname)
+        null
+      }
+      case e: Throwable => {
+        println("========================o come on")
+        null
+      }
+    }
+  }
+
+
   /*override protected def findClass(classname : String) : Class[_] = {
     null
     /*val cls = pool get classname
@@ -47,7 +74,7 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
     val pkgname = classname.substring(0, classname.lastIndexOf("."))
     if(getPackage(pkgname) == null)
       definePackage(pkgname, null, null, null, null, null, null, null)
-    defineClass(classname, btyecode, 0, bytecode.length, manager.protectionDomain)
+    defineClass(classname, btyecode, 0, bytecode.length, manager.protectionDomain)2
 */
     /*try {
       super.findClass(classname)
