@@ -21,4 +21,8 @@ class RunningInterface (private val config : Config) {
     callIn = obj
     callInCls = obj.getClass
   }
+
+  private def callIn(action : Int, args: Object*) = {
+
+  }
 }

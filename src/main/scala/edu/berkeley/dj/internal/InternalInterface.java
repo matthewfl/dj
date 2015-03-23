@@ -1,9 +1,6 @@
 package edu.berkeley.dj.internal;
 
-import scala.Int;
-
 import java.lang.reflect.InvocationTargetException;
-import java.util.IllegalFormatCodePointException;
 
 /**
  * Created by matthewfl

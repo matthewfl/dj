@@ -5,7 +5,11 @@ import edu.berkeley.dj.internal.InternalInterface
  * Created by matthewfl
  */
 
-class Main {}
+class Main {
+
+  def something =
+    notifyAll()
+}
 
 object Main {
   def main(args : Array[String]) = {
@@ -17,9 +21,12 @@ object Main {
     val i = InternalInterface.getInternalInterface();
     println(i.getUUID)
 
-    val f = classOf[testcase.Main].getFields
+    println("main fields:\n\n")
+    classOf[testcase.Main].getFields.foreach(println(_))
 
-    println(f.length)
+    val mm = new Main
+    mm.something
+
 
   }
 }

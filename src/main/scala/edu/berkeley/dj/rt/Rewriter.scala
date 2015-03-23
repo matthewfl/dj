@@ -3,6 +3,9 @@ package edu.berkeley.dj.rt
 import java.io.{ByteArrayInputStream, InputStream}
 import javassist._
 
+import edu.berkeley.dj.rt.convert.{FunctionCalls, CodeConverter}
+
+
 /**
  * Created by matthewfl
  */
@@ -17,7 +20,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
 
   def runningPool = manager.runningPool
 
-  private val moveInterface = basePool.get("edu.berkeley.dj.internal.Movable")
+  private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
   private val rewriteNamespace = "edu.berkeley.dj.internal2"//."+config.uuid
 
@@ -42,6 +45,53 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
 
   private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
+  private lazy val classMangerBase = runningPool.get("edu.berkeley.dj.internal.ClassManager")
+
+  //private val ManagerClasses = new mutable.HashMap[String, CtClass]()
+
+  // these classes are noted as not being movable
+  // this should contain items such as socket classes
+  // and filesystem as we don't want to break network connections
+  val NonMovableClasses = Set(
+    "java.lang.Object"
+  )
+
+  // if these methods are called from
+  // anywhere in a program
+  // rewrite them to the new methods
+  val rewriteMethodCalls = Map(
+    "notify" -> "__dj_nofity",
+    "notifyAll" -> "__dj_notifyAll",
+    "wait" -> "__dj_wait"
+  )
+
+  // if these methods are anywhere
+  val rewriteMethodNames = Map(
+    "finalize" -> "__dj_client_finalize"
+  )
+
+  val replacedClasses = Map(
+  )
+
+  private def transformClass(cls : CtClass, movable : Boolean = true) = {
+    val manager = runningPool.makeClass("edu.berkeley.dj.internal.managers."+cls.getName, classMangerBase)
+    if(movable)
+      cls.addInterface(moveInterface)
+    val codeConverter = new CodeConverter
+    /*rewriteMethodCalls.foreach(v => {
+      val mth = cls.getMethods.filter(_.getName == v._2)
+      if(!mth.isEmpty)
+        codeConverter.redirectMethodCall(v._1, mth(0))
+    })*/
+    codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
+
+    val isInterface = Modifier.isInterface(cls.getModifiers)
+    if(!isInterface)
+      cls.instrument(codeConverter)
+    // TODO: need to handle interfaces that can have methods on them
+
+  }
+
   def createCtClass(classname : String) : CtClass = {
     if(classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
@@ -52,13 +102,12 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       return objectBaseRaw
     }
 
-
     var cls = basePool get classname
     if(cls == null)
       return null
 
     // is this necessary???, doesn't seem like it....
-    cls = manager.runningPool.makeClass(new ByteArrayInputStream(cls.toBytecode()))
+    //cls = manager.runningPool.makeClass(new ByteArrayInputStream(cls.toBytecode()))
 
     //cls.detach
     if(!classname.startsWith("edu.berkeley.dj.internal")) {
@@ -69,9 +118,11 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       val sc = cls.getSuperclass
       if(sc.getName == "java.lang.Object" && !Modifier.isInterface(mods)) {
         // this comes directly off the object class
-
         cls.setSuperclass(objectBase)
       }
+      if(cls.getName.contains("testcase"))
+        transformClass(cls)
+      // there is an instrument method on CtClass that takes a CodeConverter
     }
     println("done rewriting: "+classname)
     //cls.toClass(manager.loader, manager.protectionDomain)
