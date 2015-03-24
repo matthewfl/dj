@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javassist.CtClass;
+import javassist.compiler.ast.Member;
 
 /**
  * Constant pool table.
@@ -811,6 +812,37 @@ public final class ConstPool {
             itemsCache.put(info, info);
             return numOfItems++;
         }
+    }
+
+    public String getMemberName(int index) {
+        MemberrefInfo minfo = (MemberrefInfo)getItem(index);
+        NameAndTypeInfo ntinfo = (NameAndTypeInfo)getItem(minfo.nameAndTypeIndex);
+        return getUtf8Info(ntinfo.memberName) + "::" +
+                getUtf8Info(ntinfo.typeDescriptor) + "::" +
+                getClassInfo(minfo.classIndex);
+    }
+
+
+    public int findMember(String memberName, String typeSig, String className) {
+        for(int i = 0; i < getSize(); i++) {
+            try {
+                MemberrefInfo minfo = (MemberrefInfo)getItem(i);
+                if(minfo == null)
+                    continue;
+                NameAndTypeInfo ntinfo = (NameAndTypeInfo)getItem(minfo.nameAndTypeIndex);
+                if(ntinfo == null)
+                    continue;
+                System.out.println(getUtf8Info(ntinfo.memberName));
+                if(memberName != null && !getUtf8Info(ntinfo.memberName).equals(memberName))
+                    continue;
+                if(typeSig != null && !getUtf8Info(ntinfo.typeDescriptor).equals(typeSig))
+                    continue;;
+                if(className != null && !getUtf8Info(minfo.classIndex).equals(className))
+                    continue;
+                return i;
+            } catch (ClassCastException e) {}
+        }
+        return -1;
     }
 
     /**

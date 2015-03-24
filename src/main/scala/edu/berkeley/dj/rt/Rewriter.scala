@@ -83,7 +83,13 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       if(!mth.isEmpty)
         codeConverter.redirectMethodCall(v._1, mth(0))
     })*/
-    codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
+    codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls.map(n => {
+      val mths = cls.getMethods.filter(_.getName == n._2)
+      if(!mths.isEmpty)
+        Map(n._1 -> mths(0))
+      else
+        Map[String, CtMethod]()
+    }).reduce(_ ++ _)))
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
     if(!isInterface)

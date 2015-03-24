@@ -61,7 +61,9 @@ public class ObjectBase implements InterfaceBase {
         super.notify();
     }
 
-    public final void __dj_notifyAll() { super.notify(); }
+    public final void __dj_notifyAll() {
+        super.notify();
+    }
 
     public final void __dj_wait(long timeout) throws InterruptedException {
         super.wait(timeout);
@@ -89,6 +91,7 @@ public class ObjectBase implements InterfaceBase {
 
     protected final void finalize () throws Throwable {
         // we can delete proxy classes
+        // but then we don't want to call the finalize method
 
     }
 
