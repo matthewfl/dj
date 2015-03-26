@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javassist.CtClass;
-import javassist.compiler.ast.Member;
 
 /**
  * Constant pool table.

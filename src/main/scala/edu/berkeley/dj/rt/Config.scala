@@ -5,6 +5,11 @@ package edu.berkeley.dj.rt
  */
 case class Config (val uuid : String="ID"+java.util.UUID.randomUUID.toString.replace("-","")) {
 
-  def fieldPrefix = "__dj_" + uuid
+  def fieldPrefix = "__dj_" //+ uuid
+
+  final val internalPrefix = "edu.berkeley.dj.internal."
+
+  final val proxyClassPrefix = internalPrefix + "proxyclazz."
+
 
 }

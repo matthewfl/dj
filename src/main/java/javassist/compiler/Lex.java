@@ -136,7 +136,15 @@ public class Lex implements TokenId {
         }
         else if (Character.isJavaIdentifierStart((char)c))
             return readIdentifier(c, token);
-        else
+        else if(c == '`') {
+            c = getc();
+            if(c == '`')
+                return readIdentifier2(token);
+            else {
+                ungetc(c);
+                return readSeparator('`');
+            }
+        } else
             return readSeparator(c);
     }
 
@@ -453,6 +461,36 @@ public class Lex implements TokenId {
             token.textValue = name;
             return Identifier;
         }
+    }
+
+    private int readIdentifier2(Token token) {
+        // reads identifiers in the form ``asdfqwer qwesadf$$...``
+
+        StringBuffer tbuf = textBuffer;
+        tbuf.setLength(0);
+
+        int c = getc();
+        while(true) {
+            while(c != '`') {
+                tbuf.append((char)c);
+                c = getc();
+            }
+            // we must have c == '`'
+            c = getc();
+            if(c == '`')
+                break; // we have gotten ``, so done
+            tbuf.append((char)'`');
+        }
+        String name = tbuf.toString();
+        // do not allow for identifiers to be used here
+        // as we might want to have a field named the same
+        // idk why, but could happen
+        /*int t = ktable.lookup(name);
+        if(t >= 0) {
+            return t;
+        }*/
+        token.textValue = name;
+        return Identifier;
     }
 
     private static final KeywordTable ktable = new KeywordTable();

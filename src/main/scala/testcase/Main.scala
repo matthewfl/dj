@@ -7,8 +7,12 @@ import edu.berkeley.dj.internal.InternalInterface
 
 class Main {
 
-  def something =
+  def something = {
+    println(qwer)
     notifyAll()
+  }
+
+  var qwer = 123
 }
 
 object Main {
@@ -25,6 +29,11 @@ object Main {
     classOf[testcase.Main].getFields.foreach(println(_))
 
     val mm = new Main
+
+    println("external read"+mm.qwer)
+
+    mm.qwer = 456
+
     mm.something
 
 
