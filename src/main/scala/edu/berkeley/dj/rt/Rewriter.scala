@@ -2,7 +2,7 @@ package edu.berkeley.dj.rt
 
 import javassist._
 
-import edu.berkeley.dj.rt.convert.{FunctionCalls, CodeConverter}
+import edu.berkeley.dj.rt.convert.{Monitors, FieldAccess, FunctionCalls, CodeConverter}
 
 
 /**
@@ -89,52 +89,25 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
         Map[String, CtMethod]()
     }).reduce(_ ++ _)))
 
+    codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
+    codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
+
     //val compiler = new Javac(cls)
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
     if(!isInterface) {
       cls.instrument(codeConverter)
-      //cls.getFields.foreach(field => {
-      for(field <- cls.getFields) {
+      for(field <- cls.getDeclaredFields) {
         val name = field.getName
-        if(!name.startsWith(config.fieldPrefix)) {
+        println("field name: " + name);
+        if (!name.startsWith(config.fieldPrefix)) {
           val typ = field.getType
+          val typ_name = if (typ.isPrimitive)
+            typ.getName
+          else
+            typ.getName.split("\\.").map("``" + _ + "``").reduce(_ + "." + _)
           val modifiers = field.getModifiers
 
-          /*
-          if (!Modifier.isFinal(modifiers)) {
-          // final field so we don't need a write method, since we wont be writing to it
-            val write_method_body =
-              s"""
-                { System.out.println("writing to field ${name} on class ${cls.getName}"); }
-                """
-            CtNewMethod.make(modifiers & (Modifier.PRIVATE | Modifier.PROTECTED | Modifier.PUBLIC), CtClass.voidType,
-            config.fieldPrefix + "write" + name, Array(typ), Array(), write_method_body, cls)
-          }
-
-          val read_method_body =
-          s"""
-             { System.out.println("reading from field ${name} on class ${cls.getName}"); }
-           """
-          CtNewMethod.make(modifiers & (Modifier.PRIVATE | Modifier.PROTECTED | Modifier.PUBLIC), CtClass.voidType,
-            config.fieldPrefix + "read" + name, Array(), Array(), read_method_body, cls)
-*/
-
-          val test_write =
-            """
-              public void ``something$$method.qwer`` (Object obj) {
-
-              }
-            """
-          CtMethod.make(test_write, cls)
-
-
-
-          /*val write_method = new CtMethod(CtClass.voidType, config.internalPrefix + "_write_"+name,
-            Array[CtClass](typ), cls)
-          write_method.setModifiers(Modifier.PUBLIC)
-          write_method.setBody()
-*/
           /*val accessMod =
             if (Modifier.isPublic(modifiers))
               "public"
@@ -142,33 +115,41 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
               "protected"
             else
               "private"
-
-          val write_method =
-            s"""
-              ${accessMod} void __dj_write_field_${name} (${typ} val) {
-                System.out.println("field name ${name} was written");
+*/
+          // TODO: deal with static variables
+          if (!Modifier.isStatic(modifiers)) {
+            val accessMod = "public" // make all the accesses public for now, as different modifiers require different bytecode
+            val write_method =
+              s"""
+              ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {
+                System.out.println("field name ${name} was written on ${cls.getName}");
+                this.``${name}`` = val;
              }
               """
-          val read_method =
-            s"""
-           ${accessMod} void __dj_read_field_${name} () {
+            val read_method =
+              s"""
+           ${accessMod} void ``${config.fieldPrefix}read_field_${name}`` () {
              System.out.println("reading field ${name}");
            }
               """
-          try {
-            CtMethod.make(write_method, cls)
-            CtMethod.make(read_method, cls)
-          } catch {
-            case e => {
-              println("gg")
+            try {
+              println("\t\tadding method for: " + name + " to " + cls.getName)
+              cls.addMethod(CtMethod.make(write_method, cls))
+              //cls.addMethod(CtMethod.make(read_method, cls))
+            } catch {
+              case e => {
+                println("gg")
+              }
             }
-          }*/
-
-          if (Modifier.isPublic(field.getModifiers)) {
-            // this is a public field, we are going to have issues
           }
         }
       }
+        /*for(method <- cls.getMethods) {
+          if(!method.getName.startsWith(config.fieldPrefix) && Modifier.isSynchronized(method)) {
+            method.setWrappedBody()
+          }
+        }*/
+
 
       val seralize_obj_method =
         s"""
@@ -239,7 +220,14 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
         transformClass(cls)
       // there is an instrument method on CtClass that takes a CodeConverter
     }
-    println("done rewriting: "+classname)
+    /*if(!cls.getFields.filter(_.getName.contains("asdf")).isEmpty) {
+      println("found it")
+    }*/
+    /*for(field <- cls.getFields) {
+      println(s"\tcls: ${cls.getName} field: ${field.getName}")
+    }*/
+
+    //println("done rewriting: "+classname)
     //cls.toClass(manager.loader, manager.protectionDomain)
     //cls.detach
     cls

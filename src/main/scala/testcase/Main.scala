@@ -8,11 +8,13 @@ import edu.berkeley.dj.internal.InternalInterface
 class Main {
 
   def something = {
-    println(qwer)
+    println(qwer456asdf)
     notifyAll()
   }
 
-  var qwer = 123
+  var qwer456asdf = 123
+
+  val asdfanthter = " something somewhere "
 }
 
 object Main {
@@ -30,9 +32,9 @@ object Main {
 
     val mm = new Main
 
-    println("external read"+mm.qwer)
+    println("external read"+mm.qwer456asdf)
 
-    mm.qwer = 456
+    mm.qwer456asdf = 456
 
     mm.something
 
