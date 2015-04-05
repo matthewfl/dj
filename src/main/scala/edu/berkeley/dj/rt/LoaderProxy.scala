@@ -35,7 +35,7 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
 
   //override protected def delegateToParent(classname : String) = throw new ClassNotFoundException(classname)
   override  protected def delegateToParent(classname : String) = {
-    println("loading from parent class: "+classname)
+    //println("loading from parent class: "+classname)
     super.delegateToParent(classname)
   }
 
@@ -60,7 +60,7 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
         null
       }
       case e: Throwable => {
-        println("========================o come on")
+        println("========================o come on\n"+e.toString)
         null
       }
     }

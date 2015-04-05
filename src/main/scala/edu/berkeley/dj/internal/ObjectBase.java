@@ -12,6 +12,7 @@ public class ObjectBase implements InterfaceBase {
 
     public ClassManager __dj_class_manager = null;
 
+
     // these have to be public in case they are getting
     // used by the interface
     //
@@ -49,7 +50,14 @@ public class ObjectBase implements InterfaceBase {
         return this == obj;
     }
 
-    public String toString() { return super.toString(); }
+    public String toString() {
+        if((__dj_class_mode & CONSTS.REMOTE_READS) == 0)
+            return super.toString();
+        else {
+            // remotely call the external class
+            return "";
+        }
+    }
 
     // these are final on the java.lang.Object
     // and we can't change the java.lang.Object class
@@ -58,13 +66,41 @@ public class ObjectBase implements InterfaceBase {
         // will have to send the notification back to the master node?
         // if there is some local item waiting on this class instance
         // then maybe just notify locally
-        super.notify();
+        if((__dj_class_mode & (CONSTS.IS_NOT_MASTER)) == 0) {
+            //if((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
+            //    throw new IllegalMonitorStateException();
+            //synchronized (this) {
+                super.notify();
+            //}
+        } else {
+            // need to perform a remote operation for sending the notify
+            assert(false);
+        }
+
     }
 
-    public final void __dj_notifyAll() { super.notify(); }
+    public final void __dj_notifyAll() {
+        if((__dj_class_mode & (CONSTS.IS_NOT_MASTER)) == 0) {
+            //if ((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
+            //    throw new IllegalMonitorStateException();
+            //synchronized (this) {
+                super.notifyAll();
+            //}
+        } else {
+            assert(false);
+        }
+    }
 
     public final void __dj_wait(long timeout) throws InterruptedException {
-        super.wait(timeout);
+        if((__dj_class_mode & (CONSTS.IS_NOT_MASTER)) == 0) {
+            //if ((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
+            //    throw new IllegalMonitorStateException();
+            //synchronized (this) {
+                super.wait(timeout);
+            //}
+        } else {
+            assert(false);
+        }
     }
 
     public final void __dj_wait(long timeout, int nanos) throws InterruptedException {
@@ -87,10 +123,40 @@ public class ObjectBase implements InterfaceBase {
 
     public final void __dj_wait() throws InterruptedException { __dj_wait(0); }
 
-    protected final void finalize () throws Throwable {
+    protected /*final*/ void finalize () throws Throwable {
         // we can delete proxy classes
+        // but then we don't want to call the finalize method
 
     }
 
     protected void __dj_client_finalize() throws Throwable {}
+
+    // TODO: going to have to rewrite the monitor enter instructions
+    final public void __dj_monitorenter() {
+        // TODO: better locking management
+        while(true) {
+            synchronized (this) {
+                // I think that there is some unsafe method that can be used to access the actual monitor on this object
+                if((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0) {
+                    __dj_class_mode |= CONSTS.MONITOR_LOCK;
+                    return;
+                }
+            }
+        }
+    }
+
+    final public void __dj_monitorexit() {
+        synchronized (this) {
+            assert((__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
+            __dj_class_mode &= ~CONSTS.MONITOR_LOCK;
+        }
+    }
+
+    public void __dj_seralize_obj(SeralizeManager man) {
+
+    }
+
+    public void __dj_deseralize_obj(SeralizeManager man) {
+
+    }
 }

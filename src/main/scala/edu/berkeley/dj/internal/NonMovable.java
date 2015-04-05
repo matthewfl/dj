@@ -1,4 +1,4 @@
-package edu.berkeley.dj;
+package edu.berkeley.dj.internal;
 
 /**
  * Created by matthewfl

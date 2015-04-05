@@ -7,4 +7,9 @@ package edu.berkeley.dj.internal;
  * This will be automatically added to classes that don't have it accordinly
  */
 public interface Movable {
+
+    void __dj_seralize_obj(SeralizeManager manager);
+
+    void __dj_deseralize_obj(SeralizeManager manager);
+
 }
