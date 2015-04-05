@@ -72,6 +72,10 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
   val replacedClasses = Map(
   )
 
+  private def isClassMovable(cls: CtClass) = {
+    !NonMovableClasses.contains(cls.getName)
+  }
+
   private def transformClass(cls : CtClass) = {
     //val manager = runningPool.makeClass("edu.berkeley.dj.internal.managers."+cls.getName, classMangerBase)
     cls.addInterface(moveInterface)
@@ -92,14 +96,12 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
     codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
-    //val compiler = new Javac(cls)
-
     val isInterface = Modifier.isInterface(cls.getModifiers)
     if(!isInterface) {
       cls.instrument(codeConverter)
       for(field <- cls.getDeclaredFields) {
         val name = field.getName
-        println("field name: " + name);
+        println("fzield name: " + name);
         if (!name.startsWith(config.fieldPrefix)) {
           val typ = field.getType
           val typ_name = if (typ.isPrimitive)
@@ -108,17 +110,16 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
             typ.getName.split("\\.").map("``" + _ + "``").reduce(_ + "." + _)
           val modifiers = field.getModifiers
 
-          /*val accessMod =
+          val accessMod =
             if (Modifier.isPublic(modifiers))
               "public"
             else if (Modifier.isProtected(modifiers))
               "protected"
             else
               "private"
-*/
+
           // TODO: deal with static variables
           if (!Modifier.isStatic(modifiers)) {
-            val accessMod = "public" // make all the accesses public for now, as different modifiers require different bytecode
             val write_method =
               s"""
               ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {
@@ -128,8 +129,9 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
               """
             val read_method =
               s"""
-           ${accessMod} void ``${config.fieldPrefix}read_field_${name}`` () {
+           ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` () {
              System.out.println("reading field ${name}");
+             return this.${name};
            }
               """
             try {
@@ -141,6 +143,8 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
                 println("gg")
               }
             }
+          } else {
+            // TODO: static field
           }
         }
       }
@@ -151,12 +155,37 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
         }*/
 
 
-      val seralize_obj_method =
-        s"""
-           void __dj_seralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
+      var seralize_obj_method =
+        """
+          public void __dj_seralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
+          super.__dj_seralize_obj(man);
+        """
+      var deseralize_obj_method =
+        """
+          public void __dj_deseralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
+          super.__dj_deseralize_obj(man);
+        """
+      for(field <- cls.getDeclaredFields) {
+        if(field.getType.isPrimitive) {
+          seralize_obj_method +=
+            s"""
+              man.put_value_${field.getType.getName}(this.``${field.getName}``);
+            """
+          deseralize_obj_method +=
+          s"""
+             this.``${field.getName}`` = man.get_value_${field.getType.getName}();
+           """
+        } else {
+          // for object should check if the object is movable first
+          if(isClassMovable(field.getType)) {
 
-           }
-          """
+          } else {
+            // TODO: seralize a proxy object so we can still use this later
+          }
+        }
+      }
+
+
     }
     // TODO: need to handle interfaces that can have methods on them
   }

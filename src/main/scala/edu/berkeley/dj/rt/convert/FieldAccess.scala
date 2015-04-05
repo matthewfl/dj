@@ -42,64 +42,55 @@ class FieldAccess(next : Transformer, val config: Config) extends Transformer(ne
      */
 
     //if(c == GETFIELD || c == GETSTATIC || c == PUTFIELD || c == PUTSTATIC) {
-    if(c == PUTFIELD) {
+    if(c == PUTFIELD || c == GETFIELD) {
       val index = it.u16bitAt(pos + 1)
 
       val fname = cp.getFieldrefName(index)
       val ftype = cp.getFieldrefType(index)
 
       // if there are dj fields, then don't modify their writes I guess
-      if(fname.startsWith(config.fieldPrefix))
+      if (fname.startsWith(config.fieldPrefix))
         return pos
 
-      // there should exist a method like ${config.fieldPrefix}write_field_${name}(${ftype})
+      if (c == PUTFIELD) {
+        // there should exist a method like ${config.fieldPrefix}write_field_${name}(${ftype})
 
-      // TODO: make this look this up in the cp rather then just add it every time
-      val methodType = s"(${ftype})V"
-      val methodCls = cp.getFieldrefClass(index)
-      val methodName = s"${config.fieldPrefix}write_field_${fname}"
-      val methodRef = cp.addMethodrefInfo(methodCls, methodName, methodType)
-      it.writeByte(INVOKEVIRTUAL, pos)
-      it.write16bit(methodRef, pos + 1)
-
-      // putfield should already have a form of objectref, value on the stack
-      // and use two bytes for the location identifier
-      // invoke virtual should take the objectref and then the arguments, which should only be one
-      // will possibly have to pop the returned values
+        // putfield should already have a form of objectref, value on the stack
+        // and use two bytes for the location identifier
+        // invoke virtual should take the objectref and then the arguments, which should only be one
+        // will possibly have to pop the returned values
 
 
-      println("write field: "+fname + " "+ftype)
-
-
-
-      //it.move(pos)
-
-
-      /*try {
-        val c = clazz.getClassPool.get(cp.getFieldrefClassName(index))
-        cp.getFieldrefType()
-      } catch {
-        case e: NotFoundException => null
-      }*/
-
-      //println(s"attempting to write field ${fname} with type ${ftype} on cls ${}")
+        // TODO: make this look this up in the cp rather then just add it every time
+        val methodType = s"(${ftype})V"
+        val methodCls = cp.getFieldrefClass(index)
+        val methodName = s"${config.fieldPrefix}write_field_${fname}"
+        val methodRef = cp.addMethodrefInfo(methodCls, methodName, methodType)
+        it.writeByte(INVOKEVIRTUAL, pos)
+        it.write16bit(methodRef, pos + 1)
+      } else if (c == GETFIELD) {
+        // if this field is not a primitive type, then
+        // replace the read access
+        if(!isPrimitiveType(ftype)) {
+          val methodType = s"()${ftype}"
+          val methodCls = cp.getFieldrefClass(index)
+          val methodName = s"${config.fieldPrefix}read_field_${fname}"
+          val methodRef = cp.addMethodrefInfo(methodCls, methodName, methodType)
+          it.writeByte(INVOKEVIRTUAL, pos)
+          it.write16bit(methodRef, pos + 1)
+        }
+      }
+      // TODO: deal with static fields
 
 
 
-
-      // there needs to be some difference between static fields and object
-
-      // use it.insertGap to make space for extra instructions
-
-      // it appears that the limitations origionally imposed by javassist in terms of rewriting
-      // field access are only because that is what is hard coded in
-
-
-      /*if(c == PUTFIELD) {
-
-      }*/
     }
     pos
+  }
+
+
+  def isPrimitiveType(ftype: String) = {
+    ftype.length == 1 && "ZCBSIJFDV".contains(ftype)
   }
 
 }

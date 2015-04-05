@@ -9,7 +9,9 @@ class Main {
 
   def something = {
     println(qwer456asdf)
-    notifyAll()
+    this.synchronized {
+      notifyAll()
+    }
   }
 
   var qwer456asdf = 123

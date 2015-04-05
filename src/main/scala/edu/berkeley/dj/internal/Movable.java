@@ -10,4 +10,6 @@ public interface Movable {
 
     void __dj_seralize_obj(SeralizeManager manager);
 
+    void __dj_deseralize_obj(SeralizeManager manager);
+
 }

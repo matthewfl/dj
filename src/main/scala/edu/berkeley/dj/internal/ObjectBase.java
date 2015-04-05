@@ -67,11 +67,11 @@ public class ObjectBase implements InterfaceBase {
         // if there is some local item waiting on this class instance
         // then maybe just notify locally
         if((__dj_class_mode & (CONSTS.IS_NOT_MASTER)) == 0) {
-            if((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
-                throw new IllegalMonitorStateException();
-            synchronized (this) {
+            //if((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
+            //    throw new IllegalMonitorStateException();
+            //synchronized (this) {
                 super.notify();
-            }
+            //}
         } else {
             // need to perform a remote operation for sending the notify
             assert(false);
@@ -81,11 +81,11 @@ public class ObjectBase implements InterfaceBase {
 
     public final void __dj_notifyAll() {
         if((__dj_class_mode & (CONSTS.IS_NOT_MASTER)) == 0) {
-            if ((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
-                throw new IllegalMonitorStateException();
-            synchronized (this) {
+            //if ((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
+            //    throw new IllegalMonitorStateException();
+            //synchronized (this) {
                 super.notifyAll();
-            }
+            //}
         } else {
             assert(false);
         }
@@ -93,11 +93,11 @@ public class ObjectBase implements InterfaceBase {
 
     public final void __dj_wait(long timeout) throws InterruptedException {
         if((__dj_class_mode & (CONSTS.IS_NOT_MASTER)) == 0) {
-            if ((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
-                throw new IllegalMonitorStateException();
-            synchronized (this) {
+            //if ((__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
+            //    throw new IllegalMonitorStateException();
+            //synchronized (this) {
                 super.wait(timeout);
-            }
+            //}
         } else {
             assert(false);
         }
@@ -150,5 +150,13 @@ public class ObjectBase implements InterfaceBase {
             assert((__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
             __dj_class_mode &= ~CONSTS.MONITOR_LOCK;
         }
+    }
+
+    public void __dj_seralize_obj(SeralizeManager man) {
+
+    }
+
+    public void __dj_deseralize_obj(SeralizeManager man) {
+
     }
 }
