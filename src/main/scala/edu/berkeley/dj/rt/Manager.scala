@@ -7,11 +7,12 @@ import javassist._
 /**
  * Created by matthewfl
  */
-private[rt] class Manager (val config : Config, mainJar : String) {
+private[rt] class Manager (val config: Config, classpaths: String) {
 
   val pool = new ClassPool(true)
-  //pool.appendClassPath(mainJar)
-  pool.appendClassPath(new ClassClassPath(this.getClass))
+
+  classpaths.split(":").foreach(pool.appendClassPath(_))
+  //pool.appendClassPath(new ClassClassPath(this.getClass))
   pool.childFirstLookup = true
 
   val securityManger = new SecurityManager(this)

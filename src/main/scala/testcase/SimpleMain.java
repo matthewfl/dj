@@ -7,8 +7,12 @@ public class SimpleMain {
 
     public int qwer456asdf = 123;
 
+    public int[] arrs = new int[10];
+
     static public void main(String[] args) {
         SimpleMain s = new SimpleMain();
+
+        s.arrs[2] = 5;
 
         s.qwer456asdf = 456;
 

@@ -76,6 +76,16 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     !NonMovableClasses.contains(cls.getName)
   }
 
+  private def getUsuableName(typ: CtClass) : String = {
+    if(typ.isArray) {
+      getUsuableName(typ.getComponentType) + "[]"
+    } else if(typ.isPrimitive) {
+      typ.getName
+    } else {
+      typ.getName.split("\\.").map("``"+_+"``").mkString(".")
+    }
+  }
+
   private def transformClass(cls : CtClass) = {
     //val manager = runningPool.makeClass("edu.berkeley.dj.internal.managers."+cls.getName, classMangerBase)
     cls.addInterface(moveInterface)
@@ -101,13 +111,10 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       cls.instrument(codeConverter)
       for(field <- cls.getDeclaredFields) {
         val name = field.getName
-        println("fzield name: " + name);
-        if (!name.startsWith(config.fieldPrefix)) {
+        println("field name: " + name);
+        if (!name.startsWith(config.fieldPrefix) && !field.getType.isArray) {
           val typ = field.getType
-          val typ_name = if (typ.isPrimitive)
-            typ.getName
-          else
-            typ.getName.split("\\.").map("``" + _ + "``").reduce(_ + "." + _)
+          val typ_name = getUsuableName(typ)
           val modifiers = field.getModifiers
 
           val accessMod =
@@ -137,7 +144,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
             try {
               println("\t\tadding method for: " + name + " to " + cls.getName)
               cls.addMethod(CtMethod.make(write_method, cls))
-              //cls.addMethod(CtMethod.make(read_method, cls))
+              cls.addMethod(CtMethod.make(read_method, cls))
             } catch {
               case e => {
                 println("gg")
@@ -245,8 +252,8 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
         // this comes directly off the object class
         cls.setSuperclass(objectBase)
       }
-      if(cls.getName.contains("testcase"))
-        transformClass(cls)
+      //if(cls.getName.contains("testcase"))
+      transformClass(cls)
       // there is an instrument method on CtClass that takes a CodeConverter
     }
     /*if(!cls.getFields.filter(_.getName.contains("asdf")).isEmpty) {

@@ -52,7 +52,7 @@ class FieldAccess(next : Transformer, val config: Config) extends Transformer(ne
       if (fname.startsWith(config.fieldPrefix))
         return pos
 
-      if (c == PUTFIELD) {
+      if (c == PUTFIELD && !ftype.startsWith("[")) {
         // there should exist a method like ${config.fieldPrefix}write_field_${name}(${ftype})
 
         // putfield should already have a form of objectref, value on the stack
@@ -71,14 +71,14 @@ class FieldAccess(next : Transformer, val config: Config) extends Transformer(ne
       } else if (c == GETFIELD) {
         // if this field is not a primitive type, then
         // replace the read access
-        if(!isPrimitiveType(ftype)) {
+        /*if(!isPrimitiveType(ftype)) {
           val methodType = s"()${ftype}"
           val methodCls = cp.getFieldrefClass(index)
           val methodName = s"${config.fieldPrefix}read_field_${fname}"
           val methodRef = cp.addMethodrefInfo(methodCls, methodName, methodType)
           it.writeByte(INVOKEVIRTUAL, pos)
           it.write16bit(methodRef, pos + 1)
-        }
+        }*/
       }
       // TODO: deal with static fields
 
