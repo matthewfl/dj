@@ -20,6 +20,12 @@ public class SimpleMain {
 
         m2.qwer456asdf_$eq(999);
 
+        basic bb = new basic();
+
+        bb.iter();
+
+        System.out.println(bb);
+
 
         /*try {
             synchronized (s) {

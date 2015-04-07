@@ -11,4 +11,5 @@ public class CONSTS {
     public static final int REMOTE_WRITE = 0x02;
     public static final int IS_NOT_MASTER = 0x04;
     public static final int MONITOR_LOCK = 0x08;
+    public static final int OBJECT_INITED = 0x10;
 }

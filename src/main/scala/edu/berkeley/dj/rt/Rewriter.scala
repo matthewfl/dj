@@ -125,20 +125,39 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
             else
               "private"
 
+          val finalField = Modifier.isFinal(modifiers)
+
+          if(finalField) {
+            // we don't want any final fields as we might want to change their values later?
+            // also it makes it harder to overwrite the access to field since the writes can't happen
+            // outside the constructor
+            // todo:? should the system check if a class is inited and then raise some error in case of a final field
+            // or just assume that the final field nature will already be check by other systems during compilation
+            // someone could always just use reflection to set final fields, so it isn't like it is imossible
+            field.setModifiers(modifiers & ~Modifier.FINAL)
+          }
+
           // TODO: deal with static variables
           if (!Modifier.isStatic(modifiers)) {
             val write_method =
               s"""
               ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {
-                System.out.println("field name ${name} was written on ${cls.getName}");
-                this.``${name}`` = val;
+                //if(this.__dj_class_mode & 0x02 != 0) {
+                  System.out.println("Imagine doing something remote here on ${cls.getName}" + this.__dj_class_mode);
+                //} else {
+                  this.``${name}`` = val;
+                //}
              }
               """
             val read_method =
               s"""
            ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` () {
-             System.out.println("reading field ${name}");
-             return this.${name};
+             //if(this.__dj_class_mode & 0x01 != 0) {
+               System.out.println("reading field ${name}");
+             //  return this.``${name}``;
+             //} else {
+               return this.``${name}``;
+             //}
            }
               """
             try {
@@ -248,7 +267,9 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       val mods = cls.getModifiers
       println("modifiers: "+Modifier.toString(mods))
       val sc = cls.getSuperclass
-      if(sc.getName == "java.lang.Object" && !Modifier.isInterface(mods)) {
+      if(sc.getName != "java.lang.Object") {
+        createCtClass(sc.getName)
+      } else if(!Modifier.isInterface(mods)) {
         // this comes directly off the object class
         cls.setSuperclass(objectBase)
       }

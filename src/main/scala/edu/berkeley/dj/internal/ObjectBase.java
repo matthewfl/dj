@@ -12,6 +12,10 @@ public class ObjectBase implements InterfaceBase {
 
     public ClassManager __dj_class_manager = null;
 
+    public ObjectBase() {
+        __dj_class_mode |= CONSTS.OBJECT_INITED;
+    }
+
 
     // these have to be public in case they are getting
     // used by the interface
