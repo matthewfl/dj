@@ -48,13 +48,13 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
     if(cls != null) {
       cls.detach()
       clazz = cls.toBytecode()
-      if(manager.config.debug_clazz_bytecode != null) {
+      /*if(manager.config.debug_clazz_bytecode != null) {
         val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".","/")}.class")
         fl.getParentFile.mkdirs()
         val f = new FileOutputStream(fl)
         f.write(clazz)
         f.close()
-      }
+      }*/
     }
     try {
       val lindx = classname.lastIndexOf(".")

@@ -1,6 +1,7 @@
 package edu.berkeley.dj.rt
 
 import javassist._
+import javassist.bytecode.SignatureAttribute
 
 import edu.berkeley.dj.rt.convert.{Monitors, FieldAccess, FunctionCalls, CodeConverter}
 
@@ -86,6 +87,8 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     }
   }
 
+  //private def getUsuableFieldName()
+
   private def transformClass(cls : CtClass) = {
     //val manager = runningPool.makeClass("edu.berkeley.dj.internal.managers."+cls.getName, classMangerBase)
     cls.addInterface(moveInterface)
@@ -103,8 +106,8 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
         Map[String, CtMethod]()
     }).reduce(_ ++ _)))
 
-    codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
-    codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
+    //codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
+    //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
     if(!isInterface) {
@@ -116,6 +119,8 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
           val typ = field.getType
           val typ_name = getUsuableName(typ)
           val modifiers = field.getModifiers
+
+          //SignatureAttribute.toFieldSignature(field.getGenericSignature)
 
           val accessMod =
             if (Modifier.isPublic(modifiers))
@@ -137,16 +142,18 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
             field.setModifiers(modifiers & ~Modifier.FINAL)
           }
 
+          // TODO: problem right now that there is an issue dealing with templated
+
           // TODO: deal with static variables
           if (!Modifier.isStatic(modifiers)) {
             val write_method =
               s"""
               ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {
-                //if(this.__dj_class_mode & 0x02 != 0) {
-                  System.out.println("Imagine doing something remote here on ${cls.getName}" + this.__dj_class_mode);
-                //} else {
+                if((this.__dj_class_mode & 0x02) != 0) {
+                  System.out.println("Imagine doing something remote here on ${cls.getName}");
+                } else {
                   this.``${name}`` = val;
-                //}
+                }
              }
               """
             val read_method =
@@ -161,12 +168,12 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
            }
               """
             try {
-              println("\t\tadding method for: " + name + " to " + cls.getName)
+              println("\t\tadding method for: " + name + " to " + cls.getName + " type "+typ_name)
               cls.addMethod(CtMethod.make(write_method, cls))
               cls.addMethod(CtMethod.make(read_method, cls))
             } catch {
               case e => {
-                println("gg")
+                println("Compile of method failed: "+e)
               }
             }
           } else {
@@ -238,6 +245,23 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     pxycls
   }
 
+  def modifyClass(cls: CtClass): Unit = {
+    println("rewriting class: "+cls.getName)
+    val mods = cls.getModifiers
+    println("modifiers: "+Modifier.toString(mods))
+    val sc = cls.getSuperclass
+    if(sc.getName != "java.lang.Object") {
+      // we want to make sure that we have loaded any classes that this depends on
+      // so that we have already overwritten their methods
+      runningPool.get(sc.getName)
+    } else if(!Modifier.isInterface(mods)) {
+      // this comes directly off the object class
+      cls.setSuperclass(objectBase)
+    }
+    //if(cls.getName.contains("testcase"))
+    transformClass(cls)
+  }
+
   def createCtClass(classname : String) : CtClass = {
     if(classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
@@ -257,36 +281,9 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     if(cls == null)
       return null
 
-    // is this necessary???, doesn't seem like it....
-    //cls = manager.runningPool.makeClass(new ByteArrayInputStream(cls.toBytecode()))
-
-    //cls.detach
     if(!classname.startsWith("edu.berkeley.dj.internal.")) {
-      //cls.addInterface(moveInterface)
-      println("rewriting class: "+classname)
-      val mods = cls.getModifiers
-      println("modifiers: "+Modifier.toString(mods))
-      val sc = cls.getSuperclass
-      if(sc.getName != "java.lang.Object") {
-        createCtClass(sc.getName)
-      } else if(!Modifier.isInterface(mods)) {
-        // this comes directly off the object class
-        cls.setSuperclass(objectBase)
-      }
-      //if(cls.getName.contains("testcase"))
-      transformClass(cls)
-      // there is an instrument method on CtClass that takes a CodeConverter
+      modifyClass(cls)
     }
-    /*if(!cls.getFields.filter(_.getName.contains("asdf")).isEmpty) {
-      println("found it")
-    }*/
-    /*for(field <- cls.getFields) {
-      println(s"\tcls: ${cls.getName} field: ${field.getName}")
-    }*/
-
-    //println("done rewriting: "+classname)
-    //cls.toClass(manager.loader, manager.protectionDomain)
-    //cls.detach
     cls
   }
 

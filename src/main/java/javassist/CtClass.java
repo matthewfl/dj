@@ -411,7 +411,7 @@ public abstract class CtClass {
      * After compilation, all type parameters are dropped off from the
      * main part of a class file.  However, for reflection, the type
      * parameters must be encoded into generic signatures and attached
-     * to a class file.
+     * to a class file.X
      *
      * <p>For example,
      *
