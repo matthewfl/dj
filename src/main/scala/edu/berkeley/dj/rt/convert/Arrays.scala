@@ -33,17 +33,34 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
    */
 
 
-  override def transform(clazz: CtClass, pos: Int, it: CodeIterator, cp: ConstPool) : Int = {
+  override def transform(clazz: CtClass, _pos: Int, it: CodeIterator, cp: ConstPool) : Int = {
+    var pos = _pos
     val c : Int = it.byteAt(pos)
 
     if(clazz.getName.startsWith(config.internalPrefix))
       return pos
 
-
-    if(c == ARRAYLENGTH) {
+    /*if(c == NEWARRAY) {
+      val atype : Int = it.byteAt(pos + 1)
+      // this is two bytes, and I want to invoke static
+      val staticMethod = atype match {
+        // believe that this is an int
+        case 10 => "edu/berkeley/dj/internal/DJArrayInt/create(I)[I"
+        case _ => throw new RuntimeException()
+      }
+      val methodRef = cp.addUtf8Info(staticMethod)
+      it.move(pos)
+      it.insertGap(2)
+      it.writeByte(INVOKESTATIC, pos)
+      it.write16bit(methodRef, pos + 1)
+    } else if(c == ARRAYLENGTH) {
       // this doesn't know the type of the array
+      // this is one instruction, and we are changing it from 1 byte instruction to invoke virtual
+      //val method = "edu/berkeley/dj/internal/DJArray/length()I"
 
-    }
+      //it.insertGap(2)
+
+    }*/
 
 
     pos

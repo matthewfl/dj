@@ -96,14 +96,14 @@ public class Declarator extends ASTList implements TokenId {
         return qualifiedClass;
     }
 
-    public String getTypeSig() {
+    /*public String getTypeSig() {
         if(javaTypeSig != null) {
             return javaTypeSig.encode();
         } else {
             // this has got to be wrong, as what if there is an array.
             return "L"+getClassName()+";";
         }
-    }
+    }*/
 
     public void setClassName(String s) { qualifiedClass = s; }
 

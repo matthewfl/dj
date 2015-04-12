@@ -1,9 +1,10 @@
 package edu.berkeley.dj.rt
 
 import javassist._
-import javassist.bytecode.SignatureAttribute
+import javassist.bytecode.{MethodInfo, SignatureAttribute}
 
-import edu.berkeley.dj.rt.convert.{Monitors, FieldAccess, FunctionCalls, CodeConverter}
+import edu.berkeley.dj.rt.convert.CodeConverter
+import edu.berkeley.dj.rt.convert._
 
 
 /**
@@ -106,6 +107,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
         Map[String, CtMethod]()
     }).reduce(_ ++ _)))
 
+    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
     //codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
     //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
@@ -146,6 +148,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
 
           // TODO: deal with static variables
           if (!Modifier.isStatic(modifiers)) {
+
             val write_method =
               s"""
               ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {

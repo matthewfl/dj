@@ -3,6 +3,7 @@ package edu.berkeley.dj.rt
 import java.lang.reflect.InvocationTargetException
 import java.security.ProtectionDomain
 import javassist._
+import javassist.bytecode.MethodInfo
 
 /**
  * Created by matthewfl
@@ -28,9 +29,10 @@ private[rt] class Manager (val config: Config, classpaths: String) {
   loader.setDomain(protectionDomain)
 
   def startMain (mainClass : String, args : Array[String]) = {
-    if(config.debug_clazz_bytecode != null)
+    if(config.debug_clazz_bytecode != null) {
       CtClass.debugDump = config.debug_clazz_bytecode
-
+      MethodInfo.doPreverify = true
+    }
     val cls = loader.loadClass("edu.berkeley.dj.internal.PreMain")
     val ri = new RunningInterface(config)
     // HACK: some complication with using getDeclaredMethod from scala
