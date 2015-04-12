@@ -51,6 +51,8 @@ import javassist.expr.ExprEditor;
 public abstract class CtClass {
     protected String qualifiedName;
 
+    public String overrideSignature = null;
+
     /**
      * If the value of this field is not null, then all class
      * files modified by Javassist are saved under the directory

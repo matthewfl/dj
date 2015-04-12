@@ -249,6 +249,9 @@ public class Descriptor {
     }
 
     private static void toDescriptor(StringBuffer desc, CtClass type) {
+        /*if(type.overrideDesc != null) {
+            desc.append(type.overrideDesc);
+        } else */
         if (type.isArray()) {
             desc.append('[');
             try {

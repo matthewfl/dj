@@ -30,7 +30,7 @@ private[rt] class Manager (val config: Config, classpaths: String) {
 
   def startMain (mainClass : String, args : Array[String]) = {
     if(config.debug_clazz_bytecode != null) {
-      CtClass.debugDump = config.debug_clazz_bytecode
+      //CtClass.debugDump = config.debug_clazz_bytecode
       MethodInfo.doPreverify = true
     }
     val cls = loader.loadClass("edu.berkeley.dj.internal.PreMain")

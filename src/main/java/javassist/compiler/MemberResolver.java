@@ -321,8 +321,19 @@ public class MemberResolver implements TokenId {
     }
 
     public CtClass lookupClass(Declarator decl) throws CompileError {
-        return lookupClass(decl.getType(), decl.getArrayDim(),
-                           decl.getClassName());
+        if(decl.isGeneric()) {
+            // need to make a CtClass that has the same type signature as what we would normally have
+            CtClass c = lookupClass(decl.getType(), decl.getArrayDim(),
+                    decl.getClassName());
+            //c.detach(); ?
+            //c.setGenericSignature(decl.getTypeSig());
+            c.overrideSignature = decl.getTypeSig();
+            c.setGenericSignature(decl.getTypeSig());
+            return c;
+        } else {
+            return lookupClass(decl.getType(), decl.getArrayDim(),
+                    decl.getClassName());
+        }
     }
 
     /**
