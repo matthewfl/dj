@@ -1,9 +1,11 @@
 package edu.berkeley.dj.rt
 
+import java.security.Permission
+
 /**
  * Created by matthewfl
  */
-class SecurityManager (private val manager : Manager) extends java.lang.SecurityManager {
+class SecurityManager extends java.lang.SecurityManager {
 
   override def checkLink(lib : String) = {
     // need to change this to check that this
@@ -13,4 +15,13 @@ class SecurityManager (private val manager : Manager) extends java.lang.Security
     if(cl != null && cl.isInstanceOf[LoaderProxy])
       throw new SecurityException()
   }
+
+  override def checkPackageDefinition(pkg: String) = {
+    println("trying to define package: "+pkg)
+  }
+
+  override def checkPermission(perm: Permission) = {
+
+  }
+
 }

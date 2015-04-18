@@ -129,8 +129,10 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
               "public"
             else if (Modifier.isProtected(modifiers))
               "protected"
-            else
+            else if(Modifier.isPrivate(modifiers))
               "private"
+            else // must be isPackage
+              ""
 
           val finalField = Modifier.isFinal(modifiers)
 
@@ -141,22 +143,27 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
             // todo:? should the system check if a class is inited and then raise some error in case of a final field
             // or just assume that the final field nature will already be check by other systems during compilation
             // someone could always just use reflection to set final fields, so it isn't like it is imossible
-            field.setModifiers(modifiers & ~Modifier.FINAL)
+            //field.setModifiers(modifiers & ~Modifier.FINAL)
           }
 
           // TODO: problem right now that there is an issue dealing with templated
+          // I wonder if this has more to deal with the fact that it should use invoke special rather then invokevirtual
+          // since it is a method on the current class, so if the value is package private or private then
+          // the invoke method used should change
 
           // TODO: deal with static variables
-          if (!Modifier.isStatic(modifiers)) {
-
+          if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/) {
             val write_method =
               s"""
               ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {
                 if((this.__dj_class_mode & 0x02) != 0) {
-                  System.out.println("Imagine doing something remote here on ${cls.getName}");
-                } else {
-                  this.``${name}`` = val;
+                  //System.out.println("Imagine doing something remote here on ${cls.getName}");
+                //  this.__dj_class_manager.writeField(0, val);
                 }
+                //} else {
+                 // this.``${name}`` = val;
+                 this.``${name}`` = val;
+                //}
              }
               """
             val read_method =
@@ -173,7 +180,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
             try {
               println("\t\tadding method for: " + name + " to " + cls.getName + " type "+typ_name)
               cls.addMethod(CtMethod.make(write_method, cls))
-              cls.addMethod(CtMethod.make(read_method, cls))
+              //cls.addMethod(CtMethod.make(read_method, cls))
             } catch {
               case e => {
                 println("Compile of method failed: "+e)

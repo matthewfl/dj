@@ -12,5 +12,5 @@ case class Config (val uuid: String="ID"+java.util.UUID.randomUUID.toString.repl
 
   final val proxyClassPrefix = internalPrefix + "proxyclazz."
 
-
+  
 }

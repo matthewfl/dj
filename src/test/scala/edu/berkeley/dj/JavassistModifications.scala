@@ -1,6 +1,6 @@
 package edu.berkeley.dj
 
-import javassist.{CtClass, ClassClassPath, CtMethod, ClassPool}
+import javassist._
 
 import org.scalatest.FunSuite
 
@@ -31,6 +31,31 @@ class JavassistModifications extends FunSuite {
 
     b.toBytecode()
     //assert(b.toBytecode)
+  }
+
+
+  test("access method on super") {
+    CtClass.debugDump = "/tmp"
+    val cp = new ClassPool()
+    cp.appendClassPath(new ClassClassPath(this.getClass))
+    val c1 = cp.makeClass("test.somepackage.someclass1")
+    c1.addField(CtField.make("int __test;", c1))
+    c1.addField(CtField.make("java.util.List l1;", c1))
+    val c2 = cp.makeClass("test.somepackage.someclass2")
+    c2.setSuperclass(c1)
+    c2.addMethod(CtMethod.make(
+      """public void gg (java.util.List vv) {
+        if((__test & 0x02) == 0) {
+          System.out.println("something");
+        } else {
+         this.l1 = vv;
+        }
+      }""", c2))
+    val loader = new Loader(null, cp)
+    loader.loadClass("test.somepackage.someclass1")
+    val inst = loader.loadClass("test.somepackage.someclass2")
+    for(m <- inst.getMethods)
+      println(m)
   }
 
 }

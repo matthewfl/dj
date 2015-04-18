@@ -16,7 +16,7 @@ private[rt] class Manager (val config: Config, classpaths: String) {
   //pool.appendClassPath(new ClassClassPath(this.getClass))
   pool.childFirstLookup = true
 
-  val securityManger = new SecurityManager(this)
+  //val securityManger = new SecurityManager(this)
 
   val rewriter = new Rewriter(this)
 
