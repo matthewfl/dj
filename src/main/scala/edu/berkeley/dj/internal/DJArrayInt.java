@@ -23,7 +23,7 @@ public class DJArrayInt implements DJArray {
     }
 
     public Object get(int i) {
-        return val[i];
+        return Integer.valueOf(val[i]);
     }
 
     public void store(int i, Object v) {

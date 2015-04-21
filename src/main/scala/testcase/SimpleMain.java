@@ -3,16 +3,16 @@ package testcase;
 /**
  * Created by matthewfl
  */
-public class SimpleMain {
+public class SimpleMain extends java.util.ArrayList<Integer> {
 
     public int qwer456asdf = 123;
 
     public int[] arrs = new int[10];
 
-    public java.util.List<java.lang.String> lll = new java.util.ArrayList<java.lang.String>();
+    //public java.util.List<java.lang.String> lll = new java.util.ArrayList<java.lang.String>();
 
     static public void main(String[] args) {
-        SimpleMain s = new SimpleMain();
+        /*SimpleMain s = new SimpleMain();
 
         s.arrs[2] = 5;
 
@@ -29,6 +29,8 @@ public class SimpleMain {
         bb.iter();
 
         System.out.println(bb);
+
+*/
 
 
         /*try {

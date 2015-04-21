@@ -5,7 +5,7 @@ import edu.berkeley.dj.internal.InternalInterface
  * Created by matthewfl
  */
 
-class Main {
+class Main extends java.util.ArrayList[Int] {
 
   def something = {
     println(qwer456asdf)

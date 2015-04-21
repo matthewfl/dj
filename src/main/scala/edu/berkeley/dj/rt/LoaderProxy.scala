@@ -38,9 +38,10 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
   //override protected def delegateToParent(classname : String) = throw new ClassNotFoundException(classname)
   override  protected def delegateToParent(classname : String) = {
     println("loading from parent class: "+classname)
-    assert(classname.startsWith("java.lang."))
+    //assert(classname.startsWith("java.lang."))
     super.delegateToParent(classname)
   }
+
 
 
   override protected def findClass(classname : String) : Class[_] = {
@@ -84,7 +85,8 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
 
   // make this load all of the classes
   // and not pass to the parent the class in the java. namespace
-  doDelegation = false
+  // some classes can only be loaded by the parent loader
+  //doDelegation = false
 
   /*override def getResource(url: String) : URL = {
 

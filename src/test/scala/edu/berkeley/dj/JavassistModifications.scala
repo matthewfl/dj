@@ -30,7 +30,7 @@ class JavassistModifications extends FunSuite {
     b.addMethod(CtMethod.make(mth, b))
 
     b.toBytecode()
-    //assert(b.toBytecode)
+    //assert(new String(b.toBytecode))
   }
 
 
@@ -58,4 +58,19 @@ class JavassistModifications extends FunSuite {
       println(m)
   }
 
+  test("change super name") {
+    CtClass.debugDump = "/tmp"
+    val cp = new ClassPool()
+    cp.appendClassPath(new ClassClassPath(this.getClass))
+    val base = cp.makeClass("test.somepackage.newclass")
+    val baseOld = cp.makeClass("test.somepackage.oldclass")
+    val c1 = cp.makeClass("test.somepackage.someclass1")
+    c1.setSuperclass(baseOld)
+    c1.replaceClassName("test.somepackage.oldclass", "test.somepackage.newclass")
+    assert(base.getName == c1.getSuperclass.getName)
+  }
+
+
 }
+
+

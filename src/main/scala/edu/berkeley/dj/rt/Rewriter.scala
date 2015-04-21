@@ -21,16 +21,20 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
 
   def runningPool = manager.runningPool
 
+  // used to get access to the internal members that need to be rewritten
+  //private val selfPool = new ClassPool(true)
+  //selfPool.appendClassPath(new ClassClassPath(this.getClass))
+
   private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
-  private val rewriteNamespace = "edu.berkeley.dj.internal2"//."+config.uuid
+  //private val rewriteNamespace = "edu.berkeley.dj.internal2"//."+config.uuid
 
-  def canRewrite (classname : String) = {
+  /*def canRewrite (classname : String) = {
     !classname.equals("java.lang.Object")
     // TODO: a lot more base class and packages
-  }
+  }*/
 
-  private lazy val objectBaseRaw = {
+  /*private lazy val objectBaseRaw = {
     //val base = basePool.get("edu.berkeley.dj.internal.ObjectBase")
     //val ob = runningPool.makeClass(rewriteNamespace+".ObjectBase")
     //val fsettings = CtField.make("public int "+config.fieldPrefix+"settings = 0;", ob)
@@ -42,7 +46,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     ob
 
     //base
-  }
+  }*/
 
   private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
@@ -90,8 +94,16 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
 
   //private def getUsuableFieldName()
 
+  private def rewriteUsedClasses(cls: CtClass) = {
+    val map = new JClassMap(manager)
+    cls.replaceClassName(map)
+    //runningPool.get(cls.getSuperclass.getName)
+  }
+
   private def transformClass(cls : CtClass) = {
     //val manager = runningPool.makeClass("edu.berkeley.dj.internal.managers."+cls.getName, classMangerBase)
+    //rewriteUsedClasses(cls)
+    // TODO: actually determine if this class is movable before adding the move interface
     cls.addInterface(moveInterface)
     val codeConverter = new CodeConverter
     /*rewriteMethodCalls.foreach(v => {
@@ -179,10 +191,11 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
               """
             try {
               println("\t\tadding method for: " + name + " to " + cls.getName + " type "+typ_name)
-              cls.addMethod(CtMethod.make(write_method, cls))
+              //cls.addMethod(CtMethod.make(write_method, cls))
               //cls.addMethod(CtMethod.make(read_method, cls))
             } catch {
-              case e => {
+              // TODO: remove
+              case e: Throwable  => {
                 println("Compile of method failed: "+e)
               }
             }
@@ -234,7 +247,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
   }
 
 
-  private def makeProxyCls(cls: CtClass) = {
+  /*private def makeProxyCls(cls: CtClass) = {
     // this is used for non movable classes
     // where we need to have some proxy that calls methods
     // back on the origional class
@@ -253,20 +266,21 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       }
     }
     pxycls
-  }
+  }*/
 
   def modifyClass(cls: CtClass): Unit = {
     println("rewriting class: "+cls.getName)
     val mods = cls.getModifiers
     println("modifiers: "+Modifier.toString(mods))
+    rewriteUsedClasses(cls)
     val sc = cls.getSuperclass
     if(sc.getName != "java.lang.Object") {
       // we want to make sure that we have loaded any classes that this depends on
       // so that we have already overwritten their methods
-      runningPool.get(sc.getName)
+      //runningPool.get(sc.getName)
     } else if(!Modifier.isInterface(mods)) {
       // this comes directly off the object class
-      cls.setSuperclass(objectBase)
+      //cls.setSuperclass(objectBase)
     }
     //if(cls.getName.contains("testcase"))
     transformClass(cls)
@@ -278,16 +292,23 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       throw new ClassNotFoundException(classname)
     }
 
-    if(classname == "edu.berkeley.dj.internal.ObjectBase") {
+    /*if(classname == "edu.berkeley.dj.internal.ObjectBase") {
       return objectBaseRaw
-    }
-
-    if(classname.startsWith(config.proxyClassPrefix)) {
-      var orgName = classname.drop(config.proxyClassPrefix.size)
-      return makeProxyCls(basePool get orgName)
-    }
+    }*/
 
     var cls = basePool get classname
+
+    if(classname.startsWith(config.coreprefix)) {
+      if(cls != null)
+        return cls
+      var orgName = classname.drop(config.coreprefix.size)
+      val clso = basePool get orgName
+      clso.detach()
+      clso.setName(classname)
+      modifyClass(clso)
+      return clso
+    }
+
     if(cls == null)
       return null
 

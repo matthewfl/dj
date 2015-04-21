@@ -11,7 +11,7 @@ public class ClassManager {
     protected String DistribuitedObjectId; // "OB_HEX_UUID"
 
     // will need a week pointer to the object base
-    protected ObjectBase ManagedObject;
+    protected edu.berkeley.dj.internal.coreclazz.java.lang.Object ManagedObject;
 
     protected int getMode() { return ManagedObject.__dj_class_mode; }
 
@@ -31,7 +31,7 @@ public class ClassManager {
 
     public void writeField(int id, double v) {}
 
-    public void writeField(int id, Object v) {}
+    public void writeField(int id, java.lang.Object v) {}
 
 
 
