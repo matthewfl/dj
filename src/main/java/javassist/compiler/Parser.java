@@ -33,7 +33,7 @@ public final class Parser implements TokenId {
     public ASTList parseMember(SymbolTable tbl) throws CompileError {
         ASTList mem = parseMember1(tbl);
         if (mem instanceof MethodDecl)
-            return parseMethod2(tbl, (MethodDecl)mem);
+            return parseMethod2(tbl, (MethodDecl) mem);
         else
             return mem;
     }
@@ -183,6 +183,16 @@ public final class Parser implements TokenId {
      */
     private Declarator parseFormalType(SymbolTable tbl) throws CompileError {
         int t = lex.lookAhead();
+        if(t == Identifier) {
+            if(lex.getString().startsWith("@")) {
+                // we can force the type signature with something like ``@Ljava/lang/String;``
+                // TODO: deal with array type
+                String s = lex.getString().substring(1);
+                lex.get();
+                return new Declarator(s);
+                //return new Declarator(CLASS, lex.getString().substring(1), 0, -1, new Symbol("some_var"));
+            }
+        }
         if (isBuiltinType(t) || t == VOID) {
             lex.get();  // primitive type
             int dim = parseArrayDimension();

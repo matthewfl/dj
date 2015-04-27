@@ -10,7 +10,11 @@ case class Config (val uuid: String="ID"+java.util.UUID.randomUUID.toString.repl
 
   final val internalPrefix = "edu.berkeley.dj.internal."
 
-  final val proxyClassPrefix = internalPrefix + "proxyclazz."
+  // we can not load classes in the java.* javax.* namespaces
+  // but we still have to rewrite thei members for our new system
+  // so we change all references to those classes
+  // and then reload our modified classes in this new namespace
+  final val coreprefix = internalPrefix + "coreclazz."
 
 
 }

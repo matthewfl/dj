@@ -444,7 +444,7 @@ public class ClassPool {
         if (classname == null)
             clazz = null;
         else
-            clazz = get0(classname, true);
+            clazz = get0(classname, true);lo
 
         if (clazz == null)
             throw new NotFoundException(classname);

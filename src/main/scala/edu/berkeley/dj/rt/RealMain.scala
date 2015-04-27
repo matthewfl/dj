@@ -1,5 +1,6 @@
 package edu.berkeley.dj.rt
 
+import java.security.AllPermission
 import java.util.jar.JarFile
 
 import scala.collection.mutable
@@ -70,6 +71,10 @@ object RealMain {
     }
 
     val config = new Config(debug_clazz_bytecode=arguments("debug_clazz_bytecode"))
+
+
+    System.setSecurityManager(new SecurityManager)
+
 
     val man = new Manager(config, clsp)
     println("Starting program: "+maincls)

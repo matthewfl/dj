@@ -11,9 +11,31 @@ public class ClassManager {
     protected String DistribuitedObjectId; // "OB_HEX_UUID"
 
     // will need a week pointer to the object base
-    protected ObjectBase ManagedObject;
+    protected edu.berkeley.dj.internal.coreclazz.java.lang.Object ManagedObject;
 
     protected int getMode() { return ManagedObject.__dj_class_mode; }
+
+    public void writeField(int id, boolean v) {}
+
+    public void writeField(int id, char v) {}
+
+    public void writeField(int id, byte v) {}
+
+    public void writeField(int id, short v) {}
+
+    public void writeField(int id, int v) {}
+
+    public void writeField(int id, long v) {}
+
+    public void writeField(int id, float v) {}
+
+    public void writeField(int id, double v) {}
+
+    public void writeField(int id, java.lang.Object v) {}
+
+
+
+    // TODO: need to have a read and write field methods for all primitive types
 
     // there should be some seralization methods added to the class
 

@@ -16,6 +16,8 @@
 
 package javassist.compiler.ast;
 
+import javassist.bytecode.BadBytecode;
+import javassist.bytecode.SignatureAttribute;
 import javassist.compiler.TokenId;
 import javassist.compiler.CompileError;
 
@@ -27,6 +29,7 @@ public class Declarator extends ASTList implements TokenId {
     protected int arrayDim;
     protected int localVar;
     protected String qualifiedClass;    // JVM-internal representation
+    protected SignatureAttribute.ClassSignature javaTypeSig;
 
     public Declarator(int type, int dim) {
         super(null);
@@ -42,6 +45,27 @@ public class Declarator extends ASTList implements TokenId {
         arrayDim = dim;
         localVar = -1;
         qualifiedClass = astToClassName(className, '/');
+    }
+
+    public Declarator(String javaType) throws CompileError {
+        super(null);
+        varType = CLASS;
+        localVar = -1;
+        arrayDim = 0;
+        try {
+            javaTypeSig = SignatureAttribute.toClassSignature(javaType);
+        } catch (BadBytecode e) {
+            throw new CompileError(e.toString());
+        }
+        qualifiedClass = javaTypeSig.getSuperClass().getName().replace('.','/');
+
+    }
+
+    public boolean isGeneric() {
+        if(javaTypeSig != null) {
+            return javaTypeSig.getSuperClass().getTypeArguments() != null;
+        }
+        return false;
     }
 
     /* For declaring a pre-defined? local variable.
@@ -74,7 +98,19 @@ public class Declarator extends ASTList implements TokenId {
 
     public void addArrayDim(int d) { arrayDim += d; }
 
-    public String getClassName() { return qualifiedClass; }
+    public String getClassName() {
+        // this has to return the class name
+        return qualifiedClass;
+    }
+
+    public String getTypeSig() {
+        if(javaTypeSig != null) {
+            return javaTypeSig.encode();
+        } else {
+            // this has got to be wrong, as what if there is an array.
+            return "L"+getClassName()+";";
+        }
+    }
 
     public void setClassName(String s) { qualifiedClass = s; }
 

@@ -1,4 +1,9 @@
-package edu.berkeley.dj.internal;
+package edu.berkeley.dj.internal.coreclazz.java.lang;
+
+import edu.berkeley.dj.internal.CONSTS;
+import edu.berkeley.dj.internal.ClassManager;
+import edu.berkeley.dj.internal.InterfaceBase;
+import edu.berkeley.dj.internal.SeralizeManager;
 
 /**
  * Created by matthewfl
@@ -6,13 +11,13 @@ package edu.berkeley.dj.internal;
  * This becomes super class of the new "base class" that will represent objects
  * it will have to override methods such as lock or wait to make them work in a distribuited fashion
  */
-public class ObjectBase implements InterfaceBase {
+public class Object implements InterfaceBase {
 
     public int __dj_class_mode = 0;
 
     public ClassManager __dj_class_manager = null;
 
-    public ObjectBase() {
+    public Object() {
         __dj_class_mode |= CONSTS.OBJECT_INITED;
     }
 
@@ -47,7 +52,7 @@ public class ObjectBase implements InterfaceBase {
         return super.hashCode();
     }
 
-    public boolean equals(Object obj) {
+    public boolean equals(java.lang.Object obj) {
         // this _should_ be ok, as if we are comparing the proxy
         // objects then it will come out to be the same proxied object
         // on a given machine

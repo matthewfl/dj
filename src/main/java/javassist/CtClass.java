@@ -51,6 +51,8 @@ import javassist.expr.ExprEditor;
 public abstract class CtClass {
     protected String qualifiedName;
 
+    public String overrideSignature = null;
+
     /**
      * If the value of this field is not null, then all class
      * files modified by Javassist are saved under the directory
@@ -220,6 +222,8 @@ public abstract class CtClass {
      * Returns a <code>ClassPool</code> for this class.
      */
     public ClassPool getClassPool() { return null; }
+
+    public void setClassPool2(ClassPool cp) {}
 
     /**
      * Returns a class file for this class.
@@ -411,7 +415,7 @@ public abstract class CtClass {
      * After compilation, all type parameters are dropped off from the
      * main part of a class file.  However, for reflection, the type
      * parameters must be encoded into generic signatures and attached
-     * to a class file.
+     * to a class file.X
      *
      * <p>For example,
      *
