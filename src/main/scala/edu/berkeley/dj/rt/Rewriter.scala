@@ -10,7 +10,8 @@ import edu.berkeley.dj.rt.convert._
 /**
  * Created by matthewfl
  */
-private[rt] class Rewriter (private val manager : Manager) { //private val config : Config, private val basePool : ClassPool) {
+private[rt] class Rewriter (private val manager : Manager) {
+  //private val config : Config, private val basePool : ClassPool) {
 
   //val runningInterface = new RunningInterface(config)
   //edu.berkeley.dj.internal.InternalInterfaceFactory.RunningUUID = config.uuid
@@ -82,25 +83,41 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     !NonMovableClasses.contains(cls.getName)
   }
 
-  private def getUsuableName(typ: CtClass) : String = {
-    if(typ.isArray) {
+  private def getUsuableName(typ: CtClass): String = {
+    if (typ.isArray) {
       getUsuableName(typ.getComponentType) + "[]"
-    } else if(typ.isPrimitive) {
+    } else if (typ.isPrimitive) {
       typ.getName
     } else {
-      typ.getName.split("\\.").map("``"+_+"``").mkString(".")
+      typ.getName.split("\\.").map("``" + _ + "``").mkString(".")
     }
   }
 
   //private def getUsuableFieldName()
 
+  private def reassociateClass(cls: CtClass) = {
+    /*if(cls.getClassPool == basePool) {
+      cls.detach()
+      // TODO: setClasspool
+    }*/
+    cls.setClassPool2(runningPool)
+  }
+
   private def rewriteUsedClasses(cls: CtClass) = {
     val map = new JClassMap(manager)
     cls.replaceClassName(map)
+
+    // the javassist library appears to not reflect the super class properly when replacing names
+    val sname = cls.getSuperclass.getName
+    val nsname = map.get(sname).asInstanceOf[String]
+    if (nsname != null && nsname != sname) {
+      // set the new super class
+      cls.setSuperclass(cls.getClassPool.get(nsname))
+    }
     //runningPool.get(cls.getSuperclass.getName)
   }
 
-  private def transformClass(cls : CtClass) = {
+  private def transformClass(cls: CtClass) = {
     //val manager = runningPool.makeClass("edu.berkeley.dj.internal.managers."+cls.getName, classMangerBase)
     //rewriteUsedClasses(cls)
     // TODO: actually determine if this class is movable before adding the move interface
@@ -113,7 +130,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     })*/
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls.map(n => {
       val mths = cls.getMethods.filter(_.getName == n._2)
-      if(!mths.isEmpty)
+      if (!mths.isEmpty)
         Map(n._1 -> mths(0))
       else
         Map[String, CtMethod]()
@@ -124,9 +141,9 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
-    if(!isInterface) {
+    if (!isInterface) {
       cls.instrument(codeConverter)
-      for(field <- cls.getDeclaredFields) {
+      for (field <- cls.getDeclaredFields) {
         val name = field.getName
         println("field name: " + name);
         if (!name.startsWith(config.fieldPrefix) && !field.getType.isArray) {
@@ -141,14 +158,14 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
               "public"
             else if (Modifier.isProtected(modifiers))
               "protected"
-            else if(Modifier.isPrivate(modifiers))
+            else if (Modifier.isPrivate(modifiers))
               "private"
             else // must be isPackage
               ""
 
           val finalField = Modifier.isFinal(modifiers)
 
-          if(finalField) {
+          if (finalField) {
             // we don't want any final fields as we might want to change their values later?
             // also it makes it harder to overwrite the access to field since the writes can't happen
             // outside the constructor
@@ -164,7 +181,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
           // the invoke method used should change
 
           // TODO: deal with static variables
-          if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/) {
+          if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
             val write_method =
               s"""
               ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {
@@ -190,13 +207,13 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
            }
               """
             try {
-              println("\t\tadding method for: " + name + " to " + cls.getName + " type "+typ_name)
+              println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
               //cls.addMethod(CtMethod.make(write_method, cls))
               //cls.addMethod(CtMethod.make(read_method, cls))
             } catch {
               // TODO: remove
-              case e: Throwable  => {
-                println("Compile of method failed: "+e)
+              case e: Throwable => {
+                println("Compile of method failed: " + e)
               }
             }
           } else {
@@ -204,7 +221,7 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
           }
         }
       }
-        /*for(method <- cls.getMethods) {
+      /*for(method <- cls.getMethods) {
           if(!method.getName.startsWith(config.fieldPrefix) && Modifier.isSynchronized(method)) {
             method.setWrappedBody()
           }
@@ -221,19 +238,19 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
           public void __dj_deseralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
           super.__dj_deseralize_obj(man);
         """
-      for(field <- cls.getDeclaredFields) {
-        if(field.getType.isPrimitive) {
+      for (field <- cls.getDeclaredFields) {
+        if (field.getType.isPrimitive) {
           seralize_obj_method +=
             s"""
               man.put_value_${field.getType.getName}(this.``${field.getName}``);
             """
           deseralize_obj_method +=
-          s"""
+            s"""
              this.``${field.getName}`` = man.get_value_${field.getType.getName}();
            """
         } else {
           // for object should check if the object is movable first
-          if(isClassMovable(field.getType)) {
+          if (isClassMovable(field.getType)) {
 
           } else {
             // TODO: seralize a proxy object so we can still use this later
@@ -269,11 +286,12 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
   }*/
 
   def modifyClass(cls: CtClass): Unit = {
-    println("rewriting class: "+cls.getName)
+    println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
-    println("modifiers: "+Modifier.toString(mods))
+    println("modifiers: " + Modifier.toString(mods))
+    reassociateClass(cls)
     rewriteUsedClasses(cls)
-    val sc = cls.getSuperclass
+    /*val sc = cls.getSuperclass
     if(sc.getName != "java.lang.Object") {
       // we want to make sure that we have loaded any classes that this depends on
       // so that we have already overwritten their methods
@@ -281,13 +299,13 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
     } else if(!Modifier.isInterface(mods)) {
       // this comes directly off the object class
       //cls.setSuperclass(objectBase)
-    }
+    }*/
     //if(cls.getName.contains("testcase"))
     transformClass(cls)
   }
 
-  def createCtClass(classname : String) : CtClass = {
-    if(classname.startsWith("edu.berkeley.dj.rt")) {
+  def createCtClass(classname: String): CtClass = {
+    if (classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
       throw new ClassNotFoundException(classname)
     }
@@ -296,23 +314,32 @@ private[rt] class Rewriter (private val manager : Manager) { //private val confi
       return objectBaseRaw
     }*/
 
-    var cls = basePool get classname
+    var cls: CtClass = try {
+      basePool get classname
+    } catch {
+      case e : NotFoundException => null
+    }
+    println("create class name:" + classname)
 
-    if(classname.startsWith(config.coreprefix)) {
-      if(cls != null)
+    if (classname.startsWith(config.coreprefix)) {
+      if (cls != null)
         return cls
       var orgName = classname.drop(config.coreprefix.size)
       val clso = basePool get orgName
-      clso.detach()
+      reassociateClass(clso)
       clso.setName(classname)
       modifyClass(clso)
       return clso
     }
 
-    if(cls == null)
+    if (cls == null)
       return null
 
-    if(!classname.startsWith("edu.berkeley.dj.internal.")) {
+
+    if(cls.isArray) {
+      // TODO: some custom handling for array types
+
+    } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
       modifyClass(cls)
     }
     cls

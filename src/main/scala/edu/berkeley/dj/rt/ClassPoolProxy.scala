@@ -14,19 +14,19 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
 
   private val cache = new mutable.HashMap[String, CtClass]
 
-  override protected def getCached(classname : String) : CtClass = {
+  override protected def getCached(classname: String) : CtClass = {
     cache get classname orNull
   }
 
-  override protected def cacheCtClass(classname : String, c : CtClass, dynamic : Boolean) = {
+  override protected def cacheCtClass(classname: String, c: CtClass, dynamic: Boolean) = {
     cache += (classname -> c)
   }
 
-  override protected def removeCached(classname : String) = {
+  override protected def removeCached(classname: String) = {
     cache remove classname orNull
   }
 
-  override protected def createCtClass(classname : String, useCache : Boolean) : CtClass = {
+  override protected def createCtClass(classname: String, useCache: Boolean) : CtClass = {
     if(!canRewrite(classname)) {
       return manager.pool.get(classname)
     }

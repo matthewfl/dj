@@ -13,8 +13,8 @@ private[rt] class Manager (val config: Config, classpaths: String) {
   val pool = new ClassPool(true)
 
   classpaths.split(":").foreach(pool.appendClassPath(_))
-  //pool.appendClassPath(new ClassClassPath(this.getClass))
-  pool.childFirstLookup = true
+  pool.appendClassPath(new ClassClassPath(this.getClass))
+  //pool.childFirstLookup = true
 
   //val securityManger = new SecurityManager(this)
 

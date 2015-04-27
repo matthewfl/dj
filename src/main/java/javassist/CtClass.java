@@ -223,6 +223,8 @@ public abstract class CtClass {
      */
     public ClassPool getClassPool() { return null; }
 
+    public void setClassPool2(ClassPool cp) {}
+
     /**
      * Returns a class file for this class.
      *

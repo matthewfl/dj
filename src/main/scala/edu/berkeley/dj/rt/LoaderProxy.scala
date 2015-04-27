@@ -78,6 +78,7 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
       }
       case e: Throwable => {
         println("========================o come on\n"+e.toString)
+        throw e
         null
       }
     }

@@ -67,6 +67,9 @@ class JavassistModifications extends FunSuite {
     val c1 = cp.makeClass("test.somepackage.someclass1")
     c1.setSuperclass(baseOld)
     c1.replaceClassName("test.somepackage.oldclass", "test.somepackage.newclass")
+    // we are now manually doing this setSuperclass
+    c1.setSuperclass(base)
+    //c1.toBytecode()
     assert(base.getName == c1.getSuperclass.getName)
   }
 

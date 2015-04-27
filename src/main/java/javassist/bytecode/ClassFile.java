@@ -113,6 +113,7 @@ public final class ClassFile {
             MAJOR_VERSION = JAVA_6;
             Class.forName("java.lang.invoke.CallSite");
             MAJOR_VERSION = JAVA_7;
+            // TODO: class for java 8 version
         }
         catch (Throwable t) {}
     }

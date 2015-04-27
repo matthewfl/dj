@@ -265,6 +265,11 @@ class CtClassType extends CtClass {
 
     void setClassPool(ClassPool cp) { classPool = cp; }
 
+    public void setClassPool2(ClassPool cp) {
+        detach();
+        classPool = cp;
+    }
+
     public URL getURL() throws NotFoundException {
         URL url = classPool.find(getName());
         if (url == null)
