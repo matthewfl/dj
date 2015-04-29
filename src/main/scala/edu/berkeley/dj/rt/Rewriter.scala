@@ -49,7 +49,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     //base
   }*/
 
-  private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
+  //private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
   private lazy val classMangerBase = runningPool.get("edu.berkeley.dj.internal.ClassManager")
 
@@ -66,9 +66,13 @@ private[rt] class Rewriter (private val manager : Manager) {
   // anywhere in a program
   // rewrite them to the new methods
   val rewriteMethodCalls = Map(
-    "notify" -> "__dj_nofity",
-    "notifyAll" -> "__dj_notifyAll",
-    "wait" -> "__dj_wait"
+    // TODO: add the method signatures onto these items
+    // and don't use
+    // TODO: the maps for when they have argument types
+    ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.coreprefix}java.lang.Object"),
+    ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.coreprefix}java.lang.Object"),
+    ("wait", "()v", "java.lang.Object") -> ("__dj_wait", s"${config.coreprefix}java.lang.Object"),
+
   )
 
   // if these methods are anywhere
@@ -100,6 +104,8 @@ private[rt] class Rewriter (private val manager : Manager) {
       cls.detach()
       // TODO: setClasspool
     }*/
+    // need to cache the classfile before moving the class to the new pool
+    cls.getClassFile
     cls.setClassPool2(runningPool)
   }
 
@@ -108,12 +114,13 @@ private[rt] class Rewriter (private val manager : Manager) {
     cls.replaceClassName(map)
 
     // the javassist library appears to not reflect the super class properly when replacing names
-    val sname = cls.getSuperclass.getName
+    // this seems to be working somewhat nowy
+    /*val sname = cls.getSuperclass.getName
     val nsname = map.get(sname).asInstanceOf[String]
     if (nsname != null && nsname != sname) {
       // set the new super class
       cls.setSuperclass(cls.getClassPool.get(nsname))
-    }
+    }*/
     //runningPool.get(cls.getSuperclass.getName)
   }
 
@@ -129,6 +136,8 @@ private[rt] class Rewriter (private val manager : Manager) {
         codeConverter.redirectMethodCall(v._1, mth(0))
     })*/
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls.map(n => {
+      // TODO: can't use this as it is causing issues with circular references to
+      // classes that aren't loaded yet
       val mths = cls.getMethods.filter(_.getName == n._2)
       if (!mths.isEmpty)
         Map(n._1 -> mths(0))
@@ -314,7 +323,13 @@ private[rt] class Rewriter (private val manager : Manager) {
       return objectBaseRaw
     }*/
 
-    var cls: CtClass = try {
+    if(classname.endsWith("[]")) {
+      // this is some array type, so treat it as such
+      // in the future we should rewrite arrays with our methods,
+      return new CtArray(classname, runningPool)
+    }
+
+    val cls: CtClass = try {
       basePool get classname
     } catch {
       case e : NotFoundException => null

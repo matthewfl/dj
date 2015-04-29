@@ -19,11 +19,11 @@ package javassist;
 /**
  * Array types.
  */
-final class CtArray extends CtClass {
+final public class CtArray extends CtClass {
     protected ClassPool pool;
 
     // the name of array type ends with "[]".
-    CtArray(String name, ClassPool cp) {
+    public CtArray(String name, ClassPool cp) {
         super(name);
         pool = cp;
     }

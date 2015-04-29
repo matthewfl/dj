@@ -135,7 +135,8 @@ public class Object implements InterfaceBase {
     protected /*final*/ void finalize () throws Throwable {
         // we can delete proxy classes
         // but then we don't want to call the finalize method
-
+        // TODO: check that this is not a proxy instance of the class
+        this.__dj_client_finalize();
     }
 
     protected void __dj_client_finalize() throws Throwable {}
