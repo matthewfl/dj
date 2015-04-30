@@ -276,7 +276,7 @@ public class CtField extends CtMember {
         AnnotationsAttribute ainfo2 = (AnnotationsAttribute)
                     fi.getAttribute(AnnotationsAttribute.visibleTag);  
         return CtClassType.getAnnotationType(clz, getDeclaringClass().getClassPool(),
-                                             ainfo, ainfo2);
+                ainfo, ainfo2);
     }
 
     /**
@@ -371,6 +371,9 @@ public class CtField extends CtMember {
         return Descriptor.toCtClass(fieldInfo.getDescriptor(),
                                     declaringClass.getClassPool());
     }
+
+
+
 
     /**
      * Sets the type of the field.

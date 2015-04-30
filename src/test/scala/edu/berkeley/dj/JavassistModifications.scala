@@ -29,7 +29,7 @@ class JavassistModifications extends FunSuite {
 
     b.addMethod(CtMethod.make(mth, b))
 
-    b.toBytecode()
+    assert(new String(b.toBytecode()).contains("java/util/List"))
     //assert(new String(b.toBytecode))
   }
 

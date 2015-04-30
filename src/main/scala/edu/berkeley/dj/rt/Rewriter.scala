@@ -71,7 +71,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     // TODO: the maps for when they have argument types
     ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.coreprefix}java.lang.Object"),
     ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.coreprefix}java.lang.Object"),
-    ("wait", "()v", "java.lang.Object") -> ("__dj_wait", s"${config.coreprefix}java.lang.Object"),
+    ("wait", "()v", "java.lang.Object") -> ("__dj_wait", s"${config.coreprefix}java.lang.Object")
 
   )
 
@@ -135,7 +135,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       if(!mth.isEmpty)
         codeConverter.redirectMethodCall(v._1, mth(0))
     })*/
-    codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls.map(n => {
+    /*codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls.map(n => {
       // TODO: can't use this as it is causing issues with circular references to
       // classes that aren't loaded yet
       val mths = cls.getMethods.filter(_.getName == n._2)
@@ -143,7 +143,8 @@ private[rt] class Rewriter (private val manager : Manager) {
         Map(n._1 -> mths(0))
       else
         Map[String, CtMethod]()
-    }).reduce(_ ++ _)))
+    }).reduce(_ ++ _)))*/
+    codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
 
     codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
     //codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
@@ -154,10 +155,12 @@ private[rt] class Rewriter (private val manager : Manager) {
       cls.instrument(codeConverter)
       for (field <- cls.getDeclaredFields) {
         val name = field.getName
-        println("field name: " + name);
-        if (!name.startsWith(config.fieldPrefix) && !field.getType.isArray) {
-          val typ = field.getType
-          val typ_name = getUsuableName(typ)
+        println("field name: " + name)
+        // TODO: manage arrays
+        if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
+          //val typ = field.getType
+
+          val typ_name = "int"//getUsuableName(typ)
           val modifiers = field.getModifiers
 
           //SignatureAttribute.toFieldSignature(field.getGenericSignature)
@@ -247,7 +250,7 @@ private[rt] class Rewriter (private val manager : Manager) {
           public void __dj_deseralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
           super.__dj_deseralize_obj(man);
         """
-      for (field <- cls.getDeclaredFields) {
+      /*for (field <- cls.getDeclaredFields) {
         if (field.getType.isPrimitive) {
           seralize_obj_method +=
             s"""
@@ -265,7 +268,7 @@ private[rt] class Rewriter (private val manager : Manager) {
             // TODO: seralize a proxy object so we can still use this later
           }
         }
-      }
+      }*/
 
 
     }
@@ -300,6 +303,10 @@ private[rt] class Rewriter (private val manager : Manager) {
     println("modifiers: " + Modifier.toString(mods))
     reassociateClass(cls)
     rewriteUsedClasses(cls)
+    if(Modifier.isInterface(mods)) {
+      // we need to have all interfaces inherit from the java.lang.Object, so we got to change it back
+      cls.getClassFile.setSuperclass("java.lang.Object")
+    }
     /*val sc = cls.getSuperclass
     if(sc.getName != "java.lang.Object") {
       // we want to make sure that we have loaded any classes that this depends on
