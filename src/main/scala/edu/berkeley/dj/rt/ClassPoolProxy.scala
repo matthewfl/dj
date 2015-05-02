@@ -22,6 +22,14 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     cache += (classname -> c)
   }
 
+  def setClass(classname: String, c: CtClass) = {
+    if(c != null) {
+      cache += (classname -> c)
+    } else {
+      cache.remove(classname)
+    }
+  }
+
   override protected def removeCached(classname: String) = {
     cache remove classname orNull
   }

@@ -105,8 +105,13 @@ private[rt] class Rewriter (private val manager : Manager) {
       // TODO: setClasspool
     }*/
     // need to cache the classfile before moving the class to the new pool
-    cls.getClassFile
-    cls.setClassPool2(runningPool)
+    if(cls.getClassPool != runningPool) {
+      // prime the cache of the class before we move it to a new pool
+      cls.getClassFile
+      cls.setClassPool2(runningPool)
+      // cache this class before we have fully rewritten it in hopes that we don't loop
+      runningPool.setClass(cls.getName, cls)
+    }
   }
 
   private def rewriteUsedClasses(cls: CtClass) = {
@@ -302,11 +307,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     val mods = cls.getModifiers
     println("modifiers: " + Modifier.toString(mods))
     reassociateClass(cls)
-    rewriteUsedClasses(cls)
-    if(Modifier.isInterface(mods)) {
-      // we need to have all interfaces inherit from the java.lang.Object, so we got to change it back
-      cls.getClassFile.setSuperclass("java.lang.Object")
-    }
+
     /*val sc = cls.getSuperclass
     if(sc.getName != "java.lang.Object") {
       // we want to make sure that we have loaded any classes that this depends on
@@ -318,6 +319,11 @@ private[rt] class Rewriter (private val manager : Manager) {
     }*/
     //if(cls.getName.contains("testcase"))
     transformClass(cls)
+    rewriteUsedClasses(cls)
+    if(Modifier.isInterface(mods)) {
+      // we need to have all interfaces inherit from the java.lang.Object, so we got to change it back
+      cls.getClassFile.setSuperclass("java.lang.Object")
+    }
   }
 
   def createCtClass(classname: String): CtClass = {
