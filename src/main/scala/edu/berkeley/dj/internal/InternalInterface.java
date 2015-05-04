@@ -29,7 +29,7 @@ public class InternalInterface {
 
     public String getUUID() throws InterfaceException { return null; }
 
-
+    public void printStdout(int i) throws InterfaceException { }
 
 }
 
@@ -78,6 +78,11 @@ class InternalInterfaceWrap extends  InternalInterface {
         } catch(InterfaceException e) {
             return "interface exception";
         }
+    }
+
+    public void printStdout(int i) throws InterfaceException {
+        // for use by the print stream
+        invoke("printStdout", new Class[]{Integer.class}, i);
     }
 
     public Object callIn(int action, Object[] args) {

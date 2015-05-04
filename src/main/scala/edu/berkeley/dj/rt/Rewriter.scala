@@ -1,7 +1,7 @@
 package edu.berkeley.dj.rt
 
 import javassist._
-import javassist.bytecode.{MethodInfo, SignatureAttribute}
+import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
@@ -77,11 +77,35 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
+  private lazy val jclassmap = new JClassMap(manager, this)
+
+  val exemptedClassesDesc = Set(
+    "java/lang/String",
+    "java/lang/Integer",
+    "java/lang/Long"
+  )
+
+  private[rt] def canRewriteClass(classdesc: String): Boolean = {
+    if(exemptedClassesDesc.contains(classdesc))
+      return false
+    // do a lookup of the class and check if it is a subclass of a good type
+
+    /*var curcls = Descriptor.toCtClass(classdesc, basePool)
+    while(curcls.getSuperclass != null) {
+      // we can not change a throwable class since we need to catch these items
+      // and the jvm checks that it inherits from throwable etc
+      // at lease these items will be seralizable....sigh
+      if(curcls.getName == "java.lang.Throwable")
+        return false
+      curcls = curcls.getSuperclass
+    }*/
+    true
+  }
+
   private def rewriteUsedClasses(cls: CtClass) = {
-    val map = new JClassMap(manager)
     val isInterface = cls.isInterface
     val useObjectBase = cls.getSuperclass.getName == "java.lang.Object"
-    cls.replaceClassName(map)
+    cls.replaceClassName(jclassmap)
 
     if(isInterface) {
       // interfaces need to inherit from java.lang.Object, but we changed that when re rewrote the
@@ -92,16 +116,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       cls.setSuperclass(objectBase)
     }
 
-    // the javassist library appears to not reflect the super class properly when replacing names
-    // this seems to be working somewhat nowy
-    /*val sname = cls.getSuperclass.getName
-    val nsname = map.get(sname).asInstanceOf[String]
-    if (nsname != null && nsname != sname) {
-      // set the new super class
-      cls.setSuperclass(cls.getClassPool.get(nsname))
-    }*/
     println()
-    //runningPool.get(cls.getSuperclass.getName)
   }
 
   private def transformClass(cls: CtClass) = {

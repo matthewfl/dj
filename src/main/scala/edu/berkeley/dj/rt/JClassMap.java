@@ -14,10 +14,13 @@ public class JClassMap extends ClassMap {
 
     final private Manager manager;
 
+    final private Rewriter rewriter;
+
     final private String prefix;
 
-    JClassMap(Manager man) {
+    JClassMap(Manager man, Rewriter rw) {
         manager = man;
+        rewriter = rw;
         // this should end with a ".", so that means that we will end with a slash
         prefix = manager.config().coreprefix().replace(".", "/");
     }
@@ -33,15 +36,32 @@ public class JClassMap extends ClassMap {
 
     final static private String[] exemptedClasses = new String[] {
             "java/lang/String",
-            "java/lang/Integer" // TODO: other types
+            "java/lang/Integer", // TODO: other types
+            "java/lang/Long",
+            "java/lang/Float",
+            "java/lang/Double",
+            "java/lang/Boolean",
+            "java/lang/Short",
+            "java/lang/Char",
+            "java/lang/Throwable",
+            "java/lang/Exception",
+            "java/lang/RuntimeException",
+            "java/lang/Class"
+
+            // tmp here until fixed issue with native methods
+            //"java/lang/System"
     };
 
+    @Override
     public Object get(Object jvn) {
         try {
             String name = (String) jvn;
             for (String n : rewritePrefixes) {
                 if(name.startsWith(n)) {
                     // we have found the prefix, so unless this is exempted
+                    /*if(!rewriter.canRewriteClass(name))
+                        return name;
+                        */
                     for(String e : exemptedClasses) {
                         if(e.equals(name))
                             return name;

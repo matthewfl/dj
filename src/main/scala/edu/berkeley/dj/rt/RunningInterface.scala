@@ -25,4 +25,9 @@ class RunningInterface (private val config : Config) {
   private def callIn(action : Int, args: Object*) = {
 
   }
+
+  def printStdout(i: Int) = {
+    println("to stdout "+i)
+  }
+
 }
