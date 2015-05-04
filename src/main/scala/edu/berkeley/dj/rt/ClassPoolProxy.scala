@@ -38,13 +38,21 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     if(!canRewrite(classname)) {
       return manager.pool.get(classname)
     }
-    val res = rewriter.createCtClass(classname)
+    val res = try {
+      rewriter.createCtClass(classname)
+    } catch {
+      case e: Throwable => {
+        println("rewriter failed to create class: " + e)
+        null
+      }
+    }
     if(res != null)
       res
     else {
       println("we failed")
       null
     }
+
       //super.createCtClass(classname, useCache)
     /*val ret = super.createCtClass(classname, useCache)
     if(ret == null)

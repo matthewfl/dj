@@ -1,6 +1,6 @@
 package edu.berkeley.dj.internal;
 
-//import edu.berkeley.dj.internal.coreclazz.java.lang.Object;
+//import edu.berkeley.dj.internal.Object;
 
 import java.lang.reflect.InvocationTargetException;
 

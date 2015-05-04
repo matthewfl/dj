@@ -49,7 +49,8 @@ private[rt] class Rewriter (private val manager : Manager) {
     //base
   }*/
 
-  //private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
+  private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
+  private lazy val objectBaseInterface = runningPool.get(s"${config.coreprefix}java.lang.Object")
 
   private lazy val classMangerBase = runningPool.get("edu.berkeley.dj.internal.ClassManager")
 
@@ -116,7 +117,16 @@ private[rt] class Rewriter (private val manager : Manager) {
 
   private def rewriteUsedClasses(cls: CtClass) = {
     val map = new JClassMap(manager)
+    val isInterface = cls.isInterface
+    val useObjectBase = cls.getSuperclass.getName == "java.lang.Object"
     cls.replaceClassName(map)
+
+    if(isInterface) {
+      cls.setSuperclass(cls.getClassPool.get("java.lang.Object"))
+      cls.addInterface(objectBaseInterface)
+    } else if(useObjectBase) {
+      cls.setSuperclass(objectBase)
+    }
 
     // the javassist library appears to not reflect the super class properly when replacing names
     // this seems to be working somewhat nowy
@@ -126,6 +136,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       // set the new super class
       cls.setSuperclass(cls.getClassPool.get(nsname))
     }*/
+    println()
     //runningPool.get(cls.getSuperclass.getName)
   }
 
@@ -320,10 +331,10 @@ private[rt] class Rewriter (private val manager : Manager) {
     //if(cls.getName.contains("testcase"))
     transformClass(cls)
     rewriteUsedClasses(cls)
-    if(Modifier.isInterface(mods)) {
+    /*if(Modifier.isInterface(mods)) {
       // we need to have all interfaces inherit from the java.lang.Object, so we got to change it back
       cls.getClassFile.setSuperclass("java.lang.Object")
-    }
+    }*/
   }
 
   def createCtClass(classname: String): CtClass = {
