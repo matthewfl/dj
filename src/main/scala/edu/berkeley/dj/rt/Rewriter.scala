@@ -11,50 +11,19 @@ import edu.berkeley.dj.rt.convert._
  * Created by matthewfl
  */
 private[rt] class Rewriter (private val manager : Manager) {
-  //private val config : Config, private val basePool : ClassPool) {
-
-  //val runningInterface = new RunningInterface(config)
-  //edu.berkeley.dj.internal.InternalInterfaceFactory.RunningUUID = config.uuid
-
   def config = manager.config
 
   def basePool = manager.pool
 
   def runningPool = manager.runningPool
 
-  // used to get access to the internal members that need to be rewritten
-  //private val selfPool = new ClassPool(true)
-  //selfPool.appendClassPath(new ClassClassPath(this.getClass))
-
   private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
-  //private val rewriteNamespace = "edu.berkeley.dj.internal2"//."+config.uuid
-
-  /*def canRewrite (classname : String) = {
-    !classname.equals("java.lang.Object")
-    // TODO: a lot more base class and packages
-  }*/
-
-  /*private lazy val objectBaseRaw = {
-    //val base = basePool.get("edu.berkeley.dj.internal.ObjectBase")
-    //val ob = runningPool.makeClass(rewriteNamespace+".ObjectBase")
-    //val fsettings = CtField.make("public int "+config.fieldPrefix+"settings = 0;", ob)
-    //ob.addField(fsettings)
-    //val fmanager = CtField.make("public edu.berkeley.dj.internal.Manager "+config.fieldPrefix+"manager = null;", ob)
-    //ob.addField(fmanager)
-    //ob
-    val ob = basePool.get("edu.berkeley.dj.internal.ObjectBase")
-    ob
-
-    //base
-  }*/
-
   private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
+
   private lazy val objectBaseInterface = runningPool.get(s"${config.coreprefix}java.lang.Object")
 
   private lazy val classMangerBase = runningPool.get("edu.berkeley.dj.internal.ClassManager")
-
-  //private val ManagerClasses = new mutable.HashMap[String, CtClass]()
 
   // these classes are noted as not being movable
   // this should contain items such as socket classes
@@ -98,14 +67,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  //private def getUsuableFieldName()
-
   private def reassociateClass(cls: CtClass) = {
-    /*if(cls.getClassPool == basePool) {
-      cls.detach()
-      // TODO: setClasspool
-    }*/
-    // need to cache the classfile before moving the class to the new pool
     if(cls.getClassPool != runningPool) {
       // prime the cache of the class before we move it to a new pool
       cls.getClassFile
@@ -122,7 +84,9 @@ private[rt] class Rewriter (private val manager : Manager) {
     cls.replaceClassName(map)
 
     if(isInterface) {
-      cls.setSuperclass(cls.getClassPool.get("java.lang.Object"))
+      // interfaces need to inherit from java.lang.Object, but we changed that when re rewrote the
+      // references, and the normal methods check if it is an interface, and makes it a nop, so do it this way
+      cls.getClassFile.setSuperclass("java.lang.Object")
       cls.addInterface(objectBaseInterface)
     } else if(useObjectBase) {
       cls.setSuperclass(objectBase)
@@ -292,26 +256,6 @@ private[rt] class Rewriter (private val manager : Manager) {
   }
 
 
-  /*private def makeProxyCls(cls: CtClass) = {
-    // this is used for non movable classes
-    // where we need to have some proxy that calls methods
-    // back on the origional class
-    val pxycls = runningPool.makeClass(config.proxyClassPrefix+cls.getName, cls)
-    CtField.make("public int __dj_class_mode = 0;", pxycls);
-    CtField.make("public edu.berkeley.dj.internal.ClassManager __dj_class_manager = null", pxycls);
-    for(mth <- cls.getMethods) {
-      if(Modifier.isPublic(mth.getModifiers)) {
-        // this is a public method, so we might have to proxy it
-        val rtn = mth.getReturnType.getName
-        val sig = mth.getSignature
-        val pxy_method =
-          s"""
-             public ${rtn} ${mth.getName} (
-          """
-      }
-    }
-    pxycls
-  }*/
 
   def modifyClass(cls: CtClass): Unit = {
     println("rewriting class: " + cls.getName)
