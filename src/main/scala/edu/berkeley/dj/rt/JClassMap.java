@@ -16,11 +16,14 @@ public class JClassMap extends ClassMap {
 
     final private Rewriter rewriter;
 
+    final private String[] extraExeptedClasses;
+
     final private String prefix;
 
-    JClassMap(Manager man, Rewriter rw) {
+    JClassMap(Manager man, Rewriter rw, String[] exc) {
         manager = man;
         rewriter = rw;
+        extraExeptedClasses = exc;
         // this should end with a ".", so that means that we will end with a slash
         prefix = manager.config().coreprefix().replace(".", "/");
     }
@@ -43,9 +46,13 @@ public class JClassMap extends ClassMap {
             "java/lang/Boolean",
             "java/lang/Short",
             "java/lang/Char",
+
+            // any exception that may be thrown by the jvm directly should be in here
             "java/lang/Throwable",
             "java/lang/Exception",
             "java/lang/RuntimeException",
+            "java/io/IOException",
+
             "java/lang/Class"
 
             // tmp here until fixed issue with native methods
@@ -63,6 +70,10 @@ public class JClassMap extends ClassMap {
                         return name;
                         */
                     for(String e : exemptedClasses) {
+                        if(e.equals(name))
+                            return name;
+                    }
+                    for(String e : extraExeptedClasses) {
                         if(e.equals(name))
                             return name;
                     }

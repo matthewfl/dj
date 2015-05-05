@@ -3,6 +3,7 @@ package edu.berkeley.dj.rt
 import javassist._
 import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 
+import edu.berkeley.dj.internal.RewriteAllBut
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
 
@@ -77,7 +78,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  private lazy val jclassmap = new JClassMap(manager, this)
+  private lazy val jclassmap = new JClassMap(manager, this, Array[String]())
 
   val exemptedClassesDesc = Set(
     "java/lang/String",
@@ -102,10 +103,10 @@ private[rt] class Rewriter (private val manager : Manager) {
     true
   }
 
-  private def rewriteUsedClasses(cls: CtClass) = {
+  private def rewriteUsedClasses(cls: CtClass, jcm: JClassMap): Unit = {
     val isInterface = cls.isInterface
     val useObjectBase = cls.getSuperclass.getName == "java.lang.Object"
-    cls.replaceClassName(jclassmap)
+    cls.replaceClassName(jcm)
 
     if(isInterface) {
       // interfaces need to inherit from java.lang.Object, but we changed that when re rewrote the
@@ -115,8 +116,10 @@ private[rt] class Rewriter (private val manager : Manager) {
     } else if(useObjectBase) {
       cls.setSuperclass(objectBase)
     }
+  }
 
-    println()
+  private def rewriteUsedClasses(cls: CtClass): Unit = {
+    rewriteUsedClasses(cls, jclassmap)
   }
 
   private def transformClass(cls: CtClass) = {
@@ -290,10 +293,25 @@ private[rt] class Rewriter (private val manager : Manager) {
     //if(cls.getName.contains("testcase"))
     transformClass(cls)
     rewriteUsedClasses(cls)
-    /*if(Modifier.isInterface(mods)) {
-      // we need to have all interfaces inherit from the java.lang.Object, so we got to change it back
-      cls.getClassFile.setSuperclass("java.lang.Object")
-    }*/
+  }
+
+  def modifyInternalClass(cls: CtClass): Unit ={
+    // the internal classes have special annotations on them to control how they are rwriten
+    var clsa = cls
+    // if the class is internal to something, we still want the annotations for the file to be "active"
+    while(clsa != null) {
+      val anns = clsa.getAnnotations
+      for (ann <- anns) {
+        ann match {
+          case norerw: RewriteAllBut => {
+            // rewrite all but a few types using the annotation
+            rewriteUsedClasses(cls, new JClassMap(manager, this, norerw.nonModClasses()))
+          }
+          case _ => {} // nop
+        }
+      }
+      clsa = clsa.getDeclaringClass
+    }
   }
 
   def createCtClass(classname: String): CtClass = {
@@ -320,8 +338,11 @@ private[rt] class Rewriter (private val manager : Manager) {
     println("create class name:" + classname)
 
     if (classname.startsWith(config.coreprefix)) {
-      if (cls != null)
+      if (cls != null) {
+        reassociateClass(cls)
+        modifyInternalClass(cls)
         return cls
+      }
       var orgName = classname.drop(config.coreprefix.size)
       val clso = basePool get orgName
       reassociateClass(clso)

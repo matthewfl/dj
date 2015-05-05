@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.InterfaceException;
 import edu.berkeley.dj.internal.InternalInterface;
+import edu.berkeley.dj.internal.RewriteAllBut;
 
 import java.io.*;
 import java.nio.channels.Channel;
@@ -10,13 +11,12 @@ import java.util.Properties;
 /**
  * Created by matthewfl
  */
+@RewriteAllBut(nonModClasses = {"java/lang/System", "java/lang/Object"})
 public class System {
 
     private System() {}
 
-    public final static PrintStream out = java.lang.System.out;
-
-            /*new PrintStream(new OutputStream(){
+    public final static PrintStream out = new PrintStream(new OutputStream(){
         public void write(int b) throws IOException {
             try {
                 InternalInterface.getInternalInterface().printStdout(b);
@@ -24,7 +24,7 @@ public class System {
                 throw new IOException("Unable to write to stdout", e);
             }
         }
-    }, true);*/
+    }, true);
 
     public final static InputStream in = null;
 
@@ -110,7 +110,7 @@ public class System {
 
 
     static {
-        System.out.println("internal system inited");
+        //java.lang.System.out.println("internal system inited");
     }
 
 
