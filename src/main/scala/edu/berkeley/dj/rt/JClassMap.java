@@ -47,6 +47,12 @@ public class JClassMap extends ClassMap {
             "java/lang/Short",
             "java/lang/Char",
 
+            // given that there are some unchanged classes, then will only have
+            // the common base of Object
+            // To seralize them, may look at using standard java seralization...
+            // or make them inmovable
+            "java/lang/Object",
+
             // any exception that may be thrown by the jvm directly should be in here
             "java/lang/Throwable",
             "java/lang/Exception",
@@ -66,9 +72,9 @@ public class JClassMap extends ClassMap {
             for (String n : rewritePrefixes) {
                 if(name.startsWith(n)) {
                     // we have found the prefix, so unless this is exempted
-                    /*if(!rewriter.canRewriteClass(name))
+                    // TODO: clean this up
+                    if(!rewriter.canRewriteClass(name))
                         return name;
-                        */
                     for(String e : exemptedClasses) {
                         if(e.equals(name))
                             return name;

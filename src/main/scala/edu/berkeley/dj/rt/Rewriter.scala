@@ -6,6 +6,7 @@ import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 import edu.berkeley.dj.internal.RewriteAllBut
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
+import edu.berkeley.dj.utils.Memo
 
 
 /**
@@ -80,26 +81,31 @@ private[rt] class Rewriter (private val manager : Manager) {
 
   private lazy val jclassmap = new JClassMap(manager, this, Array[String]())
 
-  val exemptedClassesDesc = Set(
+  /*val exemptedClassesDesc = Set(
     "java/lang/String",
     "java/lang/Integer",
     "java/lang/Long"
-  )
+  )*/
 
   private[rt] def canRewriteClass(classdesc: String): Boolean = {
-    if(exemptedClassesDesc.contains(classdesc))
+    /*if(exemptedClassesDesc.contains(classdesc))
       return false
+    */
     // do a lookup of the class and check if it is a subclass of a good type
 
-    /*var curcls = Descriptor.toCtClass(classdesc, basePool)
-    while(curcls.getSuperclass != null) {
-      // we can not change a throwable class since we need to catch these items
-      // and the jvm checks that it inherits from throwable etc
-      // at lease these items will be seralizable....sigh
-      if(curcls.getName == "java.lang.Throwable")
-        return false
-      curcls = curcls.getSuperclass
-    }*/
+    try {
+      var curcls = Descriptor.toCtClass(classdesc, basePool)
+      while (curcls != null) {
+        // we can not change a throwable class since we need to catch these items
+        // and the jvm checks that it inherits from throwable etc
+        // at lease these items will be seralizable....sigh
+        if (curcls.getName == "java.lang.Throwable")
+          return false
+        curcls = curcls.getSuperclass
+      }
+    } catch {
+      case e: NotFoundException => {}
+    }
     true
   }
 
