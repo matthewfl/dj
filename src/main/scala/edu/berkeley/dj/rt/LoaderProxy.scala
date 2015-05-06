@@ -45,8 +45,9 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
 
 
   override protected def findClass(classname : String) : Class[_] = {
-    if(classname.startsWith("java.lang."))
-      return delegateToParent(classname)
+    val lbd = loadClassByDelegation(classname)
+    if(lbd != null)
+      return lbd
     println("loading class: "+classname)
     var clazz : Array[Byte] = null
     val cls = pool get classname

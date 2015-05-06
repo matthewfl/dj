@@ -75,8 +75,13 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     throw new ClassNotFoundException(classname)
   }*/
 
-  def canRewrite(classname : String) = {
-    classname != "java.lang.Object"
+  def canRewrite(name: String) = {
+    !(name.startsWith("java.")
+      || name.startsWith("javax.")
+      || name.startsWith("sun.")
+      || name.startsWith("com.sun.")
+      || name.startsWith("org.w3c.")
+      || name.startsWith("org.xml."))
   }
 
 }
