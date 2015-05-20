@@ -21,6 +21,8 @@ private[rt] class Rewriter (private val manager : Manager) {
 
   private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
+  private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
+
   private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
   private lazy val objectBaseInterface = runningPool.get(s"${config.coreprefix}java.lang.Object")
@@ -80,6 +82,8 @@ private[rt] class Rewriter (private val manager : Manager) {
   }
 
   private lazy val jclassmap = new JClassMap(manager, this, Array[String]())
+
+
 
   /*val exemptedClassesDesc = Set(
     "java/lang/String",
@@ -281,7 +285,7 @@ private[rt] class Rewriter (private val manager : Manager) {
 
 
 
-  def modifyClass(cls: CtClass): Unit = {
+  private def modifyClass(cls: CtClass): Unit = {
     println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
     println("modifiers: " + Modifier.toString(mods))
@@ -301,7 +305,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     rewriteUsedClasses(cls)
   }
 
-  def modifyInternalClass(cls: CtClass): Unit ={
+  private def modifyInternalClass(cls: CtClass): Unit ={
     // the internal classes have special annotations on them to control how they are rwriten
     var clsa = cls
     // if the class is internal to something, we still want the annotations for the file to be "active"
@@ -318,6 +322,72 @@ private[rt] class Rewriter (private val manager : Manager) {
       }
       clsa = clsa.getDeclaringClass
     }
+  }
+
+  private def shouldCreateProxyCls(cls: CtClass): Boolean = {
+    // if this clsas contains some native methods then we can't
+    // directly instaniate this class, as it will need the native methods
+    // so instead we will make proxy methods for all of its public and protected methods
+    cls.getDeclaredMethods.foreach(m => {
+      if(Modifier.isNative(m.getModifiers))
+        return true
+    })
+    false
+  }
+
+  private def makeProxyCls(cls: CtClass): CtClass = {
+    // if there is a public field then there is nothing we can do directly to manage that
+    // we can instead make the __dj_ methods that are used for reading and writing the field
+
+    val ret = runningPool.makeClass(config.coreprefix + cls.getName)
+    ret.addInterface(proxyInterface)
+    ret.setSuperclass(runningPool.get(config.coreprefix + cls.getSuperclass.getName))
+
+    ret.addField(CtField.make(s"private ${getUsuableName(cls)} __dj_ProxiedObject;", ret))
+
+    val ret_proxy_obj_mth =
+      """
+         public Object __dj_getRawProxyPointer() { return __dj_ProxiedObject; }
+      """
+    ret.addMethod(CtMethod.make(ret_proxy_obj_mth, ret))
+
+    // TODO: make it be able to access protected methods/fields
+    // this is going to have to make some subclass of the proxy class that exposes all of the protected methods
+
+    def getArguments(sig: String): Seq[CtClass] = {
+      // sig string like: (Ljava/lang/String;)V
+      val ar = sig.substring(sig.indexOf("(") + 1, sig.indexOf(")"))
+      val args = ar.split(";")
+      for(i <- 0 until args.length) yield {
+        Descriptor.toCtClass(args(i) + ";", cls.getClassPool)
+      }
+    }
+
+    cls.getConstructors.foreach(m => {
+      val sig = m.getSignature
+
+      println(sig)
+    })
+
+    cls.getMethods.foreach(m => {
+      if(/*Modifier.isProtected(m.getModifiers) ||*/ Modifier.isPublic(m.getModifiers)) {
+        // TODO: get the
+        val args = getArguments(m.getSignature)
+        val meth_code =
+          s"""
+              public ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a"+v._2).mkString(", ")}) {
+                return return __dj_ProxiedObject.``${m.getName}`` (${(0 until args.size).map(" a"+_).mkString(", ")}) ;
+              }
+           """
+        ret.addMethod(CtMethod.make(meth_code, ret))
+      }
+    })
+    cls.getFields.foreach(f => {
+      if(/*Modifier.isProtected(f.getModifiers) ||*/ Modifier.isPublic(f.getModifiers)) {
+
+      }
+    })
+    ret
   }
 
   def createCtClass(classname: String): CtClass = {
@@ -351,18 +421,29 @@ private[rt] class Rewriter (private val manager : Manager) {
       }
       var orgName = classname.drop(config.coreprefix.size)
       val clso = basePool get orgName
+      if(shouldCreateProxyCls(clso)) {
+        return makeProxyCls(clso)
+      }
       reassociateClass(clso)
       clso.setName(classname)
       modifyClass(clso)
       return clso
     }
 
+    if(classname.startsWith(config.proxysubclasses)) {
+      // TODO:
+      throw new NotImplementedError()
+    }
+
     if (cls == null)
       return null
 
-
-    if(cls.isArray) {
+    if(cls.isPrimitive) {
+      return cls
+    } else if(cls.isArray) {
       // TODO: some custom handling for array types
+
+      // don't think tha this is ever used
 
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
       modifyClass(cls)
