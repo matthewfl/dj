@@ -402,8 +402,13 @@ private[rt] class Rewriter (private val manager : Manager) {
       // since there may be methods that were inherited
       // there is also the potential issue with methods such as wait and getting monitors since they will need
       // to be shared with the base object
+
+      /*cls.getMethods.filter(m => {
+        Modifier.isPublic(m.getModifiers) && m.getDeclaringClass.getName != "java.lang.Object"
+      }).groupBy()*/
+
       cls.getMethods.foreach(m => {
-        if ( /*Modifier.isProtected(m.getModifiers) ||*/ Modifier.isPublic(m.getModifiers) && m.getDeclaringClass.getName != "java.lang.Object") {
+        if ( /*Modifier.isProtected(m.getModifiers) ||*/ Modifier.isPublic(m.getModifiers) && true) {
           // TODO: get the
           val args = getArguments(m.getSignature)
           // work in progress code to call the native function
