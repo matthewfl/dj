@@ -8,7 +8,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 public class ConvertBridge {
 
     Object makeNative(Proxied p) {
-        p.__dj_getRawProxyPointer();
+        return p.__dj_getRawProxyPointer();
     }
 
     Object makeNative(Object o) {
@@ -20,7 +20,10 @@ public class ConvertBridge {
     }
 
     Object makeDJ(Object o) {
-        o.getClass().getName()
+        // we are going to end up recursivly calling this class
+        // so we need to independently know when to construct the objects in the internal namespace or not
+        //o.getClass().getName()
+        return null;
     }
 
 }

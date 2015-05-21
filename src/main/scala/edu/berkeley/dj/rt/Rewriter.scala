@@ -335,6 +335,29 @@ private[rt] class Rewriter (private val manager : Manager) {
     false
   }
 
+  private def makeDummyValue(cls: CtClass) = {
+    if(cls.isArray) {
+      s"new ${getUsuableName(cls.getComponentType)}[0]"
+    } else if(cls.isPrimitive) {
+      // need to determine what primitive type this is, and return some dummy value for that
+      import CtClass._
+      cls match {
+        case `voidType` => "" // ???
+        case `booleanType` => "false"
+        case `byteType` => "0"
+        case `charType` => "' '"
+        case `shortType` => "0"
+        case `intType` => "0"
+        case `longType` => "0"
+        case `floatType` => "0.0f"
+        case `doubleType` => "0.0"
+        case _ => "gg" // unknown?
+      }
+    } else {
+      "null" // this is just going to be some pointer to an object, so just return null
+    }
+  }
+
   private def makeProxyCls(cls: CtClass): CtClass = {
     // if there is a public field then there is nothing we can do directly to manage that
     // we can instead make the __dj_ methods that are used for reading and writing the field
@@ -358,30 +381,49 @@ private[rt] class Rewriter (private val manager : Manager) {
       // sig string like: (Ljava/lang/String;)V
       val ar = sig.substring(sig.indexOf("(") + 1, sig.indexOf(")"))
       val args = ar.split(";")
-      for(i <- 0 until args.length) yield {
-        Descriptor.toCtClass(args(i) + ";", cls.getClassPool)
+      if(args.length == 1 && args(0).isEmpty) {
+        // there were no arguments
+        Seq()
+      } else {
+        for (i <- 0 until args.length) yield {
+          Descriptor.toCtClass(args(i) + ";", cls.getClassPool)
+        }
       }
     }
 
     cls.getConstructors.foreach(m => {
       val sig = m.getSignature
-
-      println(sig)
+      // TODO: same sort of method creation for the constructors, once I figure this out.....
+      //println(sig)
     })
 
-    cls.getMethods.foreach(m => {
-      if(/*Modifier.isProtected(m.getModifiers) ||*/ Modifier.isPublic(m.getModifiers)) {
-        // TODO: get the
-        val args = getArguments(m.getSignature)
-        val meth_code =
-          s"""
-              public ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a"+v._2).mkString(", ")}) {
-                return return __dj_ProxiedObject.``${m.getName}`` (${(0 until args.size).map(" a"+_).mkString(", ")}) ;
+    try {
+      // we need to overwrite all the methods, not just the ones that are declared on this object
+      // since there may be methods that were inherited
+      // there is also the potential issue with methods such as wait and getting monitors since they will need
+      // to be shared with the base object
+      cls.getMethods.foreach(m => {
+        if ( /*Modifier.isProtected(m.getModifiers) ||*/ Modifier.isPublic(m.getModifiers) && m.getDeclaringClass.getName != "java.lang.Object") {
+          // TODO: get the
+          val args = getArguments(m.getSignature)
+          // work in progress code to call the native function
+          // will need to cast back and forth between the correct types for this
+          // __dj_ProxiedObject.``${m.getName}`` (${(0 until args.size).map(" a" + _).mkString(", ")}) ;
+          val meth_code =
+            s"""
+              public ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
+                ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
               }
            """
-        ret.addMethod(CtMethod.make(meth_code, ret))
+          ret.addMethod(CtMethod.make(meth_code, ret))
+        }
+      })
+    } catch {
+      case e: Exception => {
+        println(e)
+        throw e
       }
-    })
+    }
     cls.getFields.foreach(f => {
       if(/*Modifier.isProtected(f.getModifiers) ||*/ Modifier.isPublic(f.getModifiers)) {
 
