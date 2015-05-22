@@ -324,7 +324,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  private def shouldCreateProxyCls(cls: CtClass): Boolean = {
+  private def hasNativeMethod(cls: CtClass): Boolean = {
     // if this clsas contains some native methods then we can't
     // directly instaniate this class, as it will need the native methods
     // so instead we will make proxy methods for all of its public and protected methods
@@ -437,6 +437,13 @@ private[rt] class Rewriter (private val manager : Manager) {
     ret
   }
 
+
+  def modifyNativeCalls(cls: CtClass) = {
+    cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers)).foreach(m => {
+      //
+    })
+  }
+
   def createCtClass(classname: String): CtClass = {
     if (classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
@@ -468,7 +475,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       }
       var orgName = classname.drop(config.coreprefix.size)
       val clso = basePool get orgName
-      if(shouldCreateProxyCls(clso)) {
+      if(hasNativeMethod(clso)) {
         return makeProxyCls(clso)
       }
       reassociateClass(clso)
