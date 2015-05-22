@@ -324,7 +324,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  private def shouldCreateProxyCls(cls: CtClass): Boolean = {
+  private def hasNativeMethods(cls: CtClass): Boolean = {
     // if this clsas contains some native methods then we can't
     // directly instaniate this class, as it will need the native methods
     // so instead we will make proxy methods for all of its public and protected methods
@@ -437,6 +437,53 @@ private[rt] class Rewriter (private val manager : Manager) {
     ret
   }
 
+  private def getAccessControl(mod: Int) = {
+    if(Modifier.isPublic(mod)) {
+      "public"
+    } else if(Modifier.isProtected(mod)) {
+      "protected"
+    } else if(Modifier.isPrivate(mod)) {
+      "private"
+    } else if(Modifier.isPackage(mod)) {
+      ""
+    }
+  }
+
+  private def overwriteNativeMethods(cls: CtClass) = {
+    /*def getArguments(sig: String): Seq[CtClass] = {
+      // sig string like: (Ljava/lang/String;)V
+      val ar = sig.substring(sig.indexOf("(") + 1, sig.indexOf(")"))
+      val args = ar.split(";")
+      if(args.length == 1 && args(0).isEmpty) {
+        // there were no arguments
+        Seq()
+      } else {
+        for (i <- 0 until args.length) yield {
+          Descriptor.toCtClass(args(i) + ";", cls.getClassPool)
+        }
+      }
+    }*/
+
+    val rwMembers = cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers))
+
+    rwMembers.foreach(m=> {
+      cls.removeMethod(m)
+    })
+
+    rwMembers.foreach(m=>{
+      //val args = getArguments(m.getSignature)
+      val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
+      // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
+      val mth_code = s"""
+           ${getAccessControl(m.getModifiers)} ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
+              ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+           }
+         """
+      cls.addMethod(CtMethod.make(mth_code, cls))
+    })
+  }
+
+
   def createCtClass(classname: String): CtClass = {
     if (classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
@@ -468,11 +515,14 @@ private[rt] class Rewriter (private val manager : Manager) {
       }
       var orgName = classname.drop(config.coreprefix.size)
       val clso = basePool get orgName
-      if(shouldCreateProxyCls(clso)) {
+      /*if(hasNativeMethods(clso)) {
         return makeProxyCls(clso)
-      }
+      }*/
       reassociateClass(clso)
       clso.setName(classname)
+      if(hasNativeMethods(clso)) {
+        overwriteNativeMethods(clso)
+      }
       modifyClass(clso)
       return clso
     }
