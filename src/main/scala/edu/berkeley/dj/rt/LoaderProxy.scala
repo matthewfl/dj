@@ -39,15 +39,17 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
   override  protected def delegateToParent(classname : String) = {
     println("loading from parent class: "+classname)
     //assert(classname.startsWith("java.lang."))
-    super.delegateToParent(classname)
+    //super.delegateToParent(classname)
+    findClass(classname)
   }
 
 
 
   override protected def findClass(classname : String) : Class[_] = {
-    val lbd = loadClassByDelegation(classname)
+    /*val lbd = loadClassByDelegation(classname)
     if(lbd != null)
       return lbd
+    */
     println("loading class: "+classname)
     var clazz : Array[Byte] = null
     val cls = pool get classname
@@ -69,8 +71,10 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
         if (getPackage(pkgname) == null)
           definePackage(pkgname, null, null, null, null, null, null, null)
       }
-      val dcls = defineClass(classname, clazz, 0, clazz.length, manager.protectionDomain)
-      resolveClass(dcls)
+      // so that we can define in the java.* namespace
+      val dcls = Unsafe.theUnsafe.defineClass(classname, clazz, 0, clazz.length, this, manager.protectionDomain)
+      //val dcls = defineClass(classname, clazz, 0, clazz.length, manager.protectionDomain)
+      //resolveClass(dcls)
       dcls
     } catch {
       case e : IncompatibleClassChangeError => {

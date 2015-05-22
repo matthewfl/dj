@@ -116,7 +116,7 @@ private[rt] class Rewriter (private val manager : Manager) {
   private def rewriteUsedClasses(cls: CtClass, jcm: JClassMap): Unit = {
     val isInterface = cls.isInterface
     val useObjectBase = cls.getSuperclass.getName == "java.lang.Object"
-    cls.replaceClassName(jcm)
+    //cls.replaceClassName(jcm)
 
     if(isInterface) {
       // interfaces need to inherit from java.lang.Object, but we changed that when re rewrote the
