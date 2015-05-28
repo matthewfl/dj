@@ -59,7 +59,10 @@ public class JClassMap extends ClassMap {
             "java/lang/RuntimeException",
             "java/io/IOException",
 
-            "java/lang/Class"
+            "java/lang/Class",
+            // These are here b/c lang/Class uses them,
+            "java/lang/ClassLoader",
+            "java/lang/reflect/Field"
 
             // tmp here until fixed issue with native methods
             //"java/lang/System"

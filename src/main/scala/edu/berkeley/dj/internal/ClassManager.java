@@ -1,6 +1,8 @@
 package edu.berkeley.dj.internal;
 
 
+import edu.berkeley.dj.internal.coreclazz.java.lang.System;
+
 import java.util.UUID;
 
 /**
@@ -14,7 +16,7 @@ public class ClassManager {
     protected UUID distribuitedObjectId; // "OB_HEX_UUID"
 
     // will need a week pointer to the object base
-    protected edu.berkeley.dj.internal.coreclazz.java.lang.Object managedObject;
+    protected System.Object managedObject;
 
     protected int getMode() { return  managedObject.__dj_getClassMode(); }
 

@@ -115,7 +115,8 @@ private[rt] class Rewriter (private val manager : Manager) {
 
   private def rewriteUsedClasses(cls: CtClass, jcm: JClassMap): Unit = {
     val isInterface = cls.isInterface
-    val useObjectBase = cls.getSuperclass.getName == "java.lang.Object"
+    val superClass = cls.getSuperclass.getName
+    //val useObjectBase = cls.getSuperclass.getName == "java.lang.Object"
     cls.replaceClassName(jcm)
 
     if(isInterface) {
@@ -123,8 +124,13 @@ private[rt] class Rewriter (private val manager : Manager) {
       // references, and the normal methods check if it is an interface, and makes it a nop, so do it this way
       cls.getClassFile.setSuperclass("java.lang.Object")
       cls.addInterface(objectBaseInterface)
-    } else if(useObjectBase) {
+    } else if(superClass == "java.lang.Object") {
       cls.setSuperclass(objectBase)
+    } else {
+      // some issue with setting the super class using replaceClassName
+      val sclass = jcm.get(superClass.replace(".","/")).asInstanceOf[String]
+      if(sclass != null)
+        cls.getClassFile.setSuperclass(sclass.replace("/","."))
     }
   }
 
@@ -152,9 +158,10 @@ private[rt] class Rewriter (private val manager : Manager) {
       else
         Map[String, CtMethod]()
     }).reduce(_ ++ _)))*/
-    codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
+    //codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
 
-    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+    //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+
     //codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
     //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
@@ -348,7 +355,7 @@ private[rt] class Rewriter (private val manager : Manager) {
         case `charType` => "' '"
         case `shortType` => "0"
         case `intType` => "0"
-        case `longType` => "0"
+        case `longType` => "0L"
         case `floatType` => "0.0f"
         case `doubleType` => "0.0"
         case _ => "gg" // unknown?
@@ -358,7 +365,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  private def makeProxyCls(cls: CtClass): CtClass = {
+  /*private def makeProxyCls(cls: CtClass): CtClass = {
     // if there is a public field then there is nothing we can do directly to manage that
     // we can instead make the __dj_ methods that are used for reading and writing the field
 
@@ -435,7 +442,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       }
     })
     ret
-  }
+  }*/
 
   private def getAccessControl(mod: Int) = {
     if(Modifier.isPublic(mod)) {
@@ -449,7 +456,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  private def overwriteNativeMethods(cls: CtClass) = {
+  /*private def overwriteNativeMethods(cls: CtClass) = {
     /*def getArguments(sig: String): Seq[CtClass] = {
       // sig string like: (Ljava/lang/String;)V
       val ar = sig.substring(sig.indexOf("(") + 1, sig.indexOf(")"))
@@ -474,17 +481,21 @@ private[rt] class Rewriter (private val manager : Manager) {
       //val args = getArguments(m.getSignature)
       val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
       // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
+      val static = if(Modifier.isStatic(m.getModifiers)) "static" else ""
+
       val mth_code = s"""
-           ${getAccessControl(m.getModifiers)} ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
-              ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+           ${getAccessControl(m.getModifiers)} ${static} ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
+             ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
            }
          """
       cls.addMethod(CtMethod.make(mth_code, cls))
     })
-  }
+  }*/
 
 
   def createCtClass(classname: String): CtClass = {
+    MethodInfo.doPreverify = true
+
     if (classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
       throw new ClassNotFoundException(classname)
@@ -503,7 +514,17 @@ private[rt] class Rewriter (private val manager : Manager) {
     val cls: CtClass = try {
       basePool get classname
     } catch {
-      case e : NotFoundException => null
+      case e : NotFoundException => {
+        try {
+          if(classname.startsWith(config.coreprefix)) {
+            val c = basePool get (classname + "2")
+            c.setName(classname)
+            c
+          } else null
+        } catch {
+          case e: NotFoundException => null
+        }
+      }
     }
     println("create class name:" + classname)
 

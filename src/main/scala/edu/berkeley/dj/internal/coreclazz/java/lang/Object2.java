@@ -10,7 +10,7 @@ import edu.berkeley.dj.internal.SeralizeManager;
  * the object directly can "implement" this and
  * it will still be able to use changed methods
  */
-public interface Object {
+public interface Object2 {
 
     int __dj_getClassMode();
 

@@ -1,17 +1,12 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.CONSTS;
-import edu.berkeley.dj.internal.ClassManager;
-import edu.berkeley.dj.internal.InterfaceBase;
-import edu.berkeley.dj.internal.SeralizeManager;
-
 /**
  * Created by matthewfl
  *
  * This becomes super class of the new "base class" that will represent objects
  * it will have to override methods such as lock or wait to make them work in a distribuited fashion
  */
-public class ObjectBase implements edu.berkeley.dj.internal.coreclazz.java.lang.Object {
+public class ObjectBase implements edu.berkeley.dj.internal.coreclazz.java.lang.Object2 {
 
     public int __dj_class_mode = 0;
 
@@ -58,13 +53,13 @@ public class ObjectBase implements edu.berkeley.dj.internal.coreclazz.java.lang.
         // objects then it will come out to be the same proxied object
         // on a given machine
         try {
-            return this.equals((edu.berkeley.dj.internal.coreclazz.java.lang.Object) obj);
+            return this.equals((System.Object) obj);
         } catch (ClassCastException e) {
             return false;
         }
     }
 
-    public boolean equals(edu.berkeley.dj.internal.coreclazz.java.lang.Object obj) {
+    public boolean equals(System.Object obj) {
         return this == obj;
     }
 
