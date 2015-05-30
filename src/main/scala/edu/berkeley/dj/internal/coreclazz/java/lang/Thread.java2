@@ -235,7 +235,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * Set by (private) java.util.concurrent.locks.LockSupport.setBlocker
      * Accessed using java.util.concurrent.locks.LockSupport.getBlocker
      */
-    volatile System.Object parkBlocker;
+    volatile Object parkBlocker;
 
     /* The object in which this thread is blocked in an interruptible I/O
      * operation, if any.  The blocker's interrupt method should be invoked
@@ -1155,7 +1155,9 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @see     #setName(String)
      */
     public final String getName() {
-        return new String(name, true);
+        // TODO: use new String(name, true) so that it doesn't copy..
+        return new String(name);
+        //return new String(name, true);
     }
 
     /**

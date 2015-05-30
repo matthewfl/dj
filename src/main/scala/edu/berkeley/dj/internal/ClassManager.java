@@ -1,7 +1,7 @@
 package edu.berkeley.dj.internal;
 
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.System;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object2;
 
 import java.util.UUID;
 
@@ -16,7 +16,7 @@ public class ClassManager {
     protected UUID distribuitedObjectId; // "OB_HEX_UUID"
 
     // will need a week pointer to the object base
-    protected System.Object managedObject;
+    protected Object2 managedObject;
 
     protected int getMode() { return  managedObject.__dj_getClassMode(); }
 
@@ -36,7 +36,7 @@ public class ClassManager {
 
     public void writeField(int id, double v) {}
 
-    public void writeField(int id, java.lang.Object v) {}
+    public void writeField(int id, Object v) {}
 
 
 

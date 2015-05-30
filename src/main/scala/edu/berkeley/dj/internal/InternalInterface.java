@@ -31,9 +31,9 @@ public class InternalInterface {
 
     public void printStdout(int i) throws InterfaceException { }
 
-    public edu.berkeley.dj.internal.coreclazz.java.lang.Thread getCurrentThread() {
+    /*public edu.berkeley.dj.internal.coreclazz.java.lang.Thread getCurrentThread() {
         // maybe just return some uid
-    }
+    }*/
 
     public void currentThreadSleep(long millis) {}
 

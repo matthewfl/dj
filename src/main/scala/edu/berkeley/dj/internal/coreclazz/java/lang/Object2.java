@@ -18,9 +18,9 @@ public interface Object2 {
 
     int hashCode();
 
-    boolean equals(java.lang.Object obj);
-
     boolean equals(Object obj);
+
+    boolean equals(Object2 obj);
 
     void __dj_notify();
 

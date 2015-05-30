@@ -319,9 +319,9 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          */
         static class Entry extends WeakReference<ThreadLocal<?>> {
             /** The value associated with this ThreadLocal. */
-            System.Object value;
+            Object value;
 
-            Entry(ThreadLocal<?> k, System.Object v) {
+            Entry(ThreadLocal<?> k, Object v) {
                 super(k);
                 value = v;
             }
@@ -374,7 +374,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * ThreadLocalMaps are constructed lazily, so we only create
          * one when we have at least one entry to put in it.
          */
-        ThreadLocalMap(ThreadLocal<?> firstKey, System.Object firstValue) {
+        ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
             table = new Entry[INITIAL_CAPACITY];
             int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
             table[i] = new Entry(firstKey, firstValue);
@@ -398,9 +398,9 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
                 Entry e = parentTable[j];
                 if (e != null) {
                     @SuppressWarnings("unchecked")
-                    ThreadLocal<System.Object> key = (ThreadLocal<System.Object>) e.get();
+                    ThreadLocal<Object> key = (ThreadLocal<Object>) e.get();
                     if (key != null) {
-                        System.Object value = key.childValue(e.value);
+                        Object value = key.childValue(e.value);
                         Entry c = new Entry(key, value);
                         int h = key.threadLocalHashCode & (len - 1);
                         while (table[h] != null)
@@ -463,7 +463,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * @param key the thread local object
          * @param value the value to be set
          */
-        private void set(ThreadLocal<?> key, System.Object value) {
+        private void set(ThreadLocal<?> key, Object value) {
 
             // We don't use a fast path as with get() because it is at
             // least as common to use set() to create new entries as
@@ -529,7 +529,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * @param  staleSlot index of the first stale entry encountered while
          *         searching for key.
          */
-        private void replaceStaleEntry(ThreadLocal<?> key, System.Object value,
+        private void replaceStaleEntry(ThreadLocal<?> key, Object value,
                                        int staleSlot) {
             Entry[] tab = table;
             int len = tab.length;

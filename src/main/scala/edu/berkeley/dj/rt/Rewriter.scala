@@ -456,7 +456,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  /*private def overwriteNativeMethods(cls: CtClass) = {
+  private def overwriteNativeMethods(cls: CtClass) = {
     /*def getArguments(sig: String): Seq[CtClass] = {
       // sig string like: (Ljava/lang/String;)V
       val ar = sig.substring(sig.indexOf("(") + 1, sig.indexOf(")"))
@@ -490,7 +490,7 @@ private[rt] class Rewriter (private val manager : Manager) {
          """
       cls.addMethod(CtMethod.make(mth_code, cls))
     })
-  }*/
+  }
 
 
   def createCtClass(classname: String): CtClass = {

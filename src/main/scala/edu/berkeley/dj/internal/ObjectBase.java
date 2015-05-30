@@ -1,5 +1,7 @@
 package edu.berkeley.dj.internal;
 
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object2;
+
 /**
  * Created by matthewfl
  *
@@ -48,18 +50,18 @@ public class ObjectBase implements edu.berkeley.dj.internal.coreclazz.java.lang.
         return super.hashCode();
     }
 
-    public boolean equals(java.lang.Object obj) {
+    public boolean equals(Object obj) {
         // this _should_ be ok, as if we are comparing the proxy
         // objects then it will come out to be the same proxied object
         // on a given machine
         try {
-            return this.equals((System.Object) obj);
+            return this.equals((Object2)obj);
         } catch (ClassCastException e) {
             return false;
         }
     }
 
-    public boolean equals(System.Object obj) {
+    public boolean equals(Object2 obj) {
         return this == obj;
     }
 
