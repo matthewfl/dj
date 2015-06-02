@@ -1,9 +1,9 @@
 package edu.berkeley.dj.internal;
 
 /**
- * Created by matthew on 3/6/15.
+ * Created by matthewfl
  */
-public class InterfaceException extends Exception {
+public class InterfaceException extends Error /*Exception*/ {
 
     InterfaceException(String method) {
         this.method = method;

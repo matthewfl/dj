@@ -39,6 +39,7 @@ package edu.berkeley.dj.internal.coreclazz.sun.misc;
 import java.security.*;
 import java.lang.reflect.*;
 
+import edu.berkeley.dj.internal.InterfaceException;
 import edu.berkeley.dj.internal.InternalInterface;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import sun.reflect.CallerSensitive;
@@ -62,15 +63,28 @@ public final class Unsafe2 {
         sun.reflect.Reflection.registerMethodsToFilter(Unsafe.class, "getUnsafe");
     }*/
 
-    private static final sun.misc.Unsafe trueUnsafe = null;
-
+    private final sun.misc.Unsafe trueUnsafe;// = InternalInterface.getInternalInterface().getUnsafe();
+/*
     static {
         // TODO: fix trueUnsafe, and other TODO about it being commented out
+        sun.misc.Unsafe u = null;
+        try {
+            u = InternalInterface.getInternalInterface().getUnsafe();
+        } catch(InterfaceException e) {
+            System.err.println("failed to load unsafe");
+            //throw new RuntimeException("Unsafe failed to load");
+            throw e;
+        }
+        trueUnsafe = u;
 
-        trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
     }
 
     private Unsafe2() {}
+*/
+
+    private Unsafe2() {
+        trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
+    }
 
     private static final Unsafe2 theUnsafe = new Unsafe2();
 

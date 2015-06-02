@@ -39,9 +39,7 @@ public class InternalInterface {
 
     public void currentThreadSleep(long millis) {}
 
-    public sun.misc.Unsafe getUnsafe() {
-
-    }
+    public Unsafe getUnsafe() throws InterfaceException { return null; }
 
 }
 
@@ -82,6 +80,11 @@ class InternalInterfaceWrap extends  InternalInterface {
 
     public String getUUID() throws InterfaceException {
         return (String) invoke("getUUID", new Class[]{});
+    }
+
+
+    public Unsafe getUnsafe() throws InterfaceException {
+        return (Unsafe) invoke("getUnsafe", new Class[]{});
     }
 
     public String toString() {

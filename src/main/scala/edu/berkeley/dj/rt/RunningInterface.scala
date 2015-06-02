@@ -12,7 +12,7 @@ class RunningInterface (private val config : Config) {
 
   def getUUID = config.uuid
 
-  def getUnsafe() =
+  def getUnsafe() = Unsafe.theUnsafe
 
   def setCallIn(obj : Object) = {
     if(obj.getClass.getName != "edu.berkeley.dj.internal.InternalInterfaceWrap") {
