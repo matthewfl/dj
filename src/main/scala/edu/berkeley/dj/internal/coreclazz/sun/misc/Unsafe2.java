@@ -39,6 +39,7 @@ package edu.berkeley.dj.internal.coreclazz.sun.misc;
 import java.security.*;
 import java.lang.reflect.*;
 
+import edu.berkeley.dj.internal.InternalInterface;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import sun.reflect.CallerSensitive;
 
@@ -53,7 +54,7 @@ import sun.reflect.CallerSensitive;
  */
 
 @RewriteAllBut(nonModClasses = {"sun/misc/Unsafe"})
-public final class Unsafe {
+public final class Unsafe2 {
 
     /*private static native void registerNatives();
     static {
@@ -65,11 +66,13 @@ public final class Unsafe {
 
     static {
         // TODO: fix trueUnsafe, and other TODO about it being commented out
+
+        trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
     }
 
-    private Unsafe() {}
+    private Unsafe2() {}
 
-    private static final Unsafe theUnsafe = new Unsafe();
+    private static final Unsafe2 theUnsafe = new Unsafe2();
 
     /**
      * Provides the caller with the capability of performing unsafe
@@ -102,7 +105,7 @@ public final class Unsafe {
      *             access to the system properties.
      */
     @CallerSensitive
-    public static Unsafe getUnsafe() {
+    public static Unsafe2 getUnsafe() {
         // TODO: should check that this matches to some system class
         /*Class<?> caller = Reflection.getCallerClass();
         if (!VM.isSystemDomainLoader(caller.getClassLoader()))

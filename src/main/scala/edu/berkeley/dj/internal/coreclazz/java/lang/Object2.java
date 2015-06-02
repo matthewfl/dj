@@ -1,7 +1,9 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.ClassManager;
+import edu.berkeley.dj.internal.RewriteAllBut;
 import edu.berkeley.dj.internal.SeralizeManager;
+import edu.berkeley.dj.internal.SetSuperclass;
 
 /**
  * Created by matthewfl
@@ -9,7 +11,13 @@ import edu.berkeley.dj.internal.SeralizeManager;
  * This is here so that interfaces and methods that are not on
  * the object directly can "implement" this and
  * it will still be able to use changed methods
+ *
+ * This class will replace the java.lang.Object class, the 2 is append to the name of this class
+ * so that we can still reference original java.lang.Object when compiling, but the 2 suffix will
+ * be removed when the class is loaded.
  */
+//@RewriteAllBut(nonModClasses = {"java/lang/Object"})
+//@SetSuperclass(superclass = "java.lang.Object")
 public interface Object2 {
 
     int __dj_getClassMode();
@@ -26,7 +34,6 @@ public interface Object2 {
 
     void __dj_notifyAll();
 
-    // TODO: these exceptions are going to have to be rewritten
     void __dj_wait(long timeout) throws InterruptedException;
 
     void __dj_wait(long timeout, int nanos) throws InterruptedException;

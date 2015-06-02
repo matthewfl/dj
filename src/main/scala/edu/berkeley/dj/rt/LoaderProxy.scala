@@ -45,9 +45,13 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
 
 
   override protected def findClass(classname : String) : Class[_] = {
-    //val lbd = loadClassByDelegation(classname)
-    //if(lbd != null)
-    //  return lbd
+    // the java.* classes can not be rewritten by us, also they contain a special meaning between the
+    // jvm and the running program, so modification becomes an issue
+    val lbd = loadClassByDelegation(classname)
+    if(lbd != null)
+      return lbd
+
+
     println("loading class: "+classname)
     var clazz : Array[Byte] = null
     val cls = pool get classname

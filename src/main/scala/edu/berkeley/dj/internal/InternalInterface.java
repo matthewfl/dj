@@ -2,6 +2,8 @@ package edu.berkeley.dj.internal;
 
 //import edu.berkeley.dj.internal.Object;
 
+import sun.misc.Unsafe;
+
 import java.lang.reflect.InvocationTargetException;
 
 /**
@@ -36,6 +38,10 @@ public class InternalInterface {
     }*/
 
     public void currentThreadSleep(long millis) {}
+
+    public sun.misc.Unsafe getUnsafe() {
+
+    }
 
 }
 

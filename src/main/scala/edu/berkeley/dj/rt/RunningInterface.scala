@@ -12,6 +12,8 @@ class RunningInterface (private val config : Config) {
 
   def getUUID = config.uuid
 
+  def getUnsafe() =
+
   def setCallIn(obj : Object) = {
     if(obj.getClass.getName != "edu.berkeley.dj.internal.InternalInterfaceWrap") {
       throw new RuntimeException("must use internal interface for call in")

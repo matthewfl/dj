@@ -3,7 +3,7 @@ package edu.berkeley.dj.rt
 import javassist._
 import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 
-import edu.berkeley.dj.internal.RewriteAllBut
+import edu.berkeley.dj.internal.{SetSuperclass, RewriteAllBut}
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
 import edu.berkeley.dj.utils.Memo
@@ -324,10 +324,17 @@ private[rt] class Rewriter (private val manager : Manager) {
             // rewrite all but a few types using the annotation
             rewriteUsedClasses(cls, new JClassMap(manager, this, norerw.nonModClasses()))
           }
+          case sp: SetSuperclass => {
+            cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
+          }
           case _ => {} // nop
         }
       }
       clsa = clsa.getDeclaringClass
+    }
+    if(cls.isInterface) {
+      // WTF: the base of an interface always needs to be java.lang.Object, but somehow this is being overwritten
+      cls.getClassFile.setSuperclass("java.lang.Object")
     }
   }
 
