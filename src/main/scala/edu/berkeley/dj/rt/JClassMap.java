@@ -54,6 +54,8 @@ public class JClassMap extends ClassMap {
             "java/lang/Object",
 
             // any exception that may be thrown by the jvm directly should be in here
+            // we should not need to list these since we are looking up if the class is
+            // inherited from one of the exception classes
             "java/lang/Throwable",
             "java/lang/Exception",
             "java/lang/RuntimeException",
@@ -62,7 +64,8 @@ public class JClassMap extends ClassMap {
             "java/lang/Class",
             // These are here b/c lang/Class uses them,
             "java/lang/ClassLoader",
-            "java/lang/reflect/Field"
+            "java/lang/reflect/Field",
+            "java/lang/reflect/" // let all the reflect stuff through??
 
             // tmp here until fixed issue with native methods
             //"java/lang/System"
@@ -83,11 +86,13 @@ public class JClassMap extends ClassMap {
                     if(!rewriter.canRewriteClass(name))
                         return name;
                     for(String e : exemptedClasses) {
-                        if(e.equals(name))
+                        // have to have start with as this is the "raw" class name, with template params
+                        // eg: get stuff like "java/lang/Class<*>"
+                        if(name.startsWith(e))
                             return name;
                     }
                     for(String e : extraExeptedClasses) {
-                        if(e.equals(name))
+                        if(name.startsWith(e))
                             return name;
                     }
                     System.err.println("rewriting: "+name);

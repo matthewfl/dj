@@ -41,6 +41,14 @@ public class InternalInterface {
 
     public Unsafe getUnsafe() throws InterfaceException { return null; }
 
+    public void simplePrint(String p) {
+        System.out.println(p);
+    }
+
+    public String classRenamed(String name) {
+        return null;
+    }
+
 }
 
 class InternalInterfaceWrap extends  InternalInterface {
@@ -83,8 +91,14 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
 
+    @Override
     public Unsafe getUnsafe() throws InterfaceException {
         return (Unsafe) invoke("getUnsafe", new Class[]{});
+    }
+
+    @Override
+    public String classRenamed(String name) throws InterfaceException {
+        return (String) invoke("classRenamed", new Class[]{String.class}, name);
     }
 
     public String toString() {

@@ -39,6 +39,7 @@ package edu.berkeley.dj.internal.coreclazz.sun.misc;
 import java.security.*;
 import java.lang.reflect.*;
 
+import edu.berkeley.dj.internal.BridgeGetNative;
 import edu.berkeley.dj.internal.InterfaceException;
 import edu.berkeley.dj.internal.InternalInterface;
 import edu.berkeley.dj.internal.RewriteAllBut;
@@ -55,13 +56,17 @@ import sun.reflect.CallerSensitive;
  */
 
 @RewriteAllBut(nonModClasses = {"sun/misc/Unsafe"})
-public final class Unsafe2 {
+public final class Unsafe2 implements BridgeGetNative {
 
     /*private static native void registerNatives();
     static {
         registerNatives();
         sun.reflect.Reflection.registerMethodsToFilter(Unsafe.class, "getUnsafe");
     }*/
+
+    public Object __dj_toNative() { return trueUnsafe; }
+
+    public static Object __dj_fromNative(Object o) { return theUnsafe; }
 
     private final sun.misc.Unsafe trueUnsafe;// = InternalInterface.getInternalInterface().getUnsafe();
 /*
@@ -785,9 +790,7 @@ public final class Unsafe2 {
      * @see #getInt(Object, long)
      */
     public long objectFieldOffset(Field f) {
-        return 0L;
-        // TODO: mfl
-        //return trueUnsafe.objectFieldOffset(f);
+        return trueUnsafe.objectFieldOffset(f);
     }
 
     /**
@@ -834,10 +837,7 @@ public final class Unsafe2 {
      * @see #putInt(Object, long, int)
      */
     public int arrayBaseOffset(Class<?> arrayClass) {
-        return 0;
-
-        // TODO: mfl
-        //return trueUnsafe.arrayBaseOffset(arrayClass);
+        return trueUnsafe.arrayBaseOffset(arrayClass);
     }
 
     /** The value of {@code arrayBaseOffset(boolean[].class)} */
@@ -888,9 +888,7 @@ public final class Unsafe2 {
      * @see #putInt(Object, long, int)
      */
     public int arrayIndexScale(Class<?> arrayClass) {
-        return 0;
-        // TODO: mfl
-        //return  trueUnsafe.arrayIndexScale(arrayClass);
+        return  trueUnsafe.arrayIndexScale(arrayClass);
     }
 
     /** The value of {@code arrayIndexScale(boolean[].class)} */
@@ -936,9 +934,7 @@ public final class Unsafe2 {
      * fully by their information content.
      */
     public int addressSize() {
-        return 4;
-        // TODO: mfl
-        //return trueUnsafe.addressSize();
+        return trueUnsafe.addressSize();
     }
 
     /** The value of {@code addressSize()} */

@@ -3,7 +3,7 @@ package edu.berkeley.dj.rt
 /**
  * Created by matthewfl
  */
-class RunningInterface (private val config : Config) {
+class RunningInterface (private val config : Config, private val manager: Manager) {
 
   private var callIn : Object = null
   private var callInCls : java.lang.Class[_] = null
@@ -13,6 +13,14 @@ class RunningInterface (private val config : Config) {
   def getUUID = config.uuid
 
   def getUnsafe() = Unsafe.theUnsafe
+
+  def classRenamed(name: String) = {
+    val s = manager.rewriter.jclassmap.get(name.replace(".","/")).asInstanceOf[String]
+    if(s != null)
+      s.replace("/",".")
+    else
+      null
+  }
 
   def setCallIn(obj : Object) = {
     if(obj.getClass.getName != "edu.berkeley.dj.internal.InternalInterfaceWrap") {

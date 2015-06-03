@@ -8,6 +8,10 @@ import edu.berkeley.dj.internal.coreclazz.java.lang.Object2;
  * This becomes super class of the new "base class" that will represent objects
  * it will have to override methods such as lock or wait to make them work in a distribuited fashion
  */
+@RewriteClassRef(
+        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object2",
+        newName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object"
+)
 public class ObjectBase implements Object2 {
 
     public int __dj_class_mode = 0;

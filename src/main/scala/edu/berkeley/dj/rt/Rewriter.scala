@@ -3,7 +3,7 @@ package edu.berkeley.dj.rt
 import javassist._
 import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 
-import edu.berkeley.dj.internal.{SetSuperclass, RewriteAllBut}
+import edu.berkeley.dj.internal.{RewriteClassRef, SetSuperclass, RewriteAllBut}
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
 import edu.berkeley.dj.utils.Memo
@@ -81,7 +81,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  private lazy val jclassmap = new JClassMap(manager, this, Array[String]())
+  lazy val jclassmap = new JClassMap(manager, this, Array[String]())
 
 
 
@@ -316,6 +316,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     // the internal classes have special annotations on them to control how they are rwriten
     var clsa = cls
     // if the class is internal to something, we still want the annotations for the file to be "active"
+
     while(clsa != null) {
       val anns = clsa.getAnnotations
       for (ann <- anns) {
@@ -324,7 +325,12 @@ private[rt] class Rewriter (private val manager : Manager) {
             // rewrite all but a few types using the annotation
             rewriteUsedClasses(cls, new JClassMap(manager, this, norerw.nonModClasses()))
           }
+          case nrw: RewriteClassRef => {
+            // replace a single class name
+            cls.replaceClassName(nrw.oldName(), nrw.newName())
+          }
           case sp: SetSuperclass => {
+            // force the super class to be something else
             cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
           }
           case _ => {} // nop
@@ -332,6 +338,16 @@ private[rt] class Rewriter (private val manager : Manager) {
       }
       clsa = clsa.getDeclaringClass
     }
+
+
+    // TODO: maybe replace fields and method declerations
+    // that may become complicated if this would have static inits and methods calls
+    /*for(mth <- cls.getDeclaredMethods) {
+
+    }*/
+
+    //rewriteUsedClasses(cls, new JClassMap(manager, this, nonrwcls.toArray))
+
     if(cls.isInterface) {
       // WTF: the base of an interface always needs to be java.lang.Object, but somehow this is being overwritten
       cls.getClassFile.setSuperclass("java.lang.Object")
@@ -521,7 +537,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     val cls: CtClass = try {
       basePool get classname
     } catch {
-      case e : NotFoundException => {
+      case e: NotFoundException => {
         try {
           if(classname.startsWith(config.coreprefix)) {
             val c = basePool get (classname + "2")
@@ -535,6 +551,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
     println("create class name:" + classname)
 
+    // for edu.berkeley.dj.internal.coreclazz.
     if (classname.startsWith(config.coreprefix)) {
       if (cls != null) {
         reassociateClass(cls)
@@ -572,6 +589,8 @@ private[rt] class Rewriter (private val manager : Manager) {
 
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
       modifyClass(cls)
+    } else if (classname.startsWith(config.internalPrefix)) {
+      modifyInternalClass(cls)
     }
     cls
   }

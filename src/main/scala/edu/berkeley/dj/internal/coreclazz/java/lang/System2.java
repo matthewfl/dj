@@ -79,9 +79,16 @@ public class System2 {
 
     public static void setProperties(Properties props) { }
 
-    public static String getProperty(String key) { return null; }
+    public static String getProperty(String key) {
+        // TODO: make this get teh value from the "master machine"
+        return System.getProperty(key);
 
-    public static String getProperty(String key, String def) { return null; }
+        //return null;
+    }
+
+    public static String getProperty(String key, String def) {
+        return System.getProperty(key, def);
+    }
 
     public static String setProperty(String key, String value) { return null; }
 
