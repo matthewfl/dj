@@ -35,7 +35,7 @@ private[rt] class Manager (val config: Config, classpaths: String) {
       //CtClass.debugDump = config.debug_clazz_bytecode
       MethodInfo.doPreverify = true
     }
-    val cls = loader.loadClass("edu.berkeley.dj.internal.PreMain")
+    val cls = loader.loadClass("edu.berkeley.dj.internal.PreMaoin")
     val ri = new RunningInterface(config, this)
     // HACK: some complication with using getDeclaredMethod from scala
     val premain = cls.getDeclaredMethods.filter(_.getName == "premain")(0)

@@ -1,11 +1,5 @@
 package testcase;
 
-import edu.berkeley.dj.internal.ConvertBridge;
-import edu.berkeley.dj.internal.InternalInterface;
-import sun.misc.Unsafe;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Created by matthewfl
  */
@@ -14,7 +8,7 @@ public class SimpleConvertBridge {
     public static void main(String[] args) {
         // test if we can convert back and forth between two different classes
 
-        Object o = ConvertBridge.getConverter().makeNative(new int[5]);
+        /*Object o = ConvertBridge.getConverter().makeNative(new int[5]);
 
         Unsafe u = Unsafe.getUnsafe();
 
@@ -35,6 +29,17 @@ public class SimpleConvertBridge {
         assert(u != null);
 
         //System.out.println("system print");
+*/
+
+        /*
+        ArrayList<Integer> ii = new ArrayList<>();
+
+        Object oi = ConvertBridge.getConverter().makeNative(ii);
+
+        assert(oi.getClass().getName().equals("java.util.ArrayList"));
+*/
+
+        System.out.println("test");
 
     }
 }

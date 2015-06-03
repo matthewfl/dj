@@ -3,7 +3,7 @@ package edu.berkeley.dj.rt
 import javassist._
 import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 
-import edu.berkeley.dj.internal.{RewriteClassRef, SetSuperclass, RewriteAllBut}
+import edu.berkeley.dj.internal.{RewriteClassRefCls, RewriteClassRef, SetSuperclass, RewriteAllBut}
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
 import edu.berkeley.dj.utils.Memo
@@ -329,6 +329,9 @@ private[rt] class Rewriter (private val manager : Manager) {
             // replace a single class name
             cls.replaceClassName(nrw.oldName(), nrw.newName())
           }
+          case nrw: RewriteClassRefCls => {
+            cls.replaceClassName(nrw.oldCls().getName, nrw.newName());
+          }
           case sp: SetSuperclass => {
             // force the super class to be something else
             cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
@@ -508,6 +511,7 @@ private[rt] class Rewriter (private val manager : Manager) {
 
       val mth_code = s"""
            ${getAccessControl(m.getModifiers)} ${static} ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
+             edu.berkeley.dj.internal.InternalInterface.getInternalInterface().simplePrint("\t\tcall native: ${cls.getName} ${m.getName}");
              ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
            }
          """
