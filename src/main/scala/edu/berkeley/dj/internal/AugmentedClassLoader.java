@@ -10,19 +10,21 @@ public class AugmentedClassLoader {
 
     private AugmentedClassLoader() {}
 
-    static Class<?> forName(String classname) throws ClassNotFoundException {
+    // On java.lang.Class
+    public static Class<?> forName(String classname) throws ClassNotFoundException {
         Class<?> ret = Class.forName(classname);
         return ret;
     }
 
-    static Class<?> forName(String classname, boolean initialize, ClassLoader loader) throws ClassNotFoundException {
+    public static Class<?> forName(String classname, boolean initialize, ClassLoader loader) throws ClassNotFoundException {
         Class<?> ret = Class.forName(classname, initialize, loader);
         return ret;
     }
 
-    static Class<?> loadClass(Object o, String name) throws ClassNotFoundException {
-        if(o instanceof ClassLoader) {
-            Class<?> ret = ((ClassLoader)o).loadClass(name);
+    // on java.lang.ClassLoader
+    public static Class<?> loadClass(Object self, String name) throws ClassNotFoundException {
+        if(self instanceof ClassLoader) {
+            Class<?> ret = ((ClassLoader)self).loadClass(name);
             return ret;
         }
         return null;

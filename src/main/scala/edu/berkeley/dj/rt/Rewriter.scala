@@ -44,12 +44,14 @@ private[rt] class Rewriter (private val manager : Manager) {
     // TODO: add the method signatures onto these items
     // and don't use
     // TODO: the maps for when they have argument types
-    ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.coreprefix}java.lang.Object"),
-    ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.coreprefix}java.lang.Object"),
-    ("wait", "()v", "java.lang.Object") -> ("__dj_wait", s"${config.coreprefix}java.lang.Object"),
+    ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.internalPrefix}ObjectHelpers"),
+    ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.internalPrefix}ObjectHelpers"),
+    ("wait", "()V", "java.lang.Object") -> ("__dj_wait", s"${config.internalPrefix}ObjectHelpers"),
 
-    ("forName", "(Ljava/lang/String)Ljava/lang/Class", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader")
-
+    // for rewriting the class loader
+    ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;)", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader")
   )
 
   // if these methods are anywhere

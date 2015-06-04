@@ -50,12 +50,16 @@ class FunctionCalls (next : Transformer, val rewriteMethods: Map[(String,String,
         case Some((newName, newClass)) => {
           // need to replace this method call with the new name
           // TODO: this needs to reference the new class & check type interfaces
-          var newId = cp.findMember(newName, typeSig, newClass)
+          val ntypeSig = if(c != INVOKESTATIC) {
+            typeSig.replace("(", "(Ljava/lang/Object;")
+          } else typeSig
+          var newId = cp.findMember(newName, ntypeSig, newClass)
           if(newId == -1) {
             // need to add the new function call to the const pool
-            // TODO: use the int index so that it does not create a new copy of the type sig
-            val nref = cp.addNameAndTypeInfo(newName, typeSig)
+            val nref = cp.addNameAndTypeInfo(newName, ntypeSig)
             val clsref = cp.addClassInfo(newClass)
+            newId = cp.addMethodrefInfo(clsref, nref)
+            /*
             if(c == INVOKEINTERFACE) {
               newId = cp.addInterfaceMethodrefInfo(clsref, nref)
             } else {
@@ -64,7 +68,9 @@ class FunctionCalls (next : Transformer, val rewriteMethods: Map[(String,String,
               }*/
               newId = cp.addMethodrefInfo(clsref, nref)
             }
+            */
           }
+          it.writeByte(INVOKESTATIC, pos)
           it.write16bit(newId, pos + 1)
           //println(newName)
         }
