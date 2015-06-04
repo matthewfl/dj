@@ -33,9 +33,9 @@ private[rt] class Rewriter (private val manager : Manager) {
   // these classes are noted as not being movable
   // this should contain items such as socket classes
   // and filesystem as we don't want to break network connections
-  val NonMovableClasses = Set(
+  /*val NonMovableClasses = Set(
     "java.lang.Object"
-  )
+  )*/
 
   // if these methods are called from
   // anywhere in a program
@@ -46,7 +46,9 @@ private[rt] class Rewriter (private val manager : Manager) {
     // TODO: the maps for when they have argument types
     ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.coreprefix}java.lang.Object"),
     ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.coreprefix}java.lang.Object"),
-    ("wait", "()v", "java.lang.Object") -> ("__dj_wait", s"${config.coreprefix}java.lang.Object")
+    ("wait", "()v", "java.lang.Object") -> ("__dj_wait", s"${config.coreprefix}java.lang.Object"),
+
+    ("forName", "(Ljava/lang/String)Ljava/lang/Class", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader")
 
   )
 
@@ -57,9 +59,9 @@ private[rt] class Rewriter (private val manager : Manager) {
 
   //val replacedClasses = Map()
 
-  private def isClassMovable(cls: CtClass) = {
+  /*private def isClassMovable(cls: CtClass) = {
     !NonMovableClasses.contains(cls.getName)
-  }
+  }*/
 
   private def getUsuableName(typ: CtClass): String = {
     if (typ.isArray) {
@@ -84,12 +86,19 @@ private[rt] class Rewriter (private val manager : Manager) {
   lazy val jclassmap = new JClassMap(manager, this, Array[String]())
 
   private[rt] def forceClassRename(classdesc: String): String = {
-    val cls = Descriptor.toCtClass(classdesc, basePool)
-    val an = cls.getAnnotation(classOf[ReplaceSelfWithCls])
-    if(an != null) {
-      "test"
-    } else
-      null
+    try {
+      val cls = Descriptor.toCtClass(classdesc, basePool)
+      val an = cls.getAnnotation(classOf[ReplaceSelfWithCls]).asInstanceOf[ReplaceSelfWithCls]
+      if (an != null) {
+        if(!an.name().isEmpty)
+          return an.name().replace('.','/')
+        else
+          return an.cls().getName.replace('.','/')
+      } else
+        null
+    } catch {
+      case e: NotFoundException => null
+    }
   }
 
 
@@ -167,7 +176,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       else
         Map[String, CtMethod]()
     }).reduce(_ ++ _)))*/
-    //codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
+    codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
 
     //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
 

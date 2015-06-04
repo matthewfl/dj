@@ -75,13 +75,21 @@ public class JClassMap extends ClassMap {
     public Object get(Object jvn) {
         try {
             String name = (String) jvn;
-            // remove the two suffix from the internal class names
+            int gensuf = name.indexOf("<");
+            String suffix = "";
+            String nonTname = name;
+            if(gensuf != -1) {
+                suffix = name.substring(gensuf);
+                nonTname = name.substring(0, gensuf);
+            }
             if(name.startsWith(prefix)) {
-                if (name.endsWith("2")) {
-                    return name.substring(0, name.length() - 1);
+                // remove the two suffix from the internal class names
+                if (nonTname.endsWith("2")) {
+                    return nonTname.substring(0, name.length() - 1) + suffix;
                 }
-                String nn = rewriter.forceClassRename(name);
-                if(nn != null) return nn;
+                String nn = rewriter.forceClassRename(nonTname);
+                if(nn != null)
+                    return nn + suffix;
             }
             for (String n : rewritePrefixes) {
                 if(name.startsWith(n)) {

@@ -21,3 +21,4 @@ assemblySettings
 mainClass in (Compile,run) := Some("edu.berkeley.dj.rt.Main")
 
 mainClass in assembly := Some("edu.berkeley.dj.rt.Main")
+

@@ -277,14 +277,15 @@ import java.security.*;
 // that will represent the renamed dj classes
 @ReplaceSelfWithCls(
         name = "edu.berkeley.dj.internal.coreclazz.java.security.PrivilegedAction"
-//        cls = java.security.PrivilegedAction.class
 )
 interface DJPrivilegedAction<T> {
     T run();
 }
 
-@RewriteAllBut(nonModClasses = {"java/security/AccessController"})
-//@RewriteClassRefCls(oldCls = DJPrivilegedAction.class, newName = "")
+@RewriteAllBut(nonModClasses = {
+        "java/security/AccessController",
+        "java/security/PrivilegedAction"
+})
 public final class AccessController2 {
 
     /**
