@@ -277,6 +277,8 @@ Error message and password prompt
 
 <li>Basic usage</li>
 
+<li>Directions for DJ</li>
+
 <li>Documentation</li>
 
 <li>Function call redirector</li>
@@ -5960,7 +5962,7 @@ Error message and password prompt
 <div modified="20150503222258295" modifier="matthewfl" title="$:/state/add-plugin-info/$:/temp/ServerConnection/http://tiddlywiki.com/library/v5.1.8/index.html/$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/themes/tiddlywiki/snowwhite">
 <pre>no</pre>
 </div>
-<div modified="20150602171647967" modifier="matthewfl" title="$:/state/showeditpreview">
+<div modified="20150604005527006" modifier="matthewfl" title="$:/state/showeditpreview">
 <pre>yes</pre>
 </div>
 <div modified="20150602172658013" modifier="matthewfl" title="$:/state/sidebar">
@@ -5984,8 +5986,8 @@ Error message and password prompt
 <div modified="20150521214429559" modifier="matthewfl" title="$:/state/tab/moresidebar-401116514">
 <pre>$:/core/ui/MoreSideBar/Orphans</pre>
 </div>
-<div modified="20150602172701213" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
-<pre>$:/core/ui/SideBar/Tools</pre>
+<div modified="20150603002805904" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
+<pre>$:/core/ui/SideBar/Recent</pre>
 </div>
 <div modified="20150522084850108" modifier="matthewfl" title="$:/state/tabs/controlpanel/toolbars-1345989671">
 <pre>$:/core/ui/ControlPanel/Toolbars/PageControls</pre>
@@ -5993,7 +5995,7 @@ Error message and password prompt
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="Documentation" title="$:/StoryList">
+<div list="[[Directions for DJ]] [[Previous work]] Documentation" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6361,6 +6363,36 @@ sbt assembly
 
 java -jar target/scala-2.11/dj-assembly-0.0.1.jar -fjar target/scala-2.11/dj-assembly-0.0.1.jar -maincls testcase.simpleMain -debug_clazz_bytecode /tmp
 ```</pre>
+</div>
+<div created="20150603232307858" creator="matthewfl" modified="20150604032133341" modifier="matthewfl" tags="" title="Directions for DJ">
+<pre>The core of DJ is about taking a program and breaking it up automatically and intelligently.  Naturally it could apply to monolithic systems or big data platforms, however it may also be converted to work with micro-services in combining them to run on the same host as long as it is not overloaded.
+
+
+
+* Making a large java program work across a number of distributed machines
+** This would be similar to targeting systems such as spark or distributed programming like upc
+** There may exist programs that are designed for a single host that need to scale larger
+** cases where scaling a program to multiple hosts may depend on the data being processed and thus make it complicated to create a static partition of a program
+** Question: Is there a case where a typical production level application can not fit onto a single machine
+** There may be a place in making it easy for ppl with existing monolithic applications to convert it into micro services
+*** this would not really require the ideals of dynamically splitting programs, instead mostly just some clever redeployment mechanism.   
+
+
+* Combining micro-services to avoid serialization
+** Often micro-services are communicating over some socket protocol like http
+** Reasons that micro-services currently exists: [[link|http://microservices.io/patterns/microservices.html]]
+*** smaller code base makes it easier for a developer to get started
+*** fault tolerance, idea that a single service can fail without the whole application failing
+**** however, if there are multiple parts that must always be running, this may not make since
+**** client needs to handle service outage [[link|https://spring.io/blog/2015/01/20/microservice-registration-and-discovery-with-spring-cloud-and-netflix-s-eureka]]
+*** Allow for deploying a small part of the application
+*** testable [[link|https://spring.io/blog/2015/01/20/microservice-registration-and-discovery-with-spring-cloud-and-netflix-s-eureka]]: smaller components with encourage testing, so no need to use a bunch of java patterns to organize a large project
+*** Scaliablity of a small component of a larger platform [[link|http://eugenedvorkin.com/seven-micro-services-architecture-advantages/]]
+*** different tech stacks for each component
+** __issue__: Currently can't find anything about ppl looking at the efficiency of these platforms.  Mostly they are interested in scaling with more machines.
+
+* making services scalable
+** the system need not be fast as long as it can keep being scaled.</pre>
 </div>
 <div created="20150503220345237" creator="matthewfl" modified="20150521214412886" modifier="matthewfl" tags="Documentation" title="Documentation">
 <pre>* [[Basic usage]]

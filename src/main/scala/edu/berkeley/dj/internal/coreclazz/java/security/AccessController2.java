@@ -30,12 +30,12 @@ package edu.berkeley.dj.internal.coreclazz.java.security;
  * questions.
  */
 
+import edu.berkeley.dj.internal.ReplaceSelfWithCls;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import edu.berkeley.dj.internal.RewriteClassRefCls;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-import sun.security.util.Debug;
 
 import java.security.*;
 
@@ -272,12 +272,19 @@ import java.security.*;
  * @author Roland Schemers
  */
 
+
+// These interfaces will be replaced with instances of other classes
+// that will represent the renamed dj classes
+@ReplaceSelfWithCls(
+        name = "edu.berkeley.dj.internal.coreclazz.java.security.PrivilegedAction"
+//        cls = java.security.PrivilegedAction.class
+)
 interface DJPrivilegedAction<T> {
     T run();
 }
 
 @RewriteAllBut(nonModClasses = {"java/security/AccessController"})
-@RewriteClassRefCls(oldCls = DJPrivilegedAction.class, newName = "edu.berkeley.dj.internal.coreclazz.java.security.PrivilegedAction")
+//@RewriteClassRefCls(oldCls = DJPrivilegedAction.class, newName = "")
 public final class AccessController2 {
 
     /**

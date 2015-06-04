@@ -1,9 +1,10 @@
 package edu.berkeley.dj.rt
 
+import java.lang.reflect.UndeclaredThrowableException
 import javassist._
 import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 
-import edu.berkeley.dj.internal.{RewriteClassRefCls, RewriteClassRef, SetSuperclass, RewriteAllBut}
+import edu.berkeley.dj.internal._
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
 import edu.berkeley.dj.utils.Memo
@@ -54,8 +55,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     "finalize" -> "__dj_client_finalize"
   )
 
-  val replacedClasses = Map(
-  )
+  //val replacedClasses = Map()
 
   private def isClassMovable(cls: CtClass) = {
     !NonMovableClasses.contains(cls.getName)
@@ -82,6 +82,15 @@ private[rt] class Rewriter (private val manager : Manager) {
   }
 
   lazy val jclassmap = new JClassMap(manager, this, Array[String]())
+
+  private[rt] def forceClassRename(classdesc: String): String = {
+    val cls = Descriptor.toCtClass(classdesc, basePool)
+    val an = cls.getAnnotation(classOf[ReplaceSelfWithCls])
+    if(an != null) {
+      "test"
+    } else
+      null
+  }
 
 
 
@@ -330,7 +339,14 @@ private[rt] class Rewriter (private val manager : Manager) {
             cls.replaceClassName(nrw.oldName(), nrw.newName())
           }
           case nrw: RewriteClassRefCls => {
-            cls.replaceClassName(nrw.oldCls().getName, nrw.newName());
+            try {
+              cls.replaceClassName(nrw.oldCls().getName, nrw.newName());
+            } catch {
+              case e: UndeclaredThrowableException => {
+                println(e.getCause)
+                throw e.getCause()
+              }
+            }
           }
           case sp: SetSuperclass => {
             // force the super class to be something else
