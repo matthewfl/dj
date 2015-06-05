@@ -12,9 +12,9 @@ import java.util.Properties;
  * Created by matthewfl
  */
 @RewriteAllBut(nonModClasses = {"java/lang/System", "java/lang/Object"})
-public class System2 {
+public class System00 {
 
-    private System2() {}
+    private System00() {}
 
     public final static PrintStream out = new PrintStream(new OutputStream(){
         public void write(int b) throws IOException {

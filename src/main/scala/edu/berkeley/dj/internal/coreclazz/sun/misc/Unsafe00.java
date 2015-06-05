@@ -40,7 +40,6 @@ import java.security.*;
 import java.lang.reflect.*;
 
 import edu.berkeley.dj.internal.BridgeGetNative;
-import edu.berkeley.dj.internal.InterfaceException;
 import edu.berkeley.dj.internal.InternalInterface;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import sun.reflect.CallerSensitive;
@@ -56,7 +55,7 @@ import sun.reflect.CallerSensitive;
  */
 
 @RewriteAllBut(nonModClasses = {"sun/misc/Unsafe"})
-public final class Unsafe2 implements BridgeGetNative {
+public final class Unsafe00 implements BridgeGetNative {
 
     /*private static native void registerNatives();
     static {
@@ -87,11 +86,11 @@ public final class Unsafe2 implements BridgeGetNative {
     private Unsafe2() {}
 */
 
-    private Unsafe2() {
+    private Unsafe00() {
         trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
     }
 
-    private static final Unsafe2 theUnsafe = new Unsafe2();
+    private static final Unsafe00 theUnsafe = new Unsafe00();
 
     /**
      * Provides the caller with the capability of performing unsafe
@@ -124,7 +123,7 @@ public final class Unsafe2 implements BridgeGetNative {
      *             access to the system properties.
      */
     @CallerSensitive
-    public static Unsafe2 getUnsafe() {
+    public static Unsafe00 getUnsafe() {
         // TODO: should check that this matches to some system class
         /*Class<?> caller = Reflection.getCallerClass();
         if (!VM.isSystemDomainLoader(caller.getClassLoader()))

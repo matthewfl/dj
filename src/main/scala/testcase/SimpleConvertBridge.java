@@ -39,7 +39,7 @@ public class SimpleConvertBridge {
         assert(oi.getClass().getName().equals("java.util.ArrayList"));
 */
 
-        System.out.println("test");
+        System.out.println("-----------------------------------------------------------------------test------------------------------------------------");
 
     }
 }

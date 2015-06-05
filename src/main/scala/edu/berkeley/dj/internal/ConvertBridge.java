@@ -1,6 +1,6 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe2;
+import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.lang.reflect.*;
@@ -19,7 +19,7 @@ public class ConvertBridge {
 
     public static ConvertBridge getConverter() { return converter; }
 
-    private final Unsafe2 unsafe = Unsafe2.getUnsafe();
+    private final Unsafe00 unsafe = Unsafe00.getUnsafe();
 
     private ConvertBridge() {}
 

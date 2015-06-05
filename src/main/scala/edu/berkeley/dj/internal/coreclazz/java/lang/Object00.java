@@ -1,9 +1,7 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.ClassManager;
-import edu.berkeley.dj.internal.RewriteAllBut;
 import edu.berkeley.dj.internal.SeralizeManager;
-import edu.berkeley.dj.internal.SetSuperclass;
 
 /**
  * Created by matthewfl
@@ -18,7 +16,7 @@ import edu.berkeley.dj.internal.SetSuperclass;
  */
 //@RewriteAllBut(nonModClasses = {"java/lang/Object"})
 //@SetSuperclass(superclass = "java.lang.Object")
-public interface Object2 {
+public interface Object00 {
 
     int __dj_getClassMode();
 
@@ -28,7 +26,7 @@ public interface Object2 {
 
     boolean equals(Object obj);
 
-    boolean equals(Object2 obj);
+    boolean equals(Object00 obj);
 
     void __dj_notify();
 

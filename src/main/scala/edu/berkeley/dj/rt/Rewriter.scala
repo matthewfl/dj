@@ -50,7 +50,7 @@ private[rt] class Rewriter (private val manager : Manager) {
 
     // for rewriting the class loader
     ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
-    ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;)", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader")
   )
 
@@ -571,7 +571,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       case e: NotFoundException => {
         try {
           if(classname.startsWith(config.coreprefix)) {
-            val c = basePool get (classname + "2")
+            val c = basePool get (classname + "00")
             c.setName(classname)
             c
           } else null

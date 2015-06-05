@@ -1,6 +1,6 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Object2;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
 
 /**
  * Created by matthewfl
@@ -12,7 +12,7 @@ import edu.berkeley.dj.internal.coreclazz.java.lang.Object2;
         oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object2",
         newName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object"
 )
-public class ObjectBase implements Object2 {
+public class ObjectBase implements Object00 {
 
     public int __dj_class_mode = 0;
 
@@ -58,13 +58,13 @@ public class ObjectBase implements Object2 {
         // objects then it will come out to be the same proxied object
         // on a given machine
         try {
-            return this.equals((Object2)obj);
+            return this.equals((Object00)obj);
         } catch (ClassCastException e) {
             return false;
         }
     }
 
-    public boolean equals(Object2 obj) {
+    public boolean equals(Object00 obj) {
         return this == obj;
     }
 

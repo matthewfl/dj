@@ -84,8 +84,8 @@ public class JClassMap extends ClassMap {
             }
             if(name.startsWith(prefix)) {
                 // remove the two suffix from the internal class names
-                if (nonTname.endsWith("2")) {
-                    return nonTname.substring(0, name.length() - 1) + suffix;
+                if (nonTname.endsWith("00")) {
+                    return nonTname.substring(0, nonTname.length() - 2) + suffix;
                 }
                 String nn = rewriter.forceClassRename(nonTname);
                 if(nn != null)
@@ -107,8 +107,13 @@ public class JClassMap extends ClassMap {
                         if(name.startsWith(e))
                             return name;
                     }
-                    System.err.println("rewriting: "+name);
-                    return prefix + name;
+                    //System.err.println("rewriting: "+name);
+                    String ret = prefix + name;
+                    String nn = rewriter.forceClassRename(ret);
+                    if(nn != null)
+                        return nn + suffix;
+                    else
+                        return ret;
                 }
             }
         } catch(ClassCastException e) {
