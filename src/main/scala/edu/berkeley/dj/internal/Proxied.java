@@ -1,0 +1,10 @@
+package edu.berkeley.dj.internal;
+
+/**
+ * Created by matthewfl
+ */
+public interface Proxied {
+
+
+    Object __dj_getRawProxyPointer();
+}

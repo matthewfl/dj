@@ -1,66 +1,41 @@
 package edu.berkeley.dj.rt
 
+import java.lang.reflect.UndeclaredThrowableException
 import javassist._
-import javassist.bytecode.{MethodInfo, SignatureAttribute}
+import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
 
+import edu.berkeley.dj.internal._
 import edu.berkeley.dj.rt.convert.CodeConverter
 import edu.berkeley.dj.rt.convert._
+import edu.berkeley.dj.utils.Memo
 
 
 /**
  * Created by matthewfl
  */
 private[rt] class Rewriter (private val manager : Manager) {
-  //private val config : Config, private val basePool : ClassPool) {
-
-  //val runningInterface = new RunningInterface(config)
-  //edu.berkeley.dj.internal.InternalInterfaceFactory.RunningUUID = config.uuid
-
   def config = manager.config
 
   def basePool = manager.pool
 
   def runningPool = manager.runningPool
 
-  // used to get access to the internal members that need to be rewritten
-  //private val selfPool = new ClassPool(true)
-  //selfPool.appendClassPath(new ClassClassPath(this.getClass))
-
   private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
-  //private val rewriteNamespace = "edu.berkeley.dj.internal2"//."+config.uuid
+  private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
 
-  /*def canRewrite (classname : String) = {
-    !classname.equals("java.lang.Object")
-    // TODO: a lot more base class and packages
-  }*/
+  private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
-  /*private lazy val objectBaseRaw = {
-    //val base = basePool.get("edu.berkeley.dj.internal.ObjectBase")
-    //val ob = runningPool.makeClass(rewriteNamespace+".ObjectBase")
-    //val fsettings = CtField.make("public int "+config.fieldPrefix+"settings = 0;", ob)
-    //ob.addField(fsettings)
-    //val fmanager = CtField.make("public edu.berkeley.dj.internal.Manager "+config.fieldPrefix+"manager = null;", ob)
-    //ob.addField(fmanager)
-    //ob
-    val ob = basePool.get("edu.berkeley.dj.internal.ObjectBase")
-    ob
-
-    //base
-  }*/
-
-  //private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
+  private lazy val objectBaseInterface = runningPool.get(s"${config.coreprefix}java.lang.Object")
 
   private lazy val classMangerBase = runningPool.get("edu.berkeley.dj.internal.ClassManager")
-
-  //private val ManagerClasses = new mutable.HashMap[String, CtClass]()
 
   // these classes are noted as not being movable
   // this should contain items such as socket classes
   // and filesystem as we don't want to break network connections
-  val NonMovableClasses = Set(
+  /*val NonMovableClasses = Set(
     "java.lang.Object"
-  )
+  )*/
 
   // if these methods are called from
   // anywhere in a program
@@ -69,10 +44,14 @@ private[rt] class Rewriter (private val manager : Manager) {
     // TODO: add the method signatures onto these items
     // and don't use
     // TODO: the maps for when they have argument types
-    ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.coreprefix}java.lang.Object"),
-    ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.coreprefix}java.lang.Object"),
-    ("wait", "()v", "java.lang.Object") -> ("__dj_wait", s"${config.coreprefix}java.lang.Object")
+    ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.internalPrefix}ObjectHelpers"),
+    ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.internalPrefix}ObjectHelpers"),
+    ("wait", "()V", "java.lang.Object") -> ("__dj_wait", s"${config.internalPrefix}ObjectHelpers"),
 
+    // for rewriting the class loader
+    ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader")
   )
 
   // if these methods are anywhere
@@ -80,12 +59,11 @@ private[rt] class Rewriter (private val manager : Manager) {
     "finalize" -> "__dj_client_finalize"
   )
 
-  val replacedClasses = Map(
-  )
+  //val replacedClasses = Map()
 
-  private def isClassMovable(cls: CtClass) = {
+  /*private def isClassMovable(cls: CtClass) = {
     !NonMovableClasses.contains(cls.getName)
-  }
+  }*/
 
   private def getUsuableName(typ: CtClass): String = {
     if (typ.isArray) {
@@ -97,31 +75,87 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  //private def getUsuableFieldName()
-
   private def reassociateClass(cls: CtClass) = {
-    /*if(cls.getClassPool == basePool) {
-      cls.detach()
-      // TODO: setClasspool
-    }*/
-    // need to cache the classfile before moving the class to the new pool
-    cls.getClassFile
-    cls.setClassPool2(runningPool)
+    if(cls.getClassPool != runningPool) {
+      // prime the cache of the class before we move it to a new pool
+      cls.getClassFile
+      cls.setClassPool2(runningPool)
+      // cache this class before we have fully rewritten it in hopes that we don't loop
+      runningPool.setClass(cls.getName, cls)
+    }
   }
 
-  private def rewriteUsedClasses(cls: CtClass) = {
-    val map = new JClassMap(manager)
-    cls.replaceClassName(map)
+  lazy val jclassmap = new JClassMap(manager, this, Array[String]())
 
-    // the javassist library appears to not reflect the super class properly when replacing names
-    // this seems to be working somewhat nowy
-    /*val sname = cls.getSuperclass.getName
-    val nsname = map.get(sname).asInstanceOf[String]
-    if (nsname != null && nsname != sname) {
-      // set the new super class
-      cls.setSuperclass(cls.getClassPool.get(nsname))
-    }*/
-    //runningPool.get(cls.getSuperclass.getName)
+  private[rt] def forceClassRename(classdesc: String): String = {
+    try {
+      val cls = Descriptor.toCtClass(classdesc, basePool)
+      val an = cls.getAnnotation(classOf[ReplaceSelfWithCls]).asInstanceOf[ReplaceSelfWithCls]
+      if (an != null) {
+        if(!an.name().isEmpty)
+          return an.name().replace('.','/')
+        else
+          return an.cls().getName.replace('.','/')
+      } else
+        null
+    } catch {
+      case e: NotFoundException => null
+    }
+  }
+
+
+
+  /*val exemptedClassesDesc = Set(
+    "java/lang/String",
+    "java/lang/Integer",
+    "java/lang/Long"
+  )*/
+
+  private[rt] def canRewriteClass(classdesc: String): Boolean = {
+    /*if(exemptedClassesDesc.contains(classdesc))
+      return false
+    */
+    // do a lookup of the class and check if it is a subclass of a good type
+
+    try {
+      var curcls = Descriptor.toCtClass(classdesc, basePool)
+      while (curcls != null) {
+        // we can not change a throwable class since we need to catch these items
+        // and the jvm checks that it inherits from throwable etc
+        // at lease these items will be seralizable....sigh
+        if (curcls.getName == "java.lang.Throwable")
+          return false
+        curcls = curcls.getSuperclass
+      }
+    } catch {
+      case e: NotFoundException => {}
+    }
+    true
+  }
+
+  private def rewriteUsedClasses(cls: CtClass, jcm: JClassMap): Unit = {
+    val isInterface = cls.isInterface
+    val superClass = cls.getSuperclass.getName
+    //val useObjectBase = cls.getSuperclass.getName == "java.lang.Object"
+    cls.replaceClassName(jcm)
+
+    if(isInterface) {
+      // interfaces need to inherit from java.lang.Object, but we changed that when re rewrote the
+      // references, and the normal methods check if it is an interface, and makes it a nop, so do it this way
+      cls.getClassFile.setSuperclass("java.lang.Object")
+      cls.addInterface(objectBaseInterface)
+    } else if(superClass == "java.lang.Object") {
+      cls.setSuperclass(objectBase)
+    } else {
+      // some issue with setting the super class using replaceClassName
+      val sclass = jcm.get(superClass.replace(".","/")).asInstanceOf[String]
+      if(sclass != null)
+        cls.getClassFile.setSuperclass(sclass.replace("/","."))
+    }
+  }
+
+  private def rewriteUsedClasses(cls: CtClass): Unit = {
+    rewriteUsedClasses(cls, jclassmap)
   }
 
   private def transformClass(cls: CtClass) = {
@@ -146,7 +180,8 @@ private[rt] class Rewriter (private val manager : Manager) {
     }).reduce(_ ++ _)))*/
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
 
-    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+    //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+
     //codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
     //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
@@ -276,37 +311,13 @@ private[rt] class Rewriter (private val manager : Manager) {
   }
 
 
-  /*private def makeProxyCls(cls: CtClass) = {
-    // this is used for non movable classes
-    // where we need to have some proxy that calls methods
-    // back on the origional class
-    val pxycls = runningPool.makeClass(config.proxyClassPrefix+cls.getName, cls)
-    CtField.make("public int __dj_class_mode = 0;", pxycls);
-    CtField.make("public edu.berkeley.dj.internal.ClassManager __dj_class_manager = null", pxycls);
-    for(mth <- cls.getMethods) {
-      if(Modifier.isPublic(mth.getModifiers)) {
-        // this is a public method, so we might have to proxy it
-        val rtn = mth.getReturnType.getName
-        val sig = mth.getSignature
-        val pxy_method =
-          s"""
-             public ${rtn} ${mth.getName} (
-          """
-      }
-    }
-    pxycls
-  }*/
 
-  def modifyClass(cls: CtClass): Unit = {
+  private def modifyClass(cls: CtClass): Unit = {
     println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
     println("modifiers: " + Modifier.toString(mods))
     reassociateClass(cls)
-    rewriteUsedClasses(cls)
-    if(Modifier.isInterface(mods)) {
-      // we need to have all interfaces inherit from the java.lang.Object, so we got to change it back
-      cls.getClassFile.setSuperclass("java.lang.Object")
-    }
+
     /*val sc = cls.getSuperclass
     if(sc.getName != "java.lang.Object") {
       // we want to make sure that we have loaded any classes that this depends on
@@ -318,17 +329,142 @@ private[rt] class Rewriter (private val manager : Manager) {
     }*/
     //if(cls.getName.contains("testcase"))
     transformClass(cls)
+    rewriteUsedClasses(cls)
   }
 
+  private def modifyInternalClass(cls: CtClass): Unit ={
+    // the internal classes have special annotations on them to control how they are rwriten
+    var clsa = cls
+    // if the class is internal to something, we still want the annotations for the file to be "active"
+
+    while(clsa != null) {
+      val anns = clsa.getAnnotations
+      for (ann <- anns) {
+        ann match {
+          case norerw: RewriteAllBut => {
+            // rewrite all but a few types using the annotation
+            rewriteUsedClasses(cls, new JClassMap(manager, this, norerw.nonModClasses()))
+          }
+          case nrw: RewriteClassRef => {
+            // replace a single class name
+            cls.replaceClassName(nrw.oldName(), nrw.newName())
+          }
+          case nrw: RewriteClassRefCls => {
+            try {
+              cls.replaceClassName(nrw.oldCls().getName, nrw.newName());
+            } catch {
+              case e: UndeclaredThrowableException => {
+                println(e.getCause)
+                throw e.getCause()
+              }
+            }
+          }
+          case sp: SetSuperclass => {
+            // force the super class to be something else
+            cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
+          }
+          case _ => {} // nop
+        }
+      }
+      clsa = clsa.getDeclaringClass
+    }
+
+
+    // TODO: maybe replace fields and method declerations
+    // that may become complicated if this would have static inits and methods calls
+    /*for(mth <- cls.getDeclaredMethods) {
+
+    }*/
+
+    //rewriteUsedClasses(cls, new JClassMap(manager, this, nonrwcls.toArray))
+
+    if(cls.isInterface) {
+      // WTF: the base of an interface always needs to be java.lang.Object, but somehow this is being overwritten
+      cls.getClassFile.setSuperclass("java.lang.Object")
+    }
+  }
+
+  private def hasNativeMethods(cls: CtClass): Boolean = {
+    // if this clsas contains some native methods then we can't
+    // directly instaniate this class, as it will need the native methods
+    // so instead we will make proxy methods for all of its public and protected methods
+    cls.getDeclaredMethods.foreach(m => {
+      if(Modifier.isNative(m.getModifiers))
+        return true
+    })
+    false
+  }
+
+  private def makeDummyValue(cls: CtClass) = {
+    if(cls.isArray) {
+      s"new ${getUsuableName(cls.getComponentType)}[0]"
+    } else if(cls.isPrimitive) {
+      // need to determine what primitive type this is, and return some dummy value for that
+      import CtClass._
+      cls match {
+        case `voidType` => "" // ???
+        case `booleanType` => "false"
+        case `byteType` => "0"
+        case `charType` => "' '"
+        case `shortType` => "0"
+        case `intType` => "0"
+        case `longType` => "0L"
+        case `floatType` => "0.0f"
+        case `doubleType` => "0.0"
+        case _ => "gg" // unknown?
+      }
+    } else {
+      "null" // this is just going to be some pointer to an object, so just return null
+    }
+  }
+
+
+  private def getAccessControl(mod: Int) = {
+    if(Modifier.isPublic(mod)) {
+      "public"
+    } else if(Modifier.isProtected(mod)) {
+      "protected"
+    } else if(Modifier.isPrivate(mod)) {
+      "private"
+    } else if(Modifier.isPackage(mod)) {
+      ""
+    }
+  }
+
+  private def overwriteNativeMethods(cls: CtClass) = {
+    // For now if something is going to need a native method, we can just manually overwrite the native method
+    // calls, otherwise this is going to end up becoming a really complicated system
+
+    val rwMembers = cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers))
+
+    rwMembers.foreach(m=> {
+      cls.removeMethod(m)
+    })
+
+    rwMembers.foreach(m=>{
+      //val args = getArguments(m.getSignature)
+      val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
+      // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
+      val static = if(Modifier.isStatic(m.getModifiers)) "static" else ""
+
+      val mth_code = s"""
+           ${getAccessControl(m.getModifiers)} ${static} ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
+             edu.berkeley.dj.internal.InternalInterface.getInternalInterface().simplePrint("\t\tcall native: ${cls.getName} ${m.getName}");
+             ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+           }
+         """
+      cls.addMethod(CtMethod.make(mth_code, cls))
+    })
+  }
+
+
   def createCtClass(classname: String): CtClass = {
+    MethodInfo.doPreverify = true
+
     if (classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime
       throw new ClassNotFoundException(classname)
     }
-
-    /*if(classname == "edu.berkeley.dj.internal.ObjectBase") {
-      return objectBaseRaw
-    }*/
 
     if(classname.endsWith("[]")) {
       // this is some array type, so treat it as such
@@ -339,30 +475,60 @@ private[rt] class Rewriter (private val manager : Manager) {
     val cls: CtClass = try {
       basePool get classname
     } catch {
-      case e : NotFoundException => null
+      case e: NotFoundException => {
+        try {
+          if(classname.startsWith(config.coreprefix)) {
+            val c = basePool get (classname + "00")
+            c.setName(classname)
+            c
+          } else null
+        } catch {
+          case e: NotFoundException => null
+        }
+      }
     }
     println("create class name:" + classname)
 
+    // for edu.berkeley.dj.internal.coreclazz.
     if (classname.startsWith(config.coreprefix)) {
-      if (cls != null)
+      if (cls != null) {
+        reassociateClass(cls)
+        modifyInternalClass(cls)
         return cls
+      }
       var orgName = classname.drop(config.coreprefix.size)
       val clso = basePool get orgName
+      /*if(hasNativeMethods(clso)) {
+        return makeProxyCls(clso)
+      }*/
       reassociateClass(clso)
       clso.setName(classname)
+      if(hasNativeMethods(clso)) {
+        overwriteNativeMethods(clso)
+      }
       modifyClass(clso)
       return clso
+    }
+
+    if(classname.startsWith(config.proxysubclasses)) {
+      // TODO:
+      throw new NotImplementedError()
     }
 
     if (cls == null)
       return null
 
-
-    if(cls.isArray) {
+    if(cls.isPrimitive) {
+      return cls
+    } else if(cls.isArray) {
       // TODO: some custom handling for array types
+
+      // don't think tha this is ever used
 
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
       modifyClass(cls)
+    } else if (classname.startsWith(config.internalPrefix)) {
+      modifyInternalClass(cls)
     }
     cls
   }

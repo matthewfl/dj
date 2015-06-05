@@ -1,9 +1,6 @@
-package edu.berkeley.dj.internal.coreclazz.java.lang;
+package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.CONSTS;
-import edu.berkeley.dj.internal.ClassManager;
-import edu.berkeley.dj.internal.InterfaceBase;
-import edu.berkeley.dj.internal.SeralizeManager;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
 
 /**
  * Created by matthewfl
@@ -11,16 +8,19 @@ import edu.berkeley.dj.internal.SeralizeManager;
  * This becomes super class of the new "base class" that will represent objects
  * it will have to override methods such as lock or wait to make them work in a distribuited fashion
  */
-public class Object implements InterfaceBase {
+@RewriteClassRef(
+        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object2",
+        newName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object"
+)
+public class ObjectBase implements Object00 {
 
     public int __dj_class_mode = 0;
 
     public ClassManager __dj_class_manager = null;
 
-    public Object() {
+    public ObjectBase() {
         __dj_class_mode |= CONSTS.OBJECT_INITED;
     }
-
 
     // these have to be public in case they are getting
     // used by the interface
@@ -39,6 +39,7 @@ public class Object implements InterfaceBase {
         return __dj_class_mode;
     }
 
+
     public ClassManager __dj_getManager() {
         return __dj_class_manager;
     }
@@ -52,10 +53,18 @@ public class Object implements InterfaceBase {
         return super.hashCode();
     }
 
-    public boolean equals(java.lang.Object obj) {
+    public boolean equals(Object obj) {
         // this _should_ be ok, as if we are comparing the proxy
         // objects then it will come out to be the same proxied object
         // on a given machine
+        try {
+            return this.equals((Object00)obj);
+        } catch (ClassCastException e) {
+            return false;
+        }
+    }
+
+    public boolean equals(Object00 obj) {
         return this == obj;
     }
 

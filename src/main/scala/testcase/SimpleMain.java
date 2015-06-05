@@ -39,6 +39,7 @@ public class SimpleMain extends java.util.ArrayList<Integer> {
             }
         } catch (InterruptedException e) {}*/
 
+        System.out.print("\n\n\t\tsimple main is running");
 
     }
 

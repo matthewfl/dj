@@ -12,7 +12,9 @@ private[rt] class Manager (val config: Config, classpaths: String) {
 
   val pool = new ClassPool(true)
 
-  classpaths.split(":").foreach(pool.appendClassPath(_))
+  // TODO: comment to allow items that are not built into this jar
+  //classpaths.split(":").foreach(pool.appendClassPath(_))
+
   pool.appendClassPath(new ClassClassPath(this.getClass))
   //pool.childFirstLookup = true
 
@@ -34,7 +36,7 @@ private[rt] class Manager (val config: Config, classpaths: String) {
       MethodInfo.doPreverify = true
     }
     val cls = loader.loadClass("edu.berkeley.dj.internal.PreMain")
-    val ri = new RunningInterface(config)
+    val ri = new RunningInterface(config, this)
     // HACK: some complication with using getDeclaredMethod from scala
     val premain = cls.getDeclaredMethods.filter(_.getName == "premain")(0)
     try {

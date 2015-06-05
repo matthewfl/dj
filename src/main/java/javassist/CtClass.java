@@ -92,57 +92,57 @@ public abstract class CtClass {
      * The <code>CtClass</code> object representing
      * the <code>boolean</code> type.
      */
-    public static CtClass booleanType;
+    public final static CtClass booleanType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>char</code> type.
      */
-    public static CtClass charType;
+    public final static CtClass charType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>byte</code> type.
      */
-    public static CtClass byteType;
+    public final static CtClass byteType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>short</code> type.
      */
-    public static CtClass shortType;
+    public final static CtClass shortType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>int</code> type.
      */
-    public static CtClass intType;
+    public final static CtClass intType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>long</code> type.
      */
-    public static CtClass longType;
+    public final static CtClass longType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>float</code> type.
      */
-    public static CtClass floatType;
+    public final static CtClass floatType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>double</code> type.
      */
-    public static CtClass doubleType;
+    public final static CtClass doubleType;
 
     /**
      * The <code>CtClass</code> object representing
      * the <code>void</code> type.
      */
-    public static CtClass voidType;
+    public final static CtClass voidType;
 
-    static CtClass[] primitiveTypes;
+    static final CtClass[] primitiveTypes;
 
     static {
         primitiveTypes = new CtClass[9];

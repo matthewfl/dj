@@ -16,5 +16,6 @@ case class Config (val uuid: String="ID"+java.util.UUID.randomUUID.toString.repl
   // and then reload our modified classes in this new namespace
   final val coreprefix = internalPrefix + "coreclazz."
 
+  final val proxysubclasses = internalPrefix + "proxysubclazz."
 
 }

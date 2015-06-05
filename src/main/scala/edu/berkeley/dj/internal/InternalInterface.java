@@ -1,6 +1,8 @@
 package edu.berkeley.dj.internal;
 
-//import edu.berkeley.dj.internal.coreclazz.java.lang.Object;
+//import edu.berkeley.dj.internal.Object;
+
+import sun.misc.Unsafe;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -29,7 +31,29 @@ public class InternalInterface {
 
     public String getUUID() throws InterfaceException { return null; }
 
+    public void printStdout(int i) throws InterfaceException {
+        System.out.write(i);
+    }
 
+    public void printStderr(int i) throws InterfaceException {
+        System.err.write(i);
+    }
+
+    /*public edu.berkeley.dj.internal.coreclazz.java.lang.Thread getCurrentThread() {
+        // maybe just return some uid
+    }*/
+
+    public void currentThreadSleep(long millis) {}
+
+    public Unsafe getUnsafe() throws InterfaceException { return null; }
+
+    public void simplePrint(String p) {
+        System.out.println(p);
+    }
+
+    public String classRenamed(String name) {
+        return null;
+    }
 
 }
 
@@ -72,6 +96,18 @@ class InternalInterfaceWrap extends  InternalInterface {
         return (String) invoke("getUUID", new Class[]{});
     }
 
+
+    @Override
+    public Unsafe getUnsafe() throws InterfaceException {
+        return (Unsafe) invoke("getUnsafe", new Class[]{});
+    }
+
+    @Override
+    public String classRenamed(String name) throws InterfaceException {
+        return (String) invoke("classRenamed", new Class[]{String.class}, name);
+    }
+
+    @Override
     public String toString() {
         try {
             return (String) invoke("toString", new Class[]{});
@@ -79,6 +115,11 @@ class InternalInterfaceWrap extends  InternalInterface {
             return "interface exception";
         }
     }
+
+    /*public void printStdout(int i) throws InterfaceException {
+        // for use by the print stream
+        invoke("printStdout", new Class[]{int.class}, i);
+    }*/
 
     public Object callIn(int action, Object[] args) {
         switch(action) {

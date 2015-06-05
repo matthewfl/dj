@@ -22,6 +22,14 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     cache += (classname -> c)
   }
 
+  def setClass(classname: String, c: CtClass) = {
+    if(c != null) {
+      cache += (classname -> c)
+    } else {
+      cache.remove(classname)
+    }
+  }
+
   override protected def removeCached(classname: String) = {
     cache remove classname orNull
   }
@@ -30,13 +38,21 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     if(!canRewrite(classname)) {
       return manager.pool.get(classname)
     }
-    val res = rewriter.createCtClass(classname)
+    val res = try {
+      rewriter.createCtClass(classname)
+    } catch {
+      case e: Throwable => {
+        println("rewriter failed to create class: " + e)
+        null
+      }
+    }
     if(res != null)
       res
     else {
       println("we failed")
       null
     }
+
       //super.createCtClass(classname, useCache)
     /*val ret = super.createCtClass(classname, useCache)
     if(ret == null)
@@ -59,8 +75,13 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     throw new ClassNotFoundException(classname)
   }*/
 
-  def canRewrite(classname : String) = {
-    classname != "java.lang.Object"
+  def canRewrite(name: String) = {
+    !(name.startsWith("java.")
+      || name.startsWith("javax.")
+      || name.startsWith("sun.")
+      || name.startsWith("com.sun.")
+      || name.startsWith("org.w3c.")
+      || name.startsWith("org.xml."))
   }
 
 }

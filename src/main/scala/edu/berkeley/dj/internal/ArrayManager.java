@@ -1,8 +1,6 @@
 package edu.berkeley.dj.internal;
 
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Object;
-
 /**
  * Created by matthewfl
  */
@@ -10,7 +8,7 @@ public class ArrayManager {
 
     private ArrayManager() {}
 
-    static public int length_A(edu.berkeley.dj.internal.coreclazz.java.lang.Object arr[]) {
+    static public int length_A(Object arr[]) {
         return arr.length;
     }
 
