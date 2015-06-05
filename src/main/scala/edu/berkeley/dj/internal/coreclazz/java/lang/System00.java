@@ -11,12 +11,13 @@ import java.util.Properties;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/lang/System", "java/lang/Object"})
+@RewriteAllBut(nonModClasses = {"java/lang/System"})
 public class System00 {
 
     private System00() {}
 
     public final static PrintStream out = new PrintStream(new OutputStream(){
+        @Override
         public void write(int b) throws IOException {
             try {
                 InternalInterface.getInternalInterface().printStdout(b);
@@ -26,9 +27,18 @@ public class System00 {
         }
     }, true);
 
-    public final static InputStream in = null;
+    public final static PrintStream err = new PrintStream(new OutputStream() {
+        @Override
+        public void write(int b) throws IOException {
+            try {
+                InternalInterface.getInternalInterface().printStderr(b);
+            } catch (InterfaceException e) {
+                throw new IOException("Unable to write to stderr", e);
+            }
+        }
+    }, true);
 
-    public final static PrintStream err = null;
+    public final static InputStream in = null;
 
     public static void setIn(InputStream in) {}
 

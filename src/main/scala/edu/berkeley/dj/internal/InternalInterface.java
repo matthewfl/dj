@@ -31,7 +31,13 @@ public class InternalInterface {
 
     public String getUUID() throws InterfaceException { return null; }
 
-    public void printStdout(int i) throws InterfaceException { }
+    public void printStdout(int i) throws InterfaceException {
+        System.out.write(i);
+    }
+
+    public void printStderr(int i) throws InterfaceException {
+        System.err.write(i);
+    }
 
     /*public edu.berkeley.dj.internal.coreclazz.java.lang.Thread getCurrentThread() {
         // maybe just return some uid
@@ -101,6 +107,7 @@ class InternalInterfaceWrap extends  InternalInterface {
         return (String) invoke("classRenamed", new Class[]{String.class}, name);
     }
 
+    @Override
     public String toString() {
         try {
             return (String) invoke("toString", new Class[]{});
@@ -109,10 +116,10 @@ class InternalInterfaceWrap extends  InternalInterface {
         }
     }
 
-    public void printStdout(int i) throws InterfaceException {
+    /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
-        invoke("printStdout", new Class[]{Integer.class}, i);
-    }
+        invoke("printStdout", new Class[]{int.class}, i);
+    }*/
 
     public Object callIn(int action, Object[] args) {
         switch(action) {
