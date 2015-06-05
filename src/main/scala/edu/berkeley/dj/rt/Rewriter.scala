@@ -107,21 +107,10 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-
-
-  /*val exemptedClassesDesc = Set(
-    "java/lang/String",
-    "java/lang/Integer",
-    "java/lang/Long"
-  )*/
-
   private[rt] def canRewriteClass(classdesc: String): Boolean = innerCanRewriteClass(classdesc)
 
 
   private lazy val innerCanRewriteClass = Memo[String,String,Boolean] { case classdesc: String =>
-    /*if(exemptedClassesDesc.contains(classdesc))
-      return false
-    */
     // do a lookup of the class and check if it is a subclass of a good type
     var res = true
     try {
@@ -193,8 +182,9 @@ private[rt] class Rewriter (private val manager : Manager) {
     //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
+    cls.instrument(codeConverter)
+    val cls_name = getUsuableName(cls)
     if (!isInterface) {
-      cls.instrument(codeConverter)
       for (field <- cls.getDeclaredFields) {
         val name = field.getName
         println("field name: " + name)
@@ -202,7 +192,7 @@ private[rt] class Rewriter (private val manager : Manager) {
         if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
           //val typ = field.getType
 
-          val typ_name = "int"//getUsuableName(typ)
+          val typ_name = getUsuableName(field.getType)
           val modifiers = field.getModifiers
 
           //SignatureAttribute.toFieldSignature(field.getGenericSignature)
@@ -235,35 +225,39 @@ private[rt] class Rewriter (private val manager : Manager) {
           // the invoke method used should change
 
           // TODO: deal with static variables
+
+          val cls_mode = if(Modifier.isInterface(modifiers)) {
+            "__dj_getClassMode()"
+          } else {
+            "__dj_class_mode"
+          }
+
           if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
             val write_method =
               s"""
-              ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${typ_name} val) {
-                if((this.__dj_class_mode & 0x02) != 0) {
-                  //System.out.println("Imagine doing something remote here on ${cls.getName}");
-                //  this.__dj_class_manager.writeField(0, val);
+              static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
+                edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
+                if((self.${cls_mode} & 0x02) != 0) {
                 }
                 //} else {
                  // this.``${name}`` = val;
-                 this.``${name}`` = val;
+                 self.``${name}`` = val;
                 //}
              }
               """
             val read_method =
               s"""
-           ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` () {
-             //if(this.__dj_class_mode & 0x01 != 0) {
-               System.out.println("reading field ${name}");
-             //  return this.``${name}``;
-             //} else {
-               return this.``${name}``;
-             //}
+           static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
+             edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
+             //if((self.${cls_mode} & 0x01) != 0) {
+             return self.``${name}``;
            }
               """
             try {
               println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
-              //cls.addMethod(CtMethod.make(write_method, cls))
-              //cls.addMethod(CtMethod.make(read_method, cls))
+              println(write_method)
+              cls.addMethod(CtMethod.make(write_method, cls))
+              cls.addMethod(CtMethod.make(read_method, cls))
             } catch {
               // TODO: remove
               case e: Throwable => {
@@ -335,8 +329,8 @@ private[rt] class Rewriter (private val manager : Manager) {
       //cls.setSuperclass(objectBase)
     }*/
     //if(cls.getName.contains("testcase"))
-    transformClass(cls)
     rewriteUsedClasses(cls)
+    transformClass(cls)
   }
 
   private def modifyInternalClass(cls: CtClass): Unit ={

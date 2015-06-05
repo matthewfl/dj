@@ -35,12 +35,11 @@ public class ObjectBase implements Object00 {
     // so, then should those other classes use accessors
     // to get at data, or should they directly accesses
     // the "Manager"
-    public int __dj_getClassMode() {
+    final public int __dj_getClassMode() {
         return __dj_class_mode;
     }
 
-
-    public ClassManager __dj_getManager() {
+    final public ClassManager __dj_getManager() {
         return __dj_class_manager;
     }
 

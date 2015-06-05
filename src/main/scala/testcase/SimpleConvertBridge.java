@@ -1,5 +1,7 @@
 package testcase;
 
+import java.util.ArrayList;
+
 /**
  * Created by matthewfl
  */
@@ -41,7 +43,12 @@ public class SimpleConvertBridge {
 
         System.out.println("-----------------------------------------------------------------------test------------------------------------------------");
 
-        System.out.flush();
+        ArrayList<Integer> ii = new ArrayList<>();
+
+        ii.add(123);
+
+        System.out.println(ii.get(0));
+
     }
 
 }

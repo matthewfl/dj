@@ -55,6 +55,10 @@ public class InternalInterface {
         return null;
     }
 
+    public static void debug(String s) {
+        System.out.println("Internal interface debug: "+s);
+    }
+
 }
 
 class InternalInterfaceWrap extends  InternalInterface {
