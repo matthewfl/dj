@@ -1,5 +1,7 @@
 package testcase;
 
+import edu.berkeley.dj.internal.InternalInterface;
+
 /**
  * Created by matthewfl
  */
@@ -12,13 +14,13 @@ public class SimpleMain extends java.util.ArrayList<Integer> {
     //public java.util.List<java.lang.String> lll = new java.util.ArrayList<java.lang.String>();
 
     static public void main(String[] args) {
-        /*SimpleMain s = new SimpleMain();
+        SimpleMain s = new SimpleMain();
 
         s.arrs[2] = 5;
 
         s.qwer456asdf = 456;
 
-        s.lll.add("something");
+        //s.lll.add("something");
 
         Main m2 = new Main();
 
@@ -30,7 +32,6 @@ public class SimpleMain extends java.util.ArrayList<Integer> {
 
         System.out.println(bb);
 
-*/
 
 
         /*try {
@@ -39,8 +40,14 @@ public class SimpleMain extends java.util.ArrayList<Integer> {
             }
         } catch (InterruptedException e) {}*/
 
-        System.out.print("\n\n\t\tsimple main is running");
+
+        InternalInterface.getInternalInterface().simplePrint("asdfasdf");
+
+        System.out.print("\n\n\t\tsimple main is running\n");
+
+        System.out.flush();
 
     }
+
 
 }

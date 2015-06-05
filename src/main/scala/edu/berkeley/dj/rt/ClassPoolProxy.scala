@@ -49,7 +49,7 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     if(res != null)
       res
     else {
-      println("we failed")
+      System.err.println("We failed: "+classname)
       null
     }
 

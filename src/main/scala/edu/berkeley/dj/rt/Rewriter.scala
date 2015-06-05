@@ -87,15 +87,19 @@ private[rt] class Rewriter (private val manager : Manager) {
 
   lazy val jclassmap = new JClassMap(manager, this, Array[String]())
 
-  private[rt] def forceClassRename(classdesc: String): String = {
+  //private lazy val descriptorLookup = Memo {}
+
+  private[rt] def forceClassRename(classdesc: String): String = innerForceClassRename(classdesc)
+
+  private lazy val innerForceClassRename = Memo[String,String,String] { case classdesc: String =>
     try {
       val cls = Descriptor.toCtClass(classdesc, basePool)
       val an = cls.getAnnotation(classOf[ReplaceSelfWithCls]).asInstanceOf[ReplaceSelfWithCls]
       if (an != null) {
         if(!an.name().isEmpty)
-          return an.name().replace('.','/')
+          an.name().replace('.','/')
         else
-          return an.cls().getName.replace('.','/')
+          an.cls().getName.replace('.','/')
       } else
         null
     } catch {
@@ -111,12 +115,15 @@ private[rt] class Rewriter (private val manager : Manager) {
     "java/lang/Long"
   )*/
 
-  private[rt] def canRewriteClass(classdesc: String): Boolean = {
+  private[rt] def canRewriteClass(classdesc: String): Boolean = innerCanRewriteClass(classdesc)
+
+
+  private lazy val innerCanRewriteClass = Memo[String,String,Boolean] { case classdesc: String =>
     /*if(exemptedClassesDesc.contains(classdesc))
       return false
     */
     // do a lookup of the class and check if it is a subclass of a good type
-
+    var res = true
     try {
       var curcls = Descriptor.toCtClass(classdesc, basePool)
       while (curcls != null) {
@@ -124,13 +131,13 @@ private[rt] class Rewriter (private val manager : Manager) {
         // and the jvm checks that it inherits from throwable etc
         // at lease these items will be seralizable....sigh
         if (curcls.getName == "java.lang.Throwable")
-          return false
+          res = false
         curcls = curcls.getSuperclass
       }
     } catch {
       case e: NotFoundException => {}
     }
-    true
+    res
   }
 
   private def rewriteUsedClasses(cls: CtClass, jcm: JClassMap): Unit = {
