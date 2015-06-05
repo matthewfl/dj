@@ -61,21 +61,21 @@ public class System00 {
 
     public static long currentTimeMillis() {
         // we should be able to directly access the normal system class from this context
-        return java.lang.System.currentTimeMillis();
+        return System.currentTimeMillis();
     }
 
     public static long nanoTime() {
-        return java.lang.System.nanoTime();
+        return System.nanoTime();
     }
 
     public static void arraycopy(Object src,  int  srcPos,
                                  Object dest, int destPos,
                                  int length) {
-        java.lang.System.arraycopy(src, srcPos, dest, destPos, length);
+        System.arraycopy(src, srcPos, dest, destPos, length);
     }
 
     public static int identityHashCode(Object x) {
-        return java.lang.System.identityHashCode(x);
+        return System.identityHashCode(x);
     }
 
     public static Properties getProperties() {

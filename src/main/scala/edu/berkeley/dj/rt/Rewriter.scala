@@ -418,84 +418,6 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
-  /*private def makeProxyCls(cls: CtClass): CtClass = {
-    // if there is a public field then there is nothing we can do directly to manage that
-    // we can instead make the __dj_ methods that are used for reading and writing the field
-
-    val ret = runningPool.makeClass(config.coreprefix + cls.getName)
-    ret.addInterface(proxyInterface)
-    ret.setSuperclass(runningPool.get(config.coreprefix + cls.getSuperclass.getName))
-
-    ret.addField(CtField.make(s"private ${getUsuableName(cls)} __dj_ProxiedObject;", ret))
-
-    val ret_proxy_obj_mth =
-      """
-         public Object __dj_getRawProxyPointer() { return __dj_ProxiedObject; }
-      """
-    ret.addMethod(CtMethod.make(ret_proxy_obj_mth, ret))
-
-    // TODO: make it be able to access protected methods/fields
-    // this is going to have to make some subclass of the proxy class that exposes all of the protected methods
-
-    def getArguments(sig: String): Seq[CtClass] = {
-      // sig string like: (Ljava/lang/String;)V
-      val ar = sig.substring(sig.indexOf("(") + 1, sig.indexOf(")"))
-      val args = ar.split(";")
-      if(args.length == 1 && args(0).isEmpty) {
-        // there were no arguments
-        Seq()
-      } else {
-        for (i <- 0 until args.length) yield {
-          Descriptor.toCtClass(args(i) + ";", cls.getClassPool)
-        }
-      }
-    }
-
-    cls.getConstructors.foreach(m => {
-      val sig = m.getSignature
-      // TODO: same sort of method creation for the constructors, once I figure this out.....
-      //println(sig)
-    })
-
-    try {
-      // we need to overwrite all the methods, not just the ones that are declared on this object
-      // since there may be methods that were inherited
-      // there is also the potential issue with methods such as wait and getting monitors since they will need
-      // to be shared with the base object
-
-      /*cls.getMethods.filter(m => {
-        Modifier.isPublic(m.getModifiers) && m.getDeclaringClass.getName != "java.lang.Object"
-      }).groupBy()*/
-
-      cls.getMethods.foreach(m => {
-        if ( /*Modifier.isProtected(m.getModifiers) ||*/ Modifier.isPublic(m.getModifiers) && true) {
-          // TODO: get the
-          val args = getArguments(m.getSignature)
-          // work in progress code to call the native function
-          // will need to cast back and forth between the correct types for this
-          // __dj_ProxiedObject.``${m.getName}`` (${(0 until args.size).map(" a" + _).mkString(", ")}) ;
-          val meth_code =
-            s"""
-              public ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
-                ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
-              }
-           """
-          ret.addMethod(CtMethod.make(meth_code, ret))
-        }
-      })
-    } catch {
-      case e: Exception => {
-        println(e)
-        throw e
-      }
-    }
-    cls.getFields.foreach(f => {
-      if(/*Modifier.isProtected(f.getModifiers) ||*/ Modifier.isPublic(f.getModifiers)) {
-
-      }
-    })
-    ret
-  }*/
 
   private def getAccessControl(mod: Int) = {
     if(Modifier.isPublic(mod)) {
@@ -510,19 +432,8 @@ private[rt] class Rewriter (private val manager : Manager) {
   }
 
   private def overwriteNativeMethods(cls: CtClass) = {
-    /*def getArguments(sig: String): Seq[CtClass] = {
-      // sig string like: (Ljava/lang/String;)V
-      val ar = sig.substring(sig.indexOf("(") + 1, sig.indexOf(")"))
-      val args = ar.split(";")
-      if(args.length == 1 && args(0).isEmpty) {
-        // there were no arguments
-        Seq()
-      } else {
-        for (i <- 0 until args.length) yield {
-          Descriptor.toCtClass(args(i) + ";", cls.getClassPool)
-        }
-      }
-    }*/
+    // For now if something is going to need a native method, we can just manually overwrite the native method
+    // calls, otherwise this is going to end up becoming a really complicated system
 
     val rwMembers = cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers))
 
@@ -554,10 +465,6 @@ private[rt] class Rewriter (private val manager : Manager) {
       // do not allow loading the runtime into the runtime
       throw new ClassNotFoundException(classname)
     }
-
-    /*if(classname == "edu.berkeley.dj.internal.ObjectBase") {
-      return objectBaseRaw
-    }*/
 
     if(classname.endsWith("[]")) {
       // this is some array type, so treat it as such

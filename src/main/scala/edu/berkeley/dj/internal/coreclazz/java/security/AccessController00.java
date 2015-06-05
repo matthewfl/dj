@@ -282,9 +282,17 @@ interface DJPrivilegedAction<T> {
     T run();
 }
 
+@ReplaceSelfWithCls(
+        name = "edu.berkeley.dj.internal.coreclazz.java.security.PrivilegedExceptionAction"
+)
+interface DJPrivilegedExceptionAction<T> {
+    T run() throws Exception;
+}
+
 @RewriteAllBut(nonModClasses = {
         "java/security/AccessController",
-        "java/security/PrivilegedAction"
+        "java/security/PrivilegedAction",
+        "java/security/PrivilegedExceptionAction"
 })
 public final class AccessController00 {
 
@@ -399,9 +407,12 @@ public final class AccessController00 {
      * @see #doPrivileged(PrivilegedExceptionAction,AccessControlContext)
      */
     @CallerSensitive
-    public static <T> T doPrivileged(PrivilegedAction<T> action,
+    public static <T> T doPrivileged(DJPrivilegedAction<T> action,
                                      AccessControlContext context) {
-        return AccessController.doPrivileged(action, context);
+        // TODO: something is going to crash if it tries to use this method
+        // since the type signatures won't match
+        throw new NotImplementedException();
+        //return AccessController.doPrivileged(action, context);
     }
 
 
@@ -452,7 +463,9 @@ public final class AccessController00 {
     @CallerSensitive
     public static <T> T doPrivileged(PrivilegedAction<T> action,
                                      AccessControlContext context, Permission... perms) {
+        throw new NotImplementedException();
 
+        /*
         AccessControlContext parent = getContext();
         if (perms == null) {
             throw new NullPointerException("null permissions parameter");
@@ -460,6 +473,7 @@ public final class AccessController00 {
         Class <?> caller = Reflection.getCallerClass();
         return AccessController.doPrivileged(action, createWrapper(null,
                 caller, parent, context, perms));
+    */
     }
 
 
@@ -514,7 +528,8 @@ public final class AccessController00 {
     @CallerSensitive
     public static <T> T doPrivilegedWithCombiner(PrivilegedAction<T> action,
                                                  AccessControlContext context, Permission... perms) {
-        return AccessController.doPrivilegedWithCombiner(action, context, perms);
+        throw new NotImplementedException();
+        //return AccessController.doPrivilegedWithCombiner(action, context, perms);
 /*
         AccessControlContext parent = getContext();
         DomainCombiner dc = parent.getCombiner();
@@ -559,9 +574,14 @@ public final class AccessController00 {
      */
     @CallerSensitive
     public static <T> T
-    doPrivileged(PrivilegedExceptionAction<T> action)
+    doPrivileged(DJPrivilegedExceptionAction<T> action)
             throws PrivilegedActionException {
-        return AccessController.doPrivileged(action);
+        return AccessController.doPrivileged(new PrivilegedExceptionAction<T>() {
+            @Override
+            public T run() throws Exception {
+                return action.run();
+            }
+        });
     }
 
 
@@ -594,10 +614,15 @@ public final class AccessController00 {
      * @since 1.6
      */
     @CallerSensitive
-    public static <T> T doPrivilegedWithCombiner(PrivilegedExceptionAction<T> action)
+    public static <T> T doPrivilegedWithCombiner(DJPrivilegedExceptionAction<T> action)
             throws PrivilegedActionException
     {
-        return AccessController.doPrivilegedWithCombiner(action);
+        return AccessController.doPrivilegedWithCombiner(new PrivilegedExceptionAction<T>() {
+            @Override
+            public T run() throws Exception {
+                return action.run();
+            }
+        });
         /*
         AccessControlContext acc = getStackAccessControlContext();
         if (acc == null) {
@@ -749,16 +774,20 @@ public final class AccessController00 {
      * @since 1.8
      */
     @CallerSensitive
-    public static <T> T doPrivileged(PrivilegedExceptionAction<T> action,
+    public static <T> T doPrivileged(DJPrivilegedExceptionAction<T> action,
                                      AccessControlContext context, Permission... perms)
             throws PrivilegedActionException
     {
+
+        throw new NotImplementedException();
+        /*
         AccessControlContext parent = getContext();
         if (perms == null) {
             throw new NullPointerException("null permissions parameter");
         }
         Class <?> caller = Reflection.getCallerClass();
         return AccessController.doPrivileged(action, createWrapper(null, caller, parent, context, perms));
+    */
     }
 
 
@@ -813,7 +842,7 @@ public final class AccessController00 {
      * @since 1.8
      */
     @CallerSensitive
-    public static <T> T doPrivilegedWithCombiner(PrivilegedExceptionAction<T> action,
+    public static <T> T doPrivilegedWithCombiner(DJPrivilegedExceptionAction<T> action,
                                                  AccessControlContext context,
                                                  Permission... perms)
             throws PrivilegedActionException
