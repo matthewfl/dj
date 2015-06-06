@@ -40,7 +40,7 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
       // WTF: there is some bug were we can get a request for a class like: [Ljava/lang/Object;
       return Descriptor.toCtClass(classname, this)
     }*/
-    
+
     if(!canRewrite(classname)) {
       return manager.pool.get(classname)
     }

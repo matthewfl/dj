@@ -107,8 +107,8 @@ private[rt] class Rewriter (private val manager : Manager) {
     }
   }
 
+  // basically if it is not an exception
   private[rt] def canRewriteClass(classdesc: String): Boolean = innerCanRewriteClass(classdesc)
-
 
   private lazy val innerCanRewriteClass = Memo[String,String,Boolean] { case classdesc: String =>
     // do a lookup of the class and check if it is a subclass of a good type
@@ -182,9 +182,14 @@ private[rt] class Rewriter (private val manager : Manager) {
     //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
-    cls.instrument(codeConverter)
+
+    // basically if some exception type and not inherited from ObjectBase
+    val canRewrite = canRewriteClass(cls.getName)
     val cls_name = getUsuableName(cls)
-    if (!isInterface) {
+
+    cls.instrument(codeConverter)
+
+    if (!isInterface && canRewrite) {
       for (field <- cls.getDeclaredFields) {
         val name = field.getName
         println("field name: " + name)
@@ -238,19 +243,21 @@ private[rt] class Rewriter (private val manager : Manager) {
               static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
                 edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
                 if((self.${cls_mode} & 0x02) != 0) {
+
+                } else {
+                  self.``${name}`` = val;
                 }
-                //} else {
-                 // this.``${name}`` = val;
-                 self.``${name}`` = val;
-                //}
-             }
+              }
               """
             val read_method =
               s"""
            static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
              edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
-             //if((self.${cls_mode} & 0x01) != 0) {
-             return self.``${name}``;
+             if((self.${cls_mode} & 0x01) != 0) {
+               return self.``${name}``;
+             } else {
+               return self.``${name}``;
+             }
            }
               """
             try {
@@ -260,8 +267,8 @@ private[rt] class Rewriter (private val manager : Manager) {
               cls.addMethod(CtMethod.make(read_method, cls))
             } catch {
               // TODO: remove
-              case e: Throwable => {
-                println("Compile of method failed: " + e)
+              case ee: Throwable => {
+                println("Compile of method failed: " + ee)
               }
             }
           } else {

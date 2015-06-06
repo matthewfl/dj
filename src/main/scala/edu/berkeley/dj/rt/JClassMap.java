@@ -39,6 +39,7 @@ public class JClassMap extends ClassMap {
 
     final static private String[] exemptedClasses = new String[] {
             "java/lang/String",
+            /*
             "java/lang/Integer", // TODO: other types
             "java/lang/Long",
             "java/lang/Float",
@@ -46,6 +47,13 @@ public class JClassMap extends ClassMap {
             "java/lang/Boolean",
             "java/lang/Short",
             "java/lang/Char",
+            "java/lang/Void",
+            "java/lang/Byte",
+
+            "java/lang/Comparable",
+            "java/lang/Number",
+            "java/io/Serializable",
+*/
 
             // given that there are some unchanged classes, then will only have
             // the common base of Object
@@ -65,10 +73,10 @@ public class JClassMap extends ClassMap {
             // These are here b/c lang/Class uses them,
             "java/lang/ClassLoader",
             "java/lang/reflect/Field",
-            "java/lang/reflect/" // let all the reflect stuff through??
+            "java/lang/reflect/", // let all the reflect stuff through??
 
-            // tmp here until fixed issue with native methods
-            //"java/lang/System"
+            // function-ish interface to native methods for math calls
+            "java/lang/StrictMath"
     };
 
     @Override
@@ -108,12 +116,13 @@ public class JClassMap extends ClassMap {
                             return name;
                     }
                     //System.err.println("rewriting: "+name);
-                    String ret = prefix + name;
-                    String nn = rewriter.forceClassRename(ret);
+                    return prefix + name;
+                    /*String nn = rewriter.forceClassRename(ret);
                     if(nn != null)
                         return nn + suffix;
                     else
                         return ret;
+                        */
                 }
             }
         } catch(ClassCastException e) {
