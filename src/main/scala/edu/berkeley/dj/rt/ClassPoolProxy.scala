@@ -1,6 +1,7 @@
 package edu.berkeley.dj.rt
 
 import javassist.CtClass
+import javassist.bytecode.Descriptor
 
 import scala.collection.mutable
 
@@ -35,6 +36,11 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
   }
 
   override protected def createCtClass(classname: String, useCache: Boolean) : CtClass = {
+    /*if(classname.startsWith("[") || (classname.contains("/") && classname.contains(";"))) {
+      // WTF: there is some bug were we can get a request for a class like: [Ljava/lang/Object;
+      return Descriptor.toCtClass(classname, this)
+    }*/
+    
     if(!canRewrite(classname)) {
       return manager.pool.get(classname)
     }

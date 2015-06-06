@@ -342,9 +342,9 @@ public abstract class TypeData {
             else if (lowersSet.size() == 1)
                 return (String)it.next(); 
             else {
-            	CtClass cc = cp.get((String)it.next());
+            	CtClass cc = Descriptor.toCtClass((String) it.next(), cp);
             	while (it.hasNext())
-            		cc = commonSuperClassEx(cc, cp.get((String)it.next()));
+            		cc = commonSuperClassEx(cc, Descriptor.toCtClass((String) it.next(), cp));
 
             	if (cc.getSuperclass() == null || isObjectArray(cc))
             	    cc = fixByUppers(scc, cp, new HashSet(), cc);
