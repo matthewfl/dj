@@ -1,5 +1,7 @@
 package edu.berkeley.dj.rt
 
+import scala.collection.mutable
+
 /**
  * Created by matthewfl
  */
@@ -7,6 +9,7 @@ class RunningInterface (private val config : Config, private val manager: Manage
 
   private var callIn : Object = null
   private var callInCls : java.lang.Class[_] = null
+  private var callInMth : java.lang.reflect.Method = null
 
   override def toString = "RunningInterface (" + config.uuid + ")"
 
@@ -30,14 +33,55 @@ class RunningInterface (private val config : Config, private val manager: Manage
       throw new RuntimeException("can only set the call in interface once")
     callIn = obj
     callInCls = obj.getClass
+    callInMth = callInCls.getDeclaredMethods.filter(_.getName == "callIn")(0)
   }
 
-  private def callIn(action : Int, args: Object*) = {
-
+  private def callIn(action : Int, args: Object*): Any = {
+    callInMth.invoke(callIn, Integer.valueOf(action), args)
   }
 
   def printStdout(i: Int) = {
     println("to stdout "+i)
+  }
+
+  def threadId = Thread.currentThread().getId
+
+  def newThread(obj: Object) = {
+    val thread = new Thread() {
+      override def run() = {
+        callIn(1, obj)
+      }
+    }
+    thread.start()
+  }
+
+  // some sort of locking when distribuited
+  val tempLockSet = new mutable.HashSet[String]()
+
+  def lock(name: String): Boolean = {
+    tempLockSet.synchronized {
+      if(tempLockSet.contains(name))
+        return false
+      tempLockSet += name
+      return true
+    }
+  }
+
+  def unlock(name: String) = {
+    tempLockSet.synchronized {
+      tempLockSet -= name
+    }
+  }
+
+  val tempDistributiedMap = new mutable.HashMap[String,Object]()
+
+  def setDistributed(name: String, o: Object): Unit = {
+    val i: (String,Object) = (name, o)
+    tempDistributiedMap += i
+  }
+
+  def getDistributed(name: String): Object = {
+    tempDistributiedMap.getOrElse(name, null)
   }
 
 

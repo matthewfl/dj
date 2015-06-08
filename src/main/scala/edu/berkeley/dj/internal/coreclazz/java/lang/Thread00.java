@@ -1,10 +1,37 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
+import edu.berkeley.dj.internal.AugmentedClassLoader;
+import edu.berkeley.dj.internal.InternalInterface;
+import edu.berkeley.dj.internal.ReplaceSelfWithCls;
+import edu.berkeley.dj.internal.RewriteAllBut;
+import edu.berkeley.dj.internal.coreclazz.sun.misc.VM00;
+import sun.reflect.CallerSensitive;
+import sun.reflect.Reflection;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import sun.security.util.SecurityConstants;
 
-/*
- * This is modify to suppose the dj runtime
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.LockSupport;
+
+/**
+ * Created by matthewfl
  */
 
+
+@ReplaceSelfWithCls(name="edu.berkeley.dj.internal.coreclazz.sun.nio.ch.Interruptible")
+interface DJInterruptible {
+    void interrupt(Thread00 t);
+}
 
 /*
  * Copyright (c) 1994, 2013, Oracle and/or its affiliates. All rights reserved.
@@ -30,27 +57,6 @@ package edu.berkeley.dj.internal.coreclazz.java.lang;
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-
-import java.lang.ref.Reference;
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.LockSupport;
-
-import edu.berkeley.dj.internal.InternalInterface;
-import edu.berkeley.dj.internal.ObjectBase;
-
-import sun.nio.ch.Interruptible;
-import sun.reflect.CallerSensitive;
-import sun.reflect.Reflection;
-import sun.security.util.SecurityConstants;
 
 
 /**
@@ -148,17 +154,17 @@ import sun.security.util.SecurityConstants;
  * @see     #stop()
  * @since   JDK1.0
  */
-public
-class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
+@RewriteAllBut(nonModClasses = {})
+public class Thread00 implements Runnable {
     /* Make sure registerNatives is the first thing <clinit> does. */
-    //private static native void registerNatives();
+    /*private static native void registerNatives();
     static {
-    //    registerNatives();
-    }
+        registerNatives();
+    }*/
 
     private volatile char  name[];
     private int            priority;
-    private Thread         threadQ;
+    private Thread00       threadQ;
     private long           eetop;
 
     /* Whether or not to single_step this thread. */
@@ -174,7 +180,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
     private Runnable target;
 
     /* The group of this thread */
-    private ThreadGroup group;
+    private ThreadGroup00 group;
 
     /* The context ClassLoader for this thread */
     private ClassLoader contextClassLoader;
@@ -190,13 +196,13 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
 
     /* ThreadLocal values pertaining to this thread. This map is maintained
      * by the ThreadLocal class. */
-    ThreadLocal.ThreadLocalMap threadLocals = null;
+    ThreadLocal00.ThreadLocalMap threadLocals = null;
 
     /*
      * InheritableThreadLocal values pertaining to this thread. This map is
      * maintained by the InheritableThreadLocal class.
      */
-    ThreadLocal.ThreadLocalMap inheritableThreadLocals = null;
+    ThreadLocal00.ThreadLocalMap inheritableThreadLocals = null;
 
     /*
      * The requested stack size for this thread, or 0 if the creator did
@@ -241,12 +247,12 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * operation, if any.  The blocker's interrupt method should be invoked
      * after setting this thread's interrupt status.
      */
-    private volatile Interruptible blocker;
-    private final Object blockerLock = new ObjectBase();
+    private volatile DJInterruptible blocker;
+    private final Object blockerLock = new Object();
 
     /* Set the blocker field; invoked via sun.misc.SharedSecrets from java.nio code
      */
-    void blockedOn(Interruptible b) {
+    void blockedOn(DJInterruptible b) {
         synchronized (blockerLock) {
             blocker = b;
         }
@@ -272,8 +278,10 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *
      * @return  the currently executing thread.
      */
-    public static Thread currentThread() {
-        InternalInterface.getInternalInterface().getCurrentThread();
+    public static Thread00 currentThread() {
+        long id = InternalInterface.getInternalInterface().threadId();
+        throw new NotImplementedException();
+        // TODO: have some hash map of what this will do
     }
 
     /**
@@ -293,8 +301,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * {@link java.util.concurrent.locks} package.
      */
     public static void yield() {
-        // TODO:
-        // nop
+        // TODO: yield
     }
 
     /**
@@ -315,7 +322,8 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *          cleared when this exception is thrown.
      */
     public static void sleep(long millis) throws InterruptedException {
-        InternalInterface.getInternalInterface().currentThreadSleep(millis);
+        throw new NotImplementedException();
+        // TODO:
     }
 
     /**
@@ -360,9 +368,9 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
 
     /**
      * Initializes a Thread with the current AccessControlContext.
-     * @see #init(ThreadGroup,Runnable,String,long,AccessControlContext)
+     * @see #init(ThreadGroup00,Runnable,String,long,AccessControlContext)
      */
-    private void init(ThreadGroup g, Runnable target, String name,
+    private void init(ThreadGroup00 g, Runnable target, String name,
                       long stackSize) {
         init(g, target, name, stackSize, null);
     }
@@ -378,13 +386,15 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @param acc the AccessControlContext to inherit, or
      *            AccessController.getContext() if null
      */
-    private void init(ThreadGroup g, Runnable target, String name,
+    private void init(ThreadGroup00 g, Runnable target, String name,
                       long stackSize, AccessControlContext acc) {
         if (name == null) {
             throw new NullPointerException("name cannot be null");
         }
 
-        Thread parent = currentThread();
+        this.name = name.toCharArray();
+
+        Thread00 parent = currentThread();
         SecurityManager security = System.getSecurityManager();
         if (g == null) {
             /* Determine if it's an applet or not */
@@ -392,7 +402,8 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
             /* If there is a security manager, ask the security manager
                what to do. */
             if (security != null) {
-                g = security.getThreadGroup();
+                // TODO: security manager
+                g = (ThreadGroup00)(Object)security.getThreadGroup();
             }
 
             /* If the security doesn't have a strong opinion of the matter
@@ -415,13 +426,15 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
             }
         }
 
-        // TODO: mfl get thread groups
-        //g.addUnstarted();
+        /*Method addUnstarted = g.getClass().getMethod("addUnstarted", new Class[]{});
+        addUnstarted.setAccessible(true);
+        addUnstarted.invoke(g);
+        */
+        g.addUnstarted();
 
         this.group = g;
         this.daemon = parent.isDaemon();
         this.priority = parent.getPriority();
-        this.name = name.toCharArray();
         if (security == null || isCCLOverridden(parent.getClass()))
             this.contextClassLoader = parent.getContextClassLoader();
         else
@@ -432,7 +445,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
         setPriority(priority);
         if (parent.inheritableThreadLocals != null)
             this.inheritableThreadLocals =
-                    ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
+                    ThreadLocal00.createInheritedMap(parent.inheritableThreadLocals);
         /* Stash the specified stack size in case the VM cares */
         this.stackSize = stackSize;
 
@@ -454,18 +467,18 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
      * {@code (null, null, gname)}, where {@code gname} is a newly generated
      * name. Automatically generated names are of the form
      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
      */
-    public Thread() {
+    public Thread00() {
         init(null, null, "Thread-" + nextThreadNum(), 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
      * {@code (null, target, gname)}, where {@code gname} is a newly generated
      * name. Automatically generated names are of the form
      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
@@ -475,7 +488,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *         is started. If {@code null}, this classes {@code run} method does
      *         nothing.
      */
-    public Thread(Runnable target) {
+    public Thread00(Runnable target) {
         init(null, target, "Thread-" + nextThreadNum(), 0);
     }
 
@@ -483,13 +496,13 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * Creates a new Thread that inherits the given AccessControlContext.
      * This is not a public constructor.
      */
-    Thread(Runnable target, AccessControlContext acc) {
+    Thread00(Runnable target, AccessControlContext acc) {
         init(null, target, "Thread-" + nextThreadNum(), 0, acc);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
      * {@code (group, target, gname)} ,where {@code gname} is a newly generated
      * name. Automatically generated names are of the form
      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
@@ -510,25 +523,25 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *          if the current thread cannot create a thread in the specified
      *          thread group
      */
-    public Thread(ThreadGroup group, Runnable target) {
+    public Thread00(ThreadGroup00 group, Runnable target) {
         init(group, target, "Thread-" + nextThreadNum(), 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
      * {@code (null, null, name)}.
      *
      * @param   name
      *          the name of the new thread
      */
-    public Thread(String name) {
+    public Thread00(String name) {
         init(null, null, name, 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
      * {@code (group, null, name)}.
      *
      * @param  group
@@ -546,13 +559,13 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *          if the current thread cannot create a thread in the specified
      *          thread group
      */
-    public Thread(ThreadGroup group, String name) {
+    public Thread00(ThreadGroup00 group, String name) {
         init(group, null, name, 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
      * {@code (null, target, name)}.
      *
      * @param  target
@@ -562,7 +575,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @param  name
      *         the name of the new thread
      */
-    public Thread(Runnable target, String name) {
+    public Thread00(Runnable target, String name) {
         init(null, target, name, 0);
     }
 
@@ -572,7 +585,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * and belongs to the thread group referred to by {@code group}.
      *
      * <p>If there is a security manager, its
-     * {@link SecurityManager#checkAccess(ThreadGroup) checkAccess}
+     * {@link SecurityManager#checkAccess(ThreadGroup00) checkAccess}
      * method is invoked with the ThreadGroup as its argument.
      *
      * <p>In addition, its {@code checkPermission} method is invoked with
@@ -610,7 +623,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *          if the current thread cannot create a thread in the specified
      *          thread group or cannot override the context class loader methods.
      */
-    public Thread(ThreadGroup group, Runnable target, String name) {
+    public Thread00(ThreadGroup00 group, Runnable target, String name) {
         init(group, target, name, 0);
     }
 
@@ -621,7 +634,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * the specified <i>stack size</i>.
      *
      * <p>This constructor is identical to {@link
-     * #Thread(ThreadGroup,Runnable,String)} with the exception of the fact
+     * #Thread(ThreadGroup00,Runnable,String)} with the exception of the fact
      * that it allows the thread stack size to be specified.  The stack size
      * is the approximate number of bytes of address space that the virtual
      * machine is to allocate for this thread's stack.  <b>The effect of the
@@ -688,7 +701,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *
      * @since 1.4
      */
-    public Thread(ThreadGroup group, Runnable target, String name,
+    public Thread00(ThreadGroup00 group, Runnable target, String name,
                   long stackSize) {
         init(group, target, name, stackSize);
     }
@@ -725,8 +738,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
         /* Notify the group that this thread is about to be started
          * so that it can be added to the group's list of threads
          * and the group's unstarted count can be decremented. */
-        // TODO: group add
-        //group.add(this);
+        group.add(this);
 
         boolean started = false;
         try {
@@ -735,8 +747,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
         } finally {
             try {
                 if (!started) {
-                    // TODO: mfl thread group
-                    //group.threadStartFailed(this);
+                    group.threadStartFailed(this);
                 }
             } catch (Throwable ignore) {
                 /* do nothing. If start0 threw a Throwable then
@@ -746,7 +757,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
     }
 
     private void start0() {
-        // TODO: mfl start0
+        throw new NotImplementedException();
     }
 
     /**
@@ -759,7 +770,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *
      * @see     #start()
      * @see     #stop()
-     * @see     #Thread(ThreadGroup, Runnable, String)
+     * @see     #Thread(ThreadGroup00, Runnable, String)
      */
     @Override
     public void run() {
@@ -774,8 +785,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      */
     private void exit() {
         if (group != null) {
-            // TODO: mfl thread group
-            // group.threadTerminated(this);
+            group.threadTerminated(this);
             group = null;
         }
         /* Aggressively null out all reference fields: see bug 4006245 */
@@ -832,7 +842,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @see        #run()
      * @see        #start()
      * @see        ThreadDeath
-     * @see        ThreadGroup#uncaughtException(Thread,Throwable)
+     * @see        ThreadGroup00#uncaughtException(Thread,Throwable)
      * @see        SecurityManager#checkAccess(Thread)
      * @see        SecurityManager#checkPermission
      * @deprecated This method is inherently unsafe.  Stopping a thread with
@@ -859,7 +869,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             checkAccess();
-            if (this != Thread.currentThread()) {
+            if (this != Thread00.currentThread()) {
                 security.checkPermission(SecurityConstants.STOP_THREAD_PERMISSION);
             }
         }
@@ -932,11 +942,11 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @spec JSR-51
      */
     public void interrupt() {
-        if (this != Thread.currentThread())
+        if (this != Thread00.currentThread())
             checkAccess();
 
         synchronized (blockerLock) {
-            Interruptible b = blocker;
+            DJInterruptible b = blocker;
             if (b != null) {
                 interrupt0();           // Just to set the interrupt flag
                 b.interrupt(this);
@@ -989,7 +999,9 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * is reset or not based on the value of ClearInterrupted that is
      * passed.
      */
-    private native boolean isInterrupted(boolean ClearInterrupted);
+    private boolean isInterrupted(boolean ClearInterrupted) {
+        throw new NotImplementedException();
+    }
 
     /**
      * Throws {@link NoSuchMethodError}.
@@ -1020,7 +1032,9 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @return  <code>true</code> if this thread is alive;
      *          <code>false</code> otherwise.
      */
-    public final native boolean isAlive();
+    public final boolean isAlive() {
+        throw new NotImplementedException();
+    }
 
     /**
      * Suspends this thread.
@@ -1100,10 +1114,10 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @see        #getThreadGroup()
      * @see        #MAX_PRIORITY
      * @see        #MIN_PRIORITY
-     * @see        ThreadGroup#getMaxPriority()
+     * @see        ThreadGroup00#getMaxPriority()
      */
     public final void setPriority(int newPriority) {
-        ThreadGroup g;
+        ThreadGroup00 g;
         checkAccess();
         if (newPriority > MAX_PRIORITY || newPriority < MIN_PRIORITY) {
             throw new IllegalArgumentException();
@@ -1155,9 +1169,8 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @see     #setName(String)
      */
     public final String getName() {
-        // TODO: use new String(name, true) so that it doesn't copy..
-        return new String(name);
-        //return new String(name, true);
+        // TODO: don't copy this threads string
+        return new String(name/*, true*/);
     }
 
     /**
@@ -1167,7 +1180,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *
      * @return  this thread's thread group.
      */
-    public final ThreadGroup getThreadGroup() {
+    public final ThreadGroup00 getThreadGroup() {
         return group;
     }
 
@@ -1217,7 +1230,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *          if {@link java.lang.ThreadGroup#checkAccess} determines that
      *          the current thread cannot access its thread group
      */
-    public static int enumerate(Thread tarray[]) {
+    public static int enumerate(Thread00 tarray[]) {
         return currentThread().getThreadGroup().enumerate(tarray);
     }
 
@@ -1233,7 +1246,9 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *             were never well-defined.
      */
     @Deprecated
-    public native int countStackFrames();
+    public int countStackFrames() {
+        throw new NotImplementedException();
+    }
 
     /**
      * Waits at most {@code millis} milliseconds for this thread to
@@ -1405,7 +1420,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
     public final void checkAccess() {
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
-            security.checkAccess(this);
+            security.checkAccess((Thread)(Object)this);
         }
     }
 
@@ -1416,7 +1431,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @return  a string representation of this thread.
      */
     public String toString() {
-        ThreadGroup group = getThreadGroup();
+        ThreadGroup00 group = getThreadGroup();
         if (group != null) {
             return "Thread[" + getName() + "," + getPriority() + "," +
                     group.getName() + "]";
@@ -1458,7 +1473,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
             return null;
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
-            ClassLoader.checkClassLoaderPermission(contextClassLoader,
+            AugmentedClassLoader.checkClassLoaderPermission(contextClassLoader,
                     Reflection.getCallerClass());
         }
         return contextClassLoader;
@@ -1510,7 +1525,10 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *         the specified object.
      * @since 1.4
      */
-    public static native boolean holdsLock(Object obj);
+    public static boolean holdsLock(Object obj) {
+        throw new NotImplementedException();
+        // TODO:
+    }
 
     private static final StackTraceElement[] EMPTY_STACK_TRACE
             = new StackTraceElement[0];
@@ -1552,7 +1570,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @since 1.5
      */
     public StackTraceElement[] getStackTrace() {
-        if (this != Thread.currentThread()) {
+        if (this != Thread00.currentThread()) {
             // check for getStackTrace permission
             SecurityManager security = System.getSecurityManager();
             if (security != null) {
@@ -1564,7 +1582,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
             if (!isAlive()) {
                 return EMPTY_STACK_TRACE;
             }
-            StackTraceElement[][] stackTraceArray = dumpThreads(new Thread[] {this});
+            StackTraceElement[][] stackTraceArray = dumpThreads(new Thread00[] {this});
             StackTraceElement[] stackTrace = stackTraceArray[0];
             // a thread that was alive during the previous isAlive call may have
             // since terminated, therefore not having a stacktrace.
@@ -1613,7 +1631,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *
      * @since 1.5
      */
-    public static Map<Thread, StackTraceElement[]> getAllStackTraces() {
+    public static Map<Thread00, StackTraceElement[]> getAllStackTraces() {
         // check for getStackTrace permission
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
@@ -1624,9 +1642,9 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
         }
 
         // Get a snapshot of the list of all threads
-        Thread[] threads = getThreads();
+        Thread00[] threads = getThreads();
         StackTraceElement[][] traces = dumpThreads(threads);
-        Map<Thread, StackTraceElement[]> m = new HashMap<>(threads.length);
+        Map<Thread00, StackTraceElement[]> m = new HashMap<>(threads.length);
         for (int i = 0; i < threads.length; i++) {
             StackTraceElement[] stackTrace = traces[i];
             if (stackTrace != null) {
@@ -1707,8 +1725,13 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
         return result.booleanValue();
     }
 
-    private native static StackTraceElement[][] dumpThreads(Thread[] threads);
-    private native static Thread[] getThreads();
+    private static StackTraceElement[][] dumpThreads(Thread00[] threads) {
+        throw new NotImplementedException();
+    }
+    private static Thread00[] getThreads() {
+        // TODO: get a list of all the current threads
+        throw new NotImplementedException();
+    }
 
     /**
      * Returns the identifier of this Thread.  The thread ID is a positive
@@ -1832,7 +1855,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      */
     public State getState() {
         // get current thread state
-        return sun.misc.VM.toThreadState(threadStatus);
+        return VM00.toThreadState(threadStatus);
     }
 
     // Added in JSR-166
@@ -1856,7 +1879,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *
      * @see #setDefaultUncaughtExceptionHandler
      * @see #setUncaughtExceptionHandler
-     * @see ThreadGroup#uncaughtException
+     * @see ThreadGroup00#uncaughtException
      * @since 1.5
      */
     @FunctionalInterface
@@ -1869,7 +1892,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
          * @param t the thread
          * @param e the exception
          */
-        void uncaughtException(Thread t, Throwable e);
+        void uncaughtException(Thread00 t, Throwable e);
     }
 
     // null unless explicitly set
@@ -1884,7 +1907,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * for that thread.
      *
      * <p>Uncaught exception handling is controlled first by the thread, then
-     * by the thread's {@link ThreadGroup} object and finally by the default
+     * by the thread's {@link ThreadGroup00} object and finally by the default
      * uncaught exception handler. If the thread does not have an explicit
      * uncaught exception handler set, and the thread's thread group
      * (including parent thread groups)  does not specialize its
@@ -1909,7 +1932,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      *
      * @see #setUncaughtExceptionHandler
      * @see #getUncaughtExceptionHandler
-     * @see ThreadGroup#uncaughtException
+     * @see ThreadGroup00#uncaughtException
      * @since 1.5
      */
     public static void setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
@@ -1961,7 +1984,7 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
      * @throws  SecurityException  if the current thread is not allowed to
      *          modify this thread.
      * @see #setDefaultUncaughtExceptionHandler
-     * @see ThreadGroup#uncaughtException
+     * @see ThreadGroup00#uncaughtException
      * @since 1.5
      */
     public void setUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
@@ -2059,10 +2082,27 @@ class Thread extends edu.berkeley.dj.internal.ObjectBase implements Runnable {
     int threadLocalRandomSecondarySeed;
 
     /* Some private helper methods */
-    private native void setPriority0(int newPriority);
-    private native void stop0(Object o);
-    private native void suspend0();
-    private native void resume0();
-    private native void interrupt0();
-    private native void setNativeName(String name);
+    private void setPriority0(int newPriority) {
+        throw new NotImplementedException();
+        // TODO:
+    }
+    private void stop0(Object o) {
+        throw new NotImplementedException();
+        // TODO:
+    }
+    private void suspend0() {
+        throw new NotImplementedException();
+        // TODO:
+    }
+    private void resume0() {
+        throw new NotImplementedException();
+        // TODO:
+    }
+    private void interrupt0() {
+        throw new NotImplementedException();
+        // TODO:
+    }
+    private void setNativeName(String name) {
+        throw new NotImplementedException();
+    }
 }

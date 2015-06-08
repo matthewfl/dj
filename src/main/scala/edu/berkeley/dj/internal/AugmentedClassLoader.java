@@ -1,5 +1,8 @@
 package edu.berkeley.dj.internal;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 /**
  * Created by matthewfl
  *
@@ -33,6 +36,19 @@ public class AugmentedClassLoader {
         return ret;
     }
 
+    public static Class<?> getPrimitiveClass(String name) {
+        // this method is package private, but we are rewriting some classes that need to use it
+        try {
+            Method mth = Class.class.getDeclaredMethod("getPrimitiveClass", new Class[]{String.class});
+            mth.setAccessible(true);
+            return (Class<?>)mth.invoke(null, name);
+        }
+        catch(NoSuchMethodException e) {}
+        catch(IllegalAccessException e) {}
+        catch(InvocationTargetException e) {}
+        return null;
+    }
+
     // on java.lang.ClassLoader
     public static Class<?> loadClass(Object self, String name) throws ClassNotFoundException {
         String ncn = InternalInterface.getInternalInterface().classRenamed(name);
@@ -47,4 +63,10 @@ public class AugmentedClassLoader {
         }
         throw new RuntimeException("Unexpected self type for java.lang.ClassLoader:loadClass");
     }
+
+    public static void checkClassLoaderPermission(ClassLoader cl, Class<?> caller) {
+        // this is package private, but we want to access it
+        // TODO:
+    }
+
 }

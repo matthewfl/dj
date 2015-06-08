@@ -3,6 +3,7 @@ package edu.berkeley.dj.internal.coreclazz.java.lang;
 import edu.berkeley.dj.internal.InterfaceException;
 import edu.berkeley.dj.internal.InternalInterface;
 import edu.berkeley.dj.internal.RewriteAllBut;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
 import java.nio.channels.Channel;
@@ -38,7 +39,13 @@ public class System00 {
         }
     }, true);
 
-    public final static InputStream in = null;
+    public final static InputStream in = new InputStream() {
+        @Override
+        public int read() throws IOException {
+            throw new NotImplementedException();
+            //return 0;
+        }
+    };
 
     public static void setIn(InputStream in) {}
 

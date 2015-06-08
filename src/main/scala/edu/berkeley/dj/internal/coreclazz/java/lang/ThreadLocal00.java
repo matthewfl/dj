@@ -1,9 +1,15 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
+import edu.berkeley.dj.internal.RewriteAllBut;
+
+import java.lang.ref.WeakReference;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+
 /**
  * Created by matthewfl
  */
-
 /*
  * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -28,13 +34,6 @@ package edu.berkeley.dj.internal.coreclazz.java.lang;
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-import edu.berkeley.dj.internal.RewriteAllBut;
-
-import java.lang.ref.*;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 /**
  * This class provides thread-local variables.  These variables differ from
@@ -78,9 +77,8 @@ import java.util.function.Supplier;
  * @author  Josh Bloch and Doug Lea
  * @since   1.2
  */
-
 @RewriteAllBut(nonModClasses = {"java/lang/ThreadLocal"})
-public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
+public class ThreadLocal00<T> {
     /**
      * ThreadLocals rely on per-thread linear-probe hash maps attached
      * to each thread (Thread.threadLocals and
@@ -154,7 +152,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
      * Creates a thread local variable.
      * @see #withInitial(java.util.function.Supplier)
      */
-    public ThreadLocal() {
+    public ThreadLocal00() {
     }
 
     /**
@@ -166,7 +164,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
      * @return the current thread's value of this thread-local
      */
     public T get() {
-        /*Thread t = Thread.currentThread();
+        Thread00 t = Thread00.currentThread();
         ThreadLocalMap map = getMap(t);
         if (map != null) {
             ThreadLocalMap.Entry e = map.getEntry(this);
@@ -175,7 +173,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
                 T result = (T)e.value;
                 return result;
             }
-        }*/
+        }
         return setInitialValue();
     }
 
@@ -186,17 +184,14 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
      * @return the initial value
      */
     private T setInitialValue() {
-        return null;
-        /*
         T value = initialValue();
-        Thread t = Thread.currentThread();
+        Thread00 t = Thread00.currentThread();
         ThreadLocalMap map = getMap(t);
         if (map != null)
             map.set(this, value);
         else
             createMap(t, value);
         return value;
-    */
     }
 
     /**
@@ -209,7 +204,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
      *        this thread-local.
      */
     public void set(T value) {
-        Thread t = Thread.currentThread();
+        Thread00 t = Thread00.currentThread();
         ThreadLocalMap map = getMap(t);
         if (map != null)
             map.set(this, value);
@@ -229,7 +224,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
      * @since 1.5
      */
     public void remove() {
-        ThreadLocalMap m = getMap(Thread.currentThread());
+        ThreadLocalMap m = getMap(Thread00.currentThread());
         if (m != null)
             m.remove(this);
     }
@@ -241,7 +236,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
      * @param  t the current thread
      * @return the map
      */
-    ThreadLocalMap getMap(Thread t) {
+    ThreadLocalMap getMap(Thread00 t) {
         return t.threadLocals;
     }
 
@@ -252,7 +247,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
      * @param t the current thread
      * @param firstValue value for the initial entry of the map
      */
-    void createMap(Thread t, T firstValue) {
+    void createMap(Thread00 t, T firstValue) {
         t.threadLocals = new ThreadLocalMap(this, firstValue);
     }
 
@@ -317,11 +312,11 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * entry can be expunged from table.  Such entries are referred to
          * as "stale entries" in the code that follows.
          */
-        static class Entry extends WeakReference<ThreadLocal<?>> {
+        static class Entry extends WeakReference<ThreadLocal00<?>> {
             /** The value associated with this ThreadLocal. */
             Object value;
 
-            Entry(ThreadLocal<?> k, Object v) {
+            Entry(ThreadLocal00<?> k, Object v) {
                 super(k);
                 value = v;
             }
@@ -374,7 +369,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * ThreadLocalMaps are constructed lazily, so we only create
          * one when we have at least one entry to put in it.
          */
-        ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+        ThreadLocalMap(ThreadLocal00<?> firstKey, Object firstValue) {
             table = new Entry[INITIAL_CAPACITY];
             int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
             table[i] = new Entry(firstKey, firstValue);
@@ -398,7 +393,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
                 Entry e = parentTable[j];
                 if (e != null) {
                     @SuppressWarnings("unchecked")
-                    ThreadLocal<Object> key = (ThreadLocal<Object>) e.get();
+                    ThreadLocal00<Object> key = (ThreadLocal00<Object>) e.get();
                     if (key != null) {
                         Object value = key.childValue(e.value);
                         Entry c = new Entry(key, value);
@@ -422,7 +417,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * @param  key the thread local object
          * @return the entry associated with key, or null if no such
          */
-        private Entry getEntry(ThreadLocal<?> key) {
+        private Entry getEntry(ThreadLocal00<?> key) {
             int i = key.threadLocalHashCode & (table.length - 1);
             Entry e = table[i];
             if (e != null && e.get() == key)
@@ -440,12 +435,12 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * @param  e the entry at table[i]
          * @return the entry associated with key, or null if no such
          */
-        private Entry getEntryAfterMiss(ThreadLocal<?> key, int i, Entry e) {
+        private Entry getEntryAfterMiss(ThreadLocal00<?> key, int i, Entry e) {
             Entry[] tab = table;
             int len = tab.length;
 
             while (e != null) {
-                ThreadLocal<?> k = e.get();
+                ThreadLocal00<?> k = e.get();
                 if (k == key)
                     return e;
                 if (k == null)
@@ -463,7 +458,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * @param key the thread local object
          * @param value the value to be set
          */
-        private void set(ThreadLocal<?> key, Object value) {
+        private void set(ThreadLocal00<?> key, Object value) {
 
             // We don't use a fast path as with get() because it is at
             // least as common to use set() to create new entries as
@@ -477,7 +472,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
             for (Entry e = tab[i];
                  e != null;
                  e = tab[i = nextIndex(i, len)]) {
-                ThreadLocal<?> k = e.get();
+                ThreadLocal00<?> k = e.get();
 
                 if (k == key) {
                     e.value = value;
@@ -499,7 +494,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
         /**
          * Remove the entry for key.
          */
-        private void remove(ThreadLocal<?> key) {
+        private void remove(ThreadLocal00<?> key) {
             Entry[] tab = table;
             int len = tab.length;
             int i = key.threadLocalHashCode & (len-1);
@@ -529,7 +524,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
          * @param  staleSlot index of the first stale entry encountered while
          *         searching for key.
          */
-        private void replaceStaleEntry(ThreadLocal<?> key, Object value,
+        private void replaceStaleEntry(ThreadLocal00<?> key, Object value,
                                        int staleSlot) {
             Entry[] tab = table;
             int len = tab.length;
@@ -551,7 +546,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
             for (int i = nextIndex(staleSlot, len);
                  (e = tab[i]) != null;
                  i = nextIndex(i, len)) {
-                ThreadLocal<?> k = e.get();
+                ThreadLocal00<?> k = e.get();
 
                 // If we find key, then we need to swap it
                 // with the stale entry to maintain hash table order.
@@ -613,7 +608,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
             for (i = nextIndex(staleSlot, len);
                  (e = tab[i]) != null;
                  i = nextIndex(i, len)) {
-                ThreadLocal<?> k = e.get();
+                ThreadLocal00<?> k = e.get();
                 if (k == null) {
                     e.value = null;
                     tab[i] = null;
@@ -700,7 +695,7 @@ public class ThreadLocal<T> extends edu.berkeley.dj.internal.ObjectBase {
             for (int j = 0; j < oldLen; ++j) {
                 Entry e = oldTab[j];
                 if (e != null) {
-                    ThreadLocal<?> k = e.get();
+                    ThreadLocal00<?> k = e.get();
                     if (k == null) {
                         e.value = null; // Help the GC
                     } else {

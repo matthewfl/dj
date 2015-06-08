@@ -20,6 +20,8 @@ object SimpleMapthing {
       map.put(i, new Struct(i * 2, i*3))
     }
 
+    println("the simple map thing has finished")
+
   }
 
 }
