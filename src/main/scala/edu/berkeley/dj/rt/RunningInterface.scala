@@ -38,7 +38,7 @@ class RunningInterface (private val config : Config, private val manager: Manage
   }
 
   private def callIn(action : Int, args: Object*): Any = {
-    callInMth.invoke(callIn, Integer.valueOf(action), args.asInstanceOf[Array[Object]])
+    callInMth.invoke(callIn, Integer.valueOf(action), args.toArray.asInstanceOf[Array[Object]])
   }
 
   def printStdout(i: Int) = {
@@ -83,6 +83,10 @@ class RunningInterface (private val config : Config, private val manager: Manage
 
   def getDistributed(name: String): Object = {
     tempDistributiedMap.getOrElse(name, null)
+  }
+
+  def exit(code: Int): Unit = {
+    System.exit(code)
   }
 
 

@@ -44,9 +44,12 @@ private[rt] class Rewriter (private val manager : Manager) {
     // TODO: add the method signatures onto these items
     // and don't use
     // TODO: the maps for when they have argument types
-    ("notify","()V","java.lang.Object") -> ("__dj_nofity", s"${config.internalPrefix}ObjectHelpers"),
-    ("notifyAll", "()V", "java.lang.Object") -> ("__dj_notifyAll", s"${config.internalPrefix}ObjectHelpers"),
-    ("wait", "()V", "java.lang.Object") -> ("__dj_wait", s"${config.internalPrefix}ObjectHelpers"),
+    ("notify","()V","java.lang.Object") -> ("nofity", s"${config.internalPrefix}ObjectHelpers"),
+    ("notifyAll", "()V", "java.lang.Object") -> ("notifyAll", s"${config.internalPrefix}ObjectHelpers"),
+    ("wait", "()V", "java.lang.Object") -> ("wait", s"${config.internalPrefix}ObjectHelpers"),
+    ("wait", "(J)V", "java.lang.Object") -> ("wait", s"${config.internalPrefix}ObjectHelpers"),
+    ("wait", "(JI)V", "java.lang.Object") -> ("wait", s"${config.internalPrefix}ObjectHelpers"),
+
 
     // for rewriting the class loader
     ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),

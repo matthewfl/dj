@@ -63,19 +63,19 @@ public class InternalInterface {
     }
 
     public boolean lock(String name) {
-        throw new InterfaceException("can not lock");
+        throw new InterfaceException();
     }
 
     public void unlock(String name) {
-        throw new InterfaceException("can not unlock");
+        throw new InterfaceException();
     }
 
     public void setDistributed(String name, Object value) {
-        throw new InterfaceException("can not set distributed");
+        throw new InterfaceException();
     }
 
     public Object getDistributed(String name) {
-        throw new InterfaceException("can not set distributed");
+        throw new InterfaceException();
     }
 
     public long threadId() {
@@ -84,7 +84,11 @@ public class InternalInterface {
     }
 
     public void startThread(Object r) {
-        throw new InterfaceException("can not start thread");
+        throw new InterfaceException();
+    }
+
+    public void exit(int i) {
+        throw new InterfaceException();
     }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
@@ -185,6 +189,11 @@ class InternalInterfaceWrap extends  InternalInterface {
     @Override
     public void startThread(Object r) {
         invoke("startThread", new Class[]{Object.class}, r);
+    }
+
+    @Override
+    public void exit(int i) {
+        invoke("exit", new Class[]{int.class}, i);
     }
 
     /*public void printStdout(int i) throws InterfaceException {

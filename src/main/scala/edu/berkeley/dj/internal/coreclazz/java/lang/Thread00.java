@@ -174,6 +174,7 @@ public class Thread00 implements Runnable {
         stackSize = 1000; // TODO: manage stack size
         tid = nextThreadID();
         currentAlive = true;
+        ThreadHelpers.incNonDaemon();
     }
 
     static {
@@ -783,7 +784,15 @@ public class Thread00 implements Runnable {
 
     private void start0() {
         currentAlive = true;
-        ThreadHelpers.startThread(this);
+        ThreadHelpers.startThread(new Runnable() {
+            @Override
+            public void run() {
+                if(!Thread00.this.isDaemon())
+                    ThreadHelpers.incNonDaemon();
+                ThreadHelpers.setCurrentThread(Thread00.this);
+                Thread00.this.run();
+            }
+        });
         //throw new NotImplementedException();
     }
 
@@ -815,6 +824,9 @@ public class Thread00 implements Runnable {
             group.threadTerminated(this);
             group = null;
         }
+        if(!daemon) {
+            ThreadHelpers.decNonDaemon();
+        }
         /* Aggressively null out all reference fields: see bug 4006245 */
         target = null;
         /* Speed the release of some of these resources */
@@ -825,6 +837,8 @@ public class Thread00 implements Runnable {
         uncaughtExceptionHandler = null;
         currentAlive = false;
     }
+
+    public void __dj_exit() { exit(); }
 
     /**
      * Forces the thread to stop executing.
@@ -1419,6 +1433,12 @@ public class Thread00 implements Runnable {
         checkAccess();
         if (isAlive()) {
             throw new IllegalThreadStateException();
+        }
+        if(daemon != on && currentAlive) {
+            if(on)
+                ThreadHelpers.decNonDaemon();
+            else
+                ThreadHelpers.incNonDaemon();
         }
         daemon = on;
     }

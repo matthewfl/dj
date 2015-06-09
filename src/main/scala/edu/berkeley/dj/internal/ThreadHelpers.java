@@ -3,6 +3,7 @@ package edu.berkeley.dj.internal;
 import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00;
 
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by matthewfl
@@ -43,6 +44,25 @@ public class ThreadHelpers {
         allThreads.get().put(1L, t);
         setCurrentThread(t);
     */
+    }
+
+    public static DistributedVariable<AtomicInteger> nonDaemonThreadCount = new DistributedVariable("DJ_nonDaemonThreadCount", new AtomicInteger());
+
+    static public void incNonDaemon() {
+        nonDaemonThreadCount.get().incrementAndGet();
+    }
+
+    static public void decNonDaemon() {
+        int c = nonDaemonThreadCount.get().decrementAndGet();
+        if(c == 0) {
+            // Then we should kill this thing
+            InternalInterface.debug("----THIS THING SHOULD DIE----");
+            InternalInterface.getInternalInterface().exit(0);
+        }
+    }
+
+    static public void exitThread() {
+        Thread00.currentThread().__dj_exit();
     }
 
 

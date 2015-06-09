@@ -12,5 +12,6 @@ public class PreMain {
         //System.out.println("hello world early ");//+ts);
         Class cls = PreMain.class.getClassLoader().loadClass(maincls);
         cls.getDeclaredMethod("main", new Class[]{String[].class}).invoke(null, new Object[]{args});
+        ThreadHelpers.exitThread();
     }
 }

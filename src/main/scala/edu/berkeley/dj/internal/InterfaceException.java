@@ -6,12 +6,15 @@ package edu.berkeley.dj.internal;
 public class InterfaceException extends Error /*Exception*/ {
 
     InterfaceException(String method) {
-        this.method = method;
+        super("edu.berkeley.dj internal interface exception with method "+method);
     }
 
-    public final String method;
-
-    public String toString() {
-        return "edu.berkeley.dj internal interface exception with method "+method;
+    InterfaceException() {
+        super("InternalInterface not inited");
     }
+
+    InterfaceException(String method, Throwable e) {
+        super("edu.berkeley.dj internal interface exception with method "+method, e);
+    }
+
 }
