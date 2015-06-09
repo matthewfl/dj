@@ -95,6 +95,9 @@ public class JClassMap extends ClassMap {
                 if (nonTname.endsWith("00")) {
                     return nonTname.substring(0, nonTname.length() - 2) + suffix;
                 }
+                if(nonTname.contains("00$")) {
+                    return nonTname.replace("00$", "$") + suffix;
+                }
                 String nn = rewriter.forceClassRename(nonTname);
                 if(nn != null)
                     return nn + suffix;

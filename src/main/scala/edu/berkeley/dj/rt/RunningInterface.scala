@@ -34,10 +34,11 @@ class RunningInterface (private val config : Config, private val manager: Manage
     callIn = obj
     callInCls = obj.getClass
     callInMth = callInCls.getDeclaredMethods.filter(_.getName == "callIn")(0)
+    callInMth.setAccessible(true)
   }
 
   private def callIn(action : Int, args: Object*): Any = {
-    callInMth.invoke(callIn, Integer.valueOf(action), args)
+    callInMth.invoke(callIn, Integer.valueOf(action), args.asInstanceOf[Array[Object]])
   }
 
   def printStdout(i: Int) = {
@@ -46,7 +47,7 @@ class RunningInterface (private val config : Config, private val manager: Manage
 
   def threadId = Thread.currentThread().getId
 
-  def newThread(obj: Object) = {
+  def startThread(obj: Object) = {
     val thread = new Thread() {
       override def run() = {
         callIn(1, obj)

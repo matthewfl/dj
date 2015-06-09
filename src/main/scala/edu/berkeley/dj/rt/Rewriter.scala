@@ -466,6 +466,34 @@ private[rt] class Rewriter (private val manager : Manager) {
     })
   }
 
+  private def findBaseClass(classname: String): CtClass = {
+    try {
+      basePool get classname
+    } catch {
+      case e: NotFoundException => {
+        try {
+          if(classname.startsWith(config.coreprefix)) {
+            val c = basePool get (classname + "00")
+            c.setName(classname)
+            c
+          } else null
+        } catch {
+          case e: NotFoundException => {
+            if(classname.contains("$")) {
+              // There is some dollar sign in the class name so try to change the containing class
+              try {
+                val c = basePool.get(classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100\\$"))
+                c.setName(classname)
+                c
+              } catch {
+                case e: NotFoundException => null
+              }
+            } else null
+          }
+        }
+      }
+    }
+  }
 
   def createCtClass(classname: String): CtClass = {
     MethodInfo.doPreverify = true
@@ -481,21 +509,7 @@ private[rt] class Rewriter (private val manager : Manager) {
       return new CtArray(classname, runningPool)
     }
 
-    val cls: CtClass = try {
-      basePool get classname
-    } catch {
-      case e: NotFoundException => {
-        try {
-          if(classname.startsWith(config.coreprefix)) {
-            val c = basePool get (classname + "00")
-            c.setName(classname)
-            c
-          } else null
-        } catch {
-          case e: NotFoundException => null
-        }
-      }
-    }
+    val cls = findBaseClass(classname)
     println("create class name:" + classname)
 
     // for edu.berkeley.dj.internal.coreclazz.

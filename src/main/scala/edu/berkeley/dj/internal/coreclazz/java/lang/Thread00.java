@@ -1,9 +1,9 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.AugmentedClassLoader;
-import edu.berkeley.dj.internal.InternalInterface;
 import edu.berkeley.dj.internal.ReplaceSelfWithCls;
 import edu.berkeley.dj.internal.RewriteAllBut;
+import edu.berkeley.dj.internal.ThreadHelpers;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.VM00;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
@@ -13,7 +13,6 @@ import sun.security.util.SecurityConstants;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Method;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -162,6 +161,27 @@ public class Thread00 implements Runnable {
         registerNatives();
     }*/
 
+
+    // create the main base thread
+    private Thread00(long i) {
+        name = "DJ main Thread".toCharArray();
+        priority = NORM_PRIORITY;
+        group = new ThreadGroup00();  // root thread group
+        daemon = false;
+        contextClassLoader = Thread00.class.getClassLoader();
+        inheritedAccessControlContext = null;//AccessController00.getContext();
+        target = null;
+        stackSize = 1000; // TODO: manage stack size
+        tid = nextThreadID();
+        currentAlive = true;
+    }
+
+    static {
+        Thread00 mainThread = new Thread00(1);
+        ThreadHelpers.setCurrentThread(mainThread);
+        ThreadHelpers.allThreads.get().put(mainThread.getId(), mainThread);
+    }
+
     private volatile char  name[];
     private int            priority;
     private Thread00       threadQ;
@@ -230,6 +250,8 @@ public class Thread00 implements Runnable {
 
     private volatile int threadStatus = 0;
 
+    private boolean currentAlive = false;
+
 
     private static synchronized long nextThreadID() {
         return ++threadSeqNumber;
@@ -279,8 +301,9 @@ public class Thread00 implements Runnable {
      * @return  the currently executing thread.
      */
     public static Thread00 currentThread() {
-        long id = InternalInterface.getInternalInterface().threadId();
-        throw new NotImplementedException();
+        return ThreadHelpers.getCurrentThread();
+        //long id = InternalInterface.getInternalInterface().threadId();
+        //throw new NotImplementedException();
         // TODO: have some hash map of what this will do
     }
 
@@ -302,6 +325,7 @@ public class Thread00 implements Runnable {
      */
     public static void yield() {
         // TODO: yield
+        throw new NotImplementedException();
     }
 
     /**
@@ -439,8 +463,9 @@ public class Thread00 implements Runnable {
             this.contextClassLoader = parent.getContextClassLoader();
         else
             this.contextClassLoader = parent.contextClassLoader;
-        this.inheritedAccessControlContext =
-                acc != null ? acc : AccessController.getContext();
+        // TODO:???? what is this used for???
+        //this.inheritedAccessControlContext =
+        //        acc != null ? acc : AccessController.getContext();
         this.target = target;
         setPriority(priority);
         if (parent.inheritableThreadLocals != null)
@@ -757,7 +782,9 @@ public class Thread00 implements Runnable {
     }
 
     private void start0() {
-        throw new NotImplementedException();
+        currentAlive = true;
+        ThreadHelpers.startThread(this);
+        //throw new NotImplementedException();
     }
 
     /**
@@ -796,6 +823,7 @@ public class Thread00 implements Runnable {
         inheritedAccessControlContext = null;
         blocker = null;
         uncaughtExceptionHandler = null;
+        currentAlive = false;
     }
 
     /**
@@ -1033,7 +1061,8 @@ public class Thread00 implements Runnable {
      *          <code>false</code> otherwise.
      */
     public final boolean isAlive() {
-        throw new NotImplementedException();
+        return currentAlive;
+        //throw new NotImplementedException();
     }
 
     /**
@@ -2083,7 +2112,8 @@ public class Thread00 implements Runnable {
 
     /* Some private helper methods */
     private void setPriority0(int newPriority) {
-        throw new NotImplementedException();
+        // nop atm?
+        //throw new NotImplementedException();
         // TODO:
     }
     private void stop0(Object o) {

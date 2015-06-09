@@ -1,6 +1,7 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.InternalInterface;
+import edu.berkeley.dj.internal.RewriteAllBut;
 import sun.misc.VM;
 
 import java.io.PrintStream;
@@ -59,6 +60,7 @@ import java.util.Arrays;
  * and working off of that snapshot, rather than holding the thread group locked
  * while we work on the children.
  */
+@RewriteAllBut(nonModClasses = {})
 public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
     private final ThreadGroup00 parent;
     String name;
@@ -78,15 +80,16 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * Creates an empty Thread group that is not in any Thread group.
      * This method is used to create the system Thread group.
      */
-    private ThreadGroup00() {     // called from C code
-        this.name = "systemDJ";
+    ThreadGroup00() { // called from static init of Thread00
+        this.name = "systemDJ-"+InternalInterface.getInternalInterface().getUUID();
         this.maxPriority = Thread.MAX_PRIORITY;
         this.parent = null;
     }
 
+    /*
     static {
         InternalInterface.getInternalInterface().setRootThreadGroup(new ThreadGroup00());
-    }
+    }*/
 
     /**
      * Constructs a new thread group. The parent of this new group is
@@ -322,7 +325,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             // TODO: make this convert between
-            security.checkAccess((ThreadGroup)(Object)this);
+            //security.checkAccess((ThreadGroup)(Object)this);
         }
     }
 

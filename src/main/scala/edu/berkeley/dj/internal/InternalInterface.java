@@ -21,6 +21,9 @@ public class InternalInterface {
         if(ii != null)
             throw new RuntimeException("Running interface already set");
         ii = new InternalInterfaceWrap(o);
+
+        // set the main thread
+        ThreadHelpers.init();
     }
 
     public static InternalInterface getInternalInterface() {
@@ -80,9 +83,13 @@ public class InternalInterface {
         return Thread.currentThread().getId();
     }
 
-    protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
+    public void startThread(Object r) {
+        throw new InterfaceException("can not start thread");
+    }
 
-    public Object threadGroup;
+    //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
+
+    /*public Object threadGroup;
 
     public void setRootThreadGroup(Object tg) {
         threadGroup = tg;
@@ -90,7 +97,7 @@ public class InternalInterface {
 
     public Object getRootThreadGroup() {
         return threadGroup;
-    }
+    }*/
 
 }
 
@@ -175,20 +182,25 @@ class InternalInterfaceWrap extends  InternalInterface {
         return invoke("getDistributed", new Class[]{String.class}, name);
     }
 
+    @Override
+    public void startThread(Object r) {
+        invoke("startThread", new Class[]{Object.class}, r);
+    }
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
         invoke("printStdout", new Class[]{int.class}, i);
     }*/
 
-    public Object callIn(int action, Object[] args) {
+    public Object callIn(Integer action, Object[] args) {
         switch(action) {
             case 0:
                 // dummy test
                 return "this works";
             case 1:
                 // callback for creating a new thread
-
+                ThreadHelpers.newThreadCallback(args[0]);
+                return null;
         }
         return null;
     }
