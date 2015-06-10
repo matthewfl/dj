@@ -182,7 +182,7 @@ private[rt] class Rewriter (private val manager : Manager) {
 
     //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
 
-    //codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
+    codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
     //codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
