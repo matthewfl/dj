@@ -72,14 +72,20 @@ class FieldAccess(next : Transformer, val config: Config) extends Transformer(ne
         // invoke virtual should take the objectref and then the arguments, which should only be one
         // will possibly have to pop the returned values
 
+        // TODO: check if this is a class that was rewritten and thus has these indirection methods
 
-        // TODO: make this look this up in the cp rather then just add it every time
         val methodType = s"(L${Descriptor.toJvmName(fcls)};${ftype})V"
         val methodName = s"${config.fieldPrefix}write_field_${fname}"
         val methodRef = cp.addMethodrefInfo(methodCls, methodName, methodType)
         it.writeByte(INVOKESTATIC, pos)
         it.write16bit(methodRef, pos + 1)
-      } else if (c == GETFIELD) {
+      } else if (c == GETFIELD && !ftype.startsWith("[")) {
+        val methodType = s"(L${Descriptor.toJvmName(fcls)};)${ftype}"
+        val methodName = s"${config.fieldPrefix}read_field_${fname}"
+        val methodRef = cp.addMethodrefInfo(methodCls, methodName, methodType)
+        it.writeByte(INVOKESTATIC, pos)
+        it.write16bit(methodRef, pos + 1)
+
         // if this field is not a primitive type, then
         // replace the read access
         /*if(!isPrimitiveType(ftype)) {

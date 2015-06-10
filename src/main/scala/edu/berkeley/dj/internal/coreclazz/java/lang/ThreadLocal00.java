@@ -1,5 +1,6 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
+import edu.berkeley.dj.internal.RewriteAddAccessorMethods;
 import edu.berkeley.dj.internal.RewriteAllBut;
 
 import java.lang.ref.WeakReference;
@@ -78,6 +79,7 @@ import java.util.function.Supplier;
  * @since   1.2
  */
 @RewriteAllBut(nonModClasses = {"java/lang/ThreadLocal"})
+@RewriteAddAccessorMethods
 public class ThreadLocal00<T> {
     /**
      * ThreadLocals rely on per-thread linear-probe hash maps attached

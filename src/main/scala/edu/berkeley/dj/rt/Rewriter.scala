@@ -194,92 +194,7 @@ private[rt] class Rewriter (private val manager : Manager) {
     cls.instrument(codeConverter)
 
     if (!isInterface && canRewrite) {
-      for (field <- cls.getDeclaredFields) {
-        val name = field.getName
-        println("field name: " + name)
-        // TODO: manage arrays
-        if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
-          //val typ = field.getType
-
-          val typ_name = getUsuableName(field.getType)
-          val modifiers = field.getModifiers
-
-          //SignatureAttribute.toFieldSignature(field.getGenericSignature)
-
-          val accessMod =
-            if (Modifier.isPublic(modifiers))
-              "public"
-            else if (Modifier.isProtected(modifiers))
-              "protected"
-            else if (Modifier.isPrivate(modifiers))
-              "private"
-            else // must be isPackage
-              ""
-
-          val finalField = Modifier.isFinal(modifiers)
-
-          if (finalField) {
-            // we don't want any final fields as we might want to change their values later?
-            // also it makes it harder to overwrite the access to field since the writes can't happen
-            // outside the constructor
-            // todo:? should the system check if a class is inited and then raise some error in case of a final field
-            // or just assume that the final field nature will already be check by other systems during compilation
-            // someone could always just use reflection to set final fields, so it isn't like it is imossible
-            //field.setModifiers(modifiers & ~Modifier.FINAL)
-          }
-
-          // TODO: problem right now that there is an issue dealing with templated
-          // I wonder if this has more to deal with the fact that it should use invoke special rather then invokevirtual
-          // since it is a method on the current class, so if the value is package private or private then
-          // the invoke method used should change
-
-          // TODO: deal with static variables
-
-          val cls_mode = if(Modifier.isInterface(modifiers)) {
-            "__dj_getClassMode()"
-          } else {
-            "__dj_class_mode"
-          }
-
-          if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
-            val write_method =
-              s"""
-              static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
-                edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
-                if((self.${cls_mode} & 0x02) != 0) {
-
-                } else {
-                  self.``${name}`` = val;
-                }
-              }
-              """
-            val read_method =
-              s"""
-           static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
-             edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
-             if((self.${cls_mode} & 0x01) != 0) {
-               return self.``${name}``;
-             } else {
-               return self.``${name}``;
-             }
-           }
-              """
-            try {
-              println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
-              println(write_method)
-              cls.addMethod(CtMethod.make(write_method, cls))
-              cls.addMethod(CtMethod.make(read_method, cls))
-            } catch {
-              // TODO: remove
-              case ee: Throwable => {
-                println("Compile of method failed: " + ee)
-              }
-            }
-          } else {
-            // TODO: static field
-          }
-        }
-      }
+      addAccessorMethods(cls)
       /*for(method <- cls.getMethods) {
           if(!method.getName.startsWith(config.fieldPrefix) && Modifier.isSynchronized(method)) {
             method.setWrappedBody()
@@ -287,16 +202,7 @@ private[rt] class Rewriter (private val manager : Manager) {
         }*/
 
 
-      var seralize_obj_method =
-        """
-          public void __dj_seralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
-          super.__dj_seralize_obj(man);
-        """
-      var deseralize_obj_method =
-        """
-          public void __dj_deseralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
-          super.__dj_deseralize_obj(man);
-        """
+
       /*for (field <- cls.getDeclaredFields) {
         if (field.getType.isPrimitive) {
           seralize_obj_method +=
@@ -320,6 +226,110 @@ private[rt] class Rewriter (private val manager : Manager) {
 
     }
     // TODO: need to handle interfaces that can have methods on them
+  }
+
+  private def addAccessorMethods(cls: CtClass) = {
+    val cls_name = getUsuableName(cls)
+    for (field <- cls.getDeclaredFields) {
+      val name = field.getName
+      println("field name: " + name)
+      // TODO: manage arrays
+      if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
+        //val typ = field.getType
+
+        val typ_name = getUsuableName(field.getType)
+        val modifiers = field.getModifiers
+
+        //SignatureAttribute.toFieldSignature(field.getGenericSignature)
+
+        val accessMod =
+          if (Modifier.isPublic(modifiers))
+            "public"
+          else if (Modifier.isProtected(modifiers))
+            "protected"
+          else if (Modifier.isPrivate(modifiers))
+            "private"
+          else // must be isPackage
+            ""
+
+        val finalField = Modifier.isFinal(modifiers)
+
+        if (finalField) {
+          // we don't want any final fields as we might want to change their values later?
+          // also it makes it harder to overwrite the access to field since the writes can't happen
+          // outside the constructor
+          // todo:? should the system check if a class is inited and then raise some error in case of a final field
+          // or just assume that the final field nature will already be check by other systems during compilation
+          // someone could always just use reflection to set final fields, so it isn't like it is imossible
+          //field.setModifiers(modifiers & ~Modifier.FINAL)
+        }
+
+        // TODO: problem right now that there is an issue dealing with templated
+        // I wonder if this has more to deal with the fact that it should use invoke special rather then invokevirtual
+        // since it is a method on the current class, so if the value is package private or private then
+        // the invoke method used should change
+
+        // TODO: deal with static variables
+
+        val cls_mode = if (Modifier.isInterface(modifiers)) {
+          "__dj_getClassMode()"
+        } else {
+          "__dj_class_mode"
+        }
+
+        if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
+          val write_method =
+            s"""
+                  static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
+                    edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
+                    if((self.${cls_mode} & 0x02) != 0) {
+
+                    } else {
+                      self.``${name}`` = val;
+                    }
+                  }
+                  """
+          val read_method =
+            s"""
+               static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
+                 edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
+                 if((self.${cls_mode} & 0x01) != 0) {
+                   return self.``${name}``;
+                 } else {
+                   return self.``${name}``;
+                 }
+               }
+                  """
+          try {
+            println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
+            println(write_method)
+            cls.addMethod(CtMethod.make(write_method, cls))
+            cls.addMethod(CtMethod.make(read_method, cls))
+          } catch {
+            // TODO: remove
+            case ee: Throwable => {
+              println("Compile of method failed: " + ee)
+            }
+          }
+        } else {
+          // TODO: static field
+        }
+      }
+    }
+  }
+
+  private def addSeralizeMethods(cls: CtClass) = {
+    // TODO:
+    var seralize_obj_method =
+      """
+            public void __dj_seralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
+            super.__dj_seralize_obj(man);
+      """
+    var deseralize_obj_method =
+      """
+            public void __dj_deseralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
+            super.__dj_deseralize_obj(man);
+      """
   }
 
 
@@ -371,9 +381,13 @@ private[rt] class Rewriter (private val manager : Manager) {
               }
             }
           }
+          case accessM: RewriteAddAccessorMethods => {
+            addAccessorMethods(cls)
+          }
           case sp: SetSuperclass => {
             // force the super class to be something else
-            cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
+            if(clsa == cls)
+              cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
           }
           case _ => {} // nop
         }

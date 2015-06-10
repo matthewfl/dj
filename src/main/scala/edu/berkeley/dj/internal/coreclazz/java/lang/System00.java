@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.InterfaceException;
 import edu.berkeley.dj.internal.InternalInterface;
+import edu.berkeley.dj.internal.RewriteAddAccessorMethods;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -13,6 +14,7 @@ import java.util.Properties;
  * Created by matthewfl
  */
 @RewriteAllBut(nonModClasses = {"java/lang/System"})
+@RewriteAddAccessorMethods
 public class System00 {
 
     private System00() {}

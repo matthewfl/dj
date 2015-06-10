@@ -1,9 +1,6 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
-import edu.berkeley.dj.internal.AugmentedClassLoader;
-import edu.berkeley.dj.internal.ReplaceSelfWithCls;
-import edu.berkeley.dj.internal.RewriteAllBut;
-import edu.berkeley.dj.internal.ThreadHelpers;
+import edu.berkeley.dj.internal.*;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.VM00;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
@@ -154,6 +151,7 @@ interface DJInterruptible {
  * @since   JDK1.0
  */
 @RewriteAllBut(nonModClasses = {})
+@RewriteAddAccessorMethods
 public class Thread00 implements Runnable {
     /* Make sure registerNatives is the first thing <clinit> does. */
     /*private static native void registerNatives();
