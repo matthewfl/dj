@@ -25,7 +25,7 @@ import javassist._
   println("constructed")
 }*/
 
-class LoaderProxy(private val manager : Manager, private val pool : ClassPoolProxy)
+class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
   extends Loader(null, pool) {
 
   //addTranslator(pool, new LoaderTranslator)
@@ -42,6 +42,21 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
     super.delegateToParent(classname)
   }
 
+  def getClassBytes(classname: String): Array[Byte] = {
+    val cls = pool get classname
+    if(cls != null) {
+      cls.detach()
+      val clazz = cls.toBytecode()
+      if(manager.config.debug_clazz_bytecode != null) {
+        val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".","/")}.class")
+        fl.getParentFile.mkdirs()
+        val f = new FileOutputStream(fl)
+        f.write(clazz)
+        f.close()
+      }
+      clazz
+    } else null
+  }
 
 
   override protected def findClass(classname : String) : Class[_] = {
@@ -53,19 +68,7 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
 
 
     println("loading class: "+classname)
-    var clazz : Array[Byte] = null
-    val cls = pool get classname
-    if(cls != null) {
-      cls.detach()
-      clazz = cls.toBytecode()
-      if(manager.config.debug_clazz_bytecode != null) {
-        val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".","/")}.class")
-        fl.getParentFile.mkdirs()
-        val f = new FileOutputStream(fl)
-        f.write(clazz)
-        f.close()
-      }
-    }
+    val clazz : Array[Byte] = getClassBytes(classname)
     try {
       val lindx = classname.lastIndexOf(".")
       if (lindx != -1) {

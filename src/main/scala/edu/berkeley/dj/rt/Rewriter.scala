@@ -13,7 +13,7 @@ import edu.berkeley.dj.utils.Memo
 /**
  * Created by matthewfl
  */
-private[rt] class Rewriter (private val manager : Manager) {
+private[rt] class Rewriter (private val manager : MasterManager) {
   def config = manager.config
 
   def basePool = manager.pool

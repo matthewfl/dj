@@ -4,7 +4,8 @@ package edu.berkeley.dj.rt
  * Created by matthewfl
  */
 case class Config (val uuid: String="ID"+java.util.UUID.randomUUID.toString.replace("-",""),
-                   val debug_clazz_bytecode: String = null) {
+                   val debug_clazz_bytecode: String = null,
+                   val cluster_code: String = "dj-default") {
 
   def fieldPrefix = "__dj_" //+ uuid
 

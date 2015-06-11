@@ -18,7 +18,7 @@ class RunningInterface (private val config : Config, private val manager: Manage
   def getUnsafe() = Unsafe.theUnsafe
 
   def classRenamed(name: String) = {
-    val s = manager.rewriter.jclassmap.get(name.replace(".","/")).asInstanceOf[String]
+    val s = manager.classRename(name.replace(".","/")).asInstanceOf[String]
     if(s != null)
       s.replace("/",".")
     else

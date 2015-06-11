@@ -14,10 +14,17 @@ object RealMain {
     "fjar" -> "",
     "cp"-> "",
     "maincls" -> "",
-    "debug_clazz_bytecode" -> null
+    "debug_clazz_bytecode" -> null,
+    "cluster_code" -> "dj-cluster-default-code", // the code code that the nodes use to identify to eachother
+    "mode" -> "master"
   )
 
   def help = {
+    println(
+      """
+        |To start a processing node: -cluster_code 'cluster-code-key-board-cat' -mode client
+        |To start master: -cluster_code -fjar [fat jar] -maincls [main class]
+      """.stripMargin)
     println("arguments: -fjar [fat jar] -maincls [[main class]] [class arguments...]")
   }
 
@@ -30,6 +37,7 @@ object RealMain {
     var argsp = List[String]()
     var i = 0
     var done_parsing_args = false
+
     while(i < args.size) {
       if(args(i) == "--") {
         done_parsing_args = true
@@ -43,42 +51,52 @@ object RealMain {
       }
     }
 
-    val fjar = arguments("fjar")
-    var clsp = arguments("cp")
-    if(fjar.isEmpty && clsp.isEmpty) {
-      help
-      return
-    }
-    if(!clsp.contains(fjar)) {
-      clsp = if (clsp.isEmpty)
-        fjar
-      else
-        clsp + ":"+ fjar
-    }
-
-    var maincls = arguments("maincls")
-    if(maincls.isEmpty) {
-      if(fjar.isEmpty) {
-        help
-        return
-      }
-      var jfile = new JarFile(fjar)
-      maincls = jfile.getManifest.getMainAttributes.getValue("Main-Class")
-      if(maincls == null) {
-        help
-        return
-      }
-    }
-
-    val config = new Config(debug_clazz_bytecode=arguments("debug_clazz_bytecode"))
-
-
     System.setSecurityManager(new SecurityManager)
 
+    arguments("mode") match {
+      case "master" => {
+        val fjar = arguments("fjar")
+        var clsp = arguments("cp")
+        if(fjar.isEmpty && clsp.isEmpty) {
+          help
+          return
+        }
+        if(!clsp.contains(fjar)) {
+          clsp = if (clsp.isEmpty)
+            fjar
+          else
+            clsp + ":"+ fjar
+        }
 
-    val man = new Manager(config, clsp)
-    println("Starting program: "+maincls)
-    man.startMain(maincls, argsp.toArray)
+        var maincls = arguments("maincls")
+        if(maincls.isEmpty) {
+          if(fjar.isEmpty) {
+            help
+            return
+          }
+          var jfile = new JarFile(fjar)
+          maincls = jfile.getManifest.getMainAttributes.getValue("Main-Class")
+          if(maincls == null) {
+            help
+            return
+          }
+        }
 
+        val config = new Config(
+          debug_clazz_bytecode=arguments("debug_clazz_bytecode"),
+          cluster_code=arguments("cluster_code")
+        )
+
+        val man = new MasterManager(config, clsp)
+        println("Starting program: "+maincls)
+        man.startMain(maincls, argsp.toArray)
+      }
+    }
+    case "client" => {
+
+    }
+    case _ => {
+      help
+    }
   }
 }

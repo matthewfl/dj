@@ -8,7 +8,23 @@ import javassist.bytecode.MethodInfo
 /**
  * Created by matthewfl
  */
-private[rt] class Manager (val config: Config, classpaths: String) {
+
+private[rt] trait Manager {
+  def config: Config
+
+  //def runningPool : javassist.ClassPool
+
+  def protectionDomain: ProtectionDomain
+
+  // TODO:? remove this
+  def classRename(name: String): String
+}
+
+/**
+ * Manager for the master machine
+ *
+ */
+private[rt] class MasterManager (val config: Config, classpaths: String) extends Manager {
 
   val pool = new ClassPool(true)
 
@@ -21,6 +37,10 @@ private[rt] class Manager (val config: Config, classpaths: String) {
   //val securityManger = new SecurityManager(this)
 
   val rewriter = new Rewriter(this)
+
+  override def classRename(name: String): String = {
+    rewriter.jclassmap.get(name).asInstanceOf[String]
+  }
 
   val runningPool = new ClassPoolProxy(this, rewriter)
 
@@ -50,5 +70,27 @@ private[rt] class Manager (val config: Config, classpaths: String) {
         throw e
       }
     }
+  }
+}
+
+/**
+ * Manager for a client machine
+ *
+ * Will essentially proxy requests for classes to the main machine
+ */
+private [rt] class ClientManager (val config: Config) extends Manager {
+
+  override def classRename(name: String): String = {
+    throw new NotImplementedError()
+  }
+
+  val loader = new RemoteLoaderProxy(this, ClassPool.getDefault)
+
+  val protectionDomain = new ProtectionDomain(null, null, loader, null)
+  loader.setDomain(protectionDomain)
+
+  def startClient = {
+    val cls = loader.loadClass("edu.berkeley.dj.internal.ClientMain")
+    val ri = new RunningInterface(config, this)
   }
 }

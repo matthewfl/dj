@@ -9,7 +9,7 @@ import scala.collection.mutable
 /**
  * Created by matthewfl
  */
-class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewriter) extends javassist.ClassPool(false) {
+class ClassPoolProxy (private val manager: MasterManager, private val rewriter : Rewriter) extends javassist.ClassPool(false) {
 
   childFirstLookup = false
 
@@ -41,7 +41,7 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
       return Descriptor.toCtClass(classname, this)
     }*/
 
-    if(!canRewrite(classname)) {
+    if(!ClassPoolProxy.canRewrite(classname)) {
       return manager.pool.get(classname)
     }
     val res = try {
@@ -80,6 +80,11 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     }
     throw new ClassNotFoundException(classname)
   }*/
+
+
+}
+
+object ClassPoolProxy {
 
   def canRewrite(name: String) = {
     !(name.startsWith("java.")
