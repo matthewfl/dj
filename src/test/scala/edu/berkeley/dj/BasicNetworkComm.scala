@@ -14,6 +14,7 @@ class BasicNetworkComm extends FunSuite {
 
   var receved_new_app = false
   var app_started = false
+  var receved_bytes = false
 
   def nm_setup = {
     val nm = new NetworkManager("test", "dummy")
@@ -22,10 +23,23 @@ class BasicNetworkComm extends FunSuite {
         receved_new_app = true
         new NetworkRecever {
           // for recving when there will be no reply
-          override def recv(from: Int, action: Int, msg: Array[Byte]): Unit = ???
+          override def recv(from: Int, action: Int, msg: Array[Byte]): Unit = {
+            assert(action == 2)
+            assert(from == 0)
+            assert(msg.length == 3)
+            assert(msg(0) == 1)
+            assert(msg(1) == 2)
+            assert(msg(2) == 3)
+            receved_bytes = true
+          }
 
           // for sending a reply back
-          override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = ???
+          override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = {
+            assert(from == 0)
+            assert(action == 1)
+            assert(new String(msg).equals("test123"))
+            Future.successful(Array[Byte](6,5,4))
+          }
 
           override def start: Unit = {
             app_started = true
@@ -37,6 +51,13 @@ class BasicNetworkComm extends FunSuite {
     Future { nm2.runClient }
 
     (nm, nm2)
+  }
+
+  def wait_till_true(func: => Boolean): Boolean = {
+    for(i <- 0 until 1000; if func == false) {
+      Thread.sleep(2)
+    }
+    func
   }
 
 
@@ -55,14 +76,31 @@ class BasicNetworkComm extends FunSuite {
 
     nm.createNewApp("test-app")
 
-    val r = Future {
-      for(i <- 0 until 1000; if receved_new_app == false) {
-        Thread.sleep(1)
-      }
-      receved_new_app
+    assert(wait_till_true(receved_new_app))
+
+    assert(wait_till_true(app_started))
+
+    for(h <- network.getAllHosts) {
+      if(h != network.getSelfId)
+        network.send(h, 2, Array[Byte](1,2,3))
     }
 
-    assert(Await.result(r, 1500 millisecond) == true)
+    assert(wait_till_true(receved_bytes))
+
+    var r : Future[Array[Byte]] = null
+    for(h <- network.getAllHosts) {
+      if(h != network.getSelfId)
+        r = network.sendWrpl(h, 1, "test123".getBytes())
+    }
+
+    val arr = Await.result(r, 1500 millisecond)
+    assert(arr.length == 3)
+    assert(arr(0) == 6)
+    assert(arr(1) == 5)
+    assert(arr(2) == 4)
+
+    nm.createNewApp("exit")
+
   }
 
 }

@@ -15,7 +15,11 @@ abstract class NetworkCommunication(private val recever: NetworkRecever) {
 
   protected def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = recever.recvWrpl(from, action, msg)
 
+  // get all hosts
   def getAllHosts: Seq[Int]
+
+  // get the id of this host, 0 should reprsent that this is the master
+  def getSelfId: Int
 }
 
 trait NetworkRecever {

@@ -8,19 +8,28 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by matthewfl
+ *
+ * Dummy system for when running unit tests or more then one dj server in a single jvm that are communicating
+ *
+ * Attempt to use futures and other async stuff to simulate the async nature of the network
  */
 class DummyComm(recever: NetworkRecever, private val appId: String, private val p: DummyHost, private val selfid: Int) extends NetworkCommunication(recever) {
 
-  override def send(to: Int, action: Int, msg: Array[Byte]) = {
+  override def send(to: Int, action: Int, msg: Array[Byte]): Unit = {
     DummyHost.comms.get((appId, to)) match {
-      case Some(h) => h.recv(selfid, action, msg)
+      case Some(h) => Future { h.recv(selfid, action, msg) }
       case None => throw new RuntimeException("host not found: "+to)
     }
   }
 
   override def sendWrpl(to: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = {
     DummyHost.comms.get((appId, to)) match {
-      case Some(h) => h.recvWrpl(selfid, action, msg)
+      case Some(h) => Future {
+        // this recvWrpl returns a future so it can do an async reply
+        // normally we would attach callbacks to send the result back to the sending machine
+        // but here we are just using await since this is designed to be used with unit tests etc
+        Await.result(h.recvWrpl(selfid, action, msg), 1 minute)
+      }
       case None => throw new RuntimeException("host not found: "+to)
     }
   }
@@ -33,6 +42,8 @@ class DummyComm(recever: NetworkRecever, private val appId: String, private val 
     }
     ret
   }
+
+  override def getSelfId = selfid
 
 }
 
