@@ -29,7 +29,7 @@ object RealMain {
   }
 
   def main(args : Array[String]) : Unit = {
-    if(args.size < 2) {
+    if (args.size < 2) {
       help
       return
     }
@@ -38,12 +38,12 @@ object RealMain {
     var i = 0
     var done_parsing_args = false
 
-    while(i < args.size) {
-      if(args(i) == "--") {
+    while (i < args.size) {
+      if (args(i) == "--") {
         done_parsing_args = true
         i += 1
-      } else if(!done_parsing_args && args(i).startsWith("-") && arguments.contains(args(i).drop(1))) {
-        arguments.update(args(i).drop(1), args(i+1))
+      } else if (!done_parsing_args && args(i).startsWith("-") && arguments.contains(args(i).drop(1))) {
+        arguments.update(args(i).drop(1), args(i + 1))
         i += 2
       } else {
         argsp ++= List(args(i))
@@ -57,46 +57,46 @@ object RealMain {
       case "master" => {
         val fjar = arguments("fjar")
         var clsp = arguments("cp")
-        if(fjar.isEmpty && clsp.isEmpty) {
+        if (fjar.isEmpty && clsp.isEmpty) {
           help
           return
         }
-        if(!clsp.contains(fjar)) {
+        if (!clsp.contains(fjar)) {
           clsp = if (clsp.isEmpty)
             fjar
           else
-            clsp + ":"+ fjar
+            clsp + ":" + fjar
         }
 
         var maincls = arguments("maincls")
-        if(maincls.isEmpty) {
-          if(fjar.isEmpty) {
+        if (maincls.isEmpty) {
+          if (fjar.isEmpty) {
             help
             return
           }
           var jfile = new JarFile(fjar)
           maincls = jfile.getManifest.getMainAttributes.getValue("Main-Class")
-          if(maincls == null) {
+          if (maincls == null) {
             help
             return
           }
         }
 
         val config = new Config(
-          debug_clazz_bytecode=arguments("debug_clazz_bytecode"),
-          cluster_code=arguments("cluster_code")
+          debug_clazz_bytecode = arguments("debug_clazz_bytecode"),
+          cluster_code = arguments("cluster_code")
         )
 
         val man = new MasterManager(config, clsp)
-        println("Starting program: "+maincls)
+        println("Starting program: " + maincls)
         man.startMain(maincls, argsp.toArray)
       }
-    }
-    case "client" => {
+      case "client" => {
 
-    }
-    case _ => {
-      help
+      }
+      case _ => {
+        help
+      }
     }
   }
 }

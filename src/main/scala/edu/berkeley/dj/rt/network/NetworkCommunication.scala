@@ -5,17 +5,17 @@ import scala.concurrent.Future
 /**
  * Created by matthewfl
  */
-abstract class NetworkCommunication(val recever: NetworkRecever) {
+abstract class NetworkCommunication(private val recever: NetworkRecever) {
 
-  abstract def send(to: Int, action: Int, msg: Array[Byte]): Unit
+  def send(to: Int, action: Int, msg: Array[Byte]): Unit
 
-  abstract def sendWrpl(to: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]]
+  def sendWrpl(to: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]]
 
   protected def recv(from: Int, action: Int, msg: Array[Byte]): Unit = recever.recv(from, action, msg)
 
   protected def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = recever.recvWrpl(from, action, msg)
 
-
+  def getAllHosts: Seq[Int]
 }
 
 trait NetworkRecever {
@@ -25,19 +25,30 @@ trait NetworkRecever {
   // for sending a reply back
   def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]]
 
+  def start // should this be async?
+}
+
+trait NetworkHostRecever {
+
+  def newProgram(identifier: String): Unit
+
 }
 
 trait NetworkHost {
   def getApplicationComm(identifier: String, isMaster: Boolean, recever: NetworkRecever): NetworkCommunication
+
+  // send a message to all the clients
+  def createNewApp(identifier: String)
+
+  // keep this client alive as long as it is told not to die
+  def runClient(man: NetworkManager)
 }
 
-object NetworkCommunication {
+class NetworkManager(val code: String, val mode: String) {
 
-  private var host: NetworkHost = null
-
-  def setupHost(code: String, mode: String) = mode match {
+  private val host: NetworkHost = mode match {
     case "dummy" => {
-      host = new DummyHost()
+      new DummyHost()
     }
     case "hazelcast" => {
       throw new NotImplementedError()
@@ -51,6 +62,18 @@ object NetworkCommunication {
     host.getApplicationComm(identifer, isMaster, recever)
   }
 
+  // run an even loop that waits for new client applications to be started
+  def runClient = {
+    host.runClient(this)
+  }
+
+  // send a message to all the other hosts that they should start an application with some identifier
+  def createNewApp(identifier: String) = host.createNewApp(identifier)
+
+  def makeClientApplication(identifier: String): NetworkRecever = {
+    // on the client, we get a callback with the identifier and then have to construct a runtime on this client host
+    null
+  }
 
 
 }

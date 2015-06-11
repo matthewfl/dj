@@ -41,9 +41,6 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   // anywhere in a program
   // rewrite them to the new methods
   val rewriteMethodCalls = Map(
-    // TODO: add the method signatures onto these items
-    // and don't use
-    // TODO: the maps for when they have argument types
     ("notify","()V","java.lang.Object") -> ("nofity", s"${config.internalPrefix}ObjectHelpers"),
     ("notifyAll", "()V", "java.lang.Object") -> ("notifyAll", s"${config.internalPrefix}ObjectHelpers"),
     ("wait", "()V", "java.lang.Object") -> ("wait", s"${config.internalPrefix}ObjectHelpers"),
