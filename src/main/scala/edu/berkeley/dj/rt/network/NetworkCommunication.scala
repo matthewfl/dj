@@ -55,7 +55,7 @@ class NetworkManager(val code: String, val mode: String) {
       new DummyHost()
     }
     case "hazelcast" => {
-      throw new NotImplementedError()
+      new HazelcastHost(code)
     }
     case "gasnet" => {
       throw new NotImplementedError()

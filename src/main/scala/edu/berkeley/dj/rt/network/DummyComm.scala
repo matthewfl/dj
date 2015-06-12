@@ -50,7 +50,7 @@ class DummyComm(recever: NetworkRecever, private val appId: String, private val 
 
 class DummyHost/*(val man: NetworkManager)*/ extends NetworkHost {
 
-  def getApplicationComm(identifier: String, isMaster: Boolean, recever: NetworkRecever): NetworkCommunication = {
+  override def getApplicationComm(identifier: String, isMaster: Boolean, recever: NetworkRecever): NetworkCommunication = {
     val id = if(isMaster)
       0
     else {
@@ -62,7 +62,7 @@ class DummyHost/*(val man: NetworkManager)*/ extends NetworkHost {
     r
   }
 
-  def createNewApp(identifier: String) = {
+  override def createNewApp(identifier: String) = {
     /*val rc = man.makeClientApplication(identifier)
     getApplicationComm(identifier, false, rc)
     */
@@ -70,11 +70,12 @@ class DummyHost/*(val man: NetworkManager)*/ extends NetworkHost {
       if(h != this)
         h.waitLock.trySuccess(identifier)
     }
+    // should this wait for the new servers to be setup
   }
 
   var waitLock = Promise[String]()
 
-  def runClient(man: NetworkManager) = {
+  override def runClient(man: NetworkManager) = {
     var exit = false
     while(!exit) {
       val act = Await.result(waitLock.future, 0 nanos)

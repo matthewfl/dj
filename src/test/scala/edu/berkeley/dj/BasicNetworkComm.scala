@@ -17,8 +17,8 @@ class BasicNetworkComm extends FunSuite {
   var receved_bytes = false
 
   def nm_setup = {
-    val nm = new NetworkManager("test", "dummy")
-    val nm2 = new NetworkManager("test", "dummy") {
+    val nm = new NetworkManager("testtesttest", "dummy")
+    val nm2 = new NetworkManager("testtesttest", "dummy") {
       override def makeClientApplication(id: String) = {
         receved_new_app = true
         new NetworkRecever {
@@ -64,7 +64,8 @@ class BasicNetworkComm extends FunSuite {
   test("simple set up client") {
     val (nm, nm2) = nm_setup
     val network = nm.getApplication("test-app", true, new NetworkRecever {// for recving when there will be no reply
-    override def recv(from: Int, action: Int, msg: Array[Byte]): Unit = ???
+
+      override def recv(from: Int, action: Int, msg: Array[Byte]): Unit = ???
 
       // for sending a reply back
       override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = ???
