@@ -55,7 +55,7 @@ class BasicNetworkComm extends FunSuite {
 
   def wait_till_true(func: => Boolean): Boolean = {
     for(i <- 0 until 1000; if func == false) {
-      Thread.sleep(2)
+      Thread.sleep(3)
     }
     func
   }

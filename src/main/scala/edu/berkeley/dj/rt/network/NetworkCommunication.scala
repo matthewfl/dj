@@ -55,7 +55,7 @@ class NetworkManager(val code: String, val mode: String) {
       new DummyHost()
     }
     case "hazelcast" => {
-      new HazelcastHost(code)
+      new HazelcastHost(code, this)
     }
     case "gasnet" => {
       throw new NotImplementedError()
@@ -75,6 +75,7 @@ class NetworkManager(val code: String, val mode: String) {
   def createNewApp(identifier: String) = host.createNewApp(identifier)
 
   def makeClientApplication(identifier: String): NetworkRecever = {
+    println(s"we are making the client application for $identifier")
     // on the client, we get a callback with the identifier and then have to construct a runtime on this client host
     null
   }
