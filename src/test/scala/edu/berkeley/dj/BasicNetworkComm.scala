@@ -41,7 +41,7 @@ class BasicNetworkComm extends FunSuite {
             Future.successful(Array[Byte](6,5,4))
           }
 
-          override def start: Unit = {
+          override def start(nc: NetworkCommunication): Unit = {
             app_started = true
           }
         }
@@ -70,7 +70,7 @@ class BasicNetworkComm extends FunSuite {
       // for sending a reply back
       override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = ???
 
-      override def start: Unit = ???
+      override def start(nc: NetworkCommunication): Unit = ???
     })
 
     assert(receved_new_app == false)

@@ -20,7 +20,7 @@ class networkSimpleEcho extends FunSuite {
       // for sending a reply back
       override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = ??? // we are also not going to get back some request for data
 
-      override def start: Unit = {}
+      override def start(nc: NetworkCommunication): Unit = {}
     })
     gg.createNewApp("test123")
 

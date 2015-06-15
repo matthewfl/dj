@@ -13,7 +13,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
  *
  * Attempt to use futures and other async stuff to simulate the async nature of the network
  */
-class DummyComm(recever: NetworkRecever, private val appId: String, private val p: DummyHost, private val selfid: Int) extends NetworkCommunication(recever) {
+class DummyComm(recever: NetworkRecever,
+                private val appId: String,
+                private val p: DummyHost,
+                private val selfid: Int) extends NetworkCommunication(recever) {
 
   override def send(to: Int, action: Int, msg: Array[Byte]): Unit = {
     DummyHost.comms.get((appId, to)) match {
@@ -48,7 +51,7 @@ class DummyComm(recever: NetworkRecever, private val appId: String, private val 
 }
 
 
-class DummyHost/*(val man: NetworkManager)*/ extends NetworkHost {
+class DummyHost(val man: NetworkManager) extends NetworkHost {
 
   override def getApplicationComm(identifier: String, isMaster: Boolean, recever: NetworkRecever): NetworkCommunication = {
     val id = if(isMaster)
@@ -84,7 +87,7 @@ class DummyHost/*(val man: NetworkManager)*/ extends NetworkHost {
         val rc = man.makeClientApplication(act)
         val comm = getApplicationComm(act, false, rc)
         waitLock = Promise[String]()
-        Future { rc.start }
+        Future { rc.start(comm) }
       }
     }
   }

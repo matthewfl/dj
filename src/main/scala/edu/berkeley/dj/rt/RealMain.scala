@@ -1,9 +1,12 @@
 package edu.berkeley.dj.rt
 
-import java.security.AllPermission
 import java.util.jar.JarFile
 
+import edu.berkeley.dj.rt.network.NetworkManager
+
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 /**
  * Created by matthewfl
@@ -16,6 +19,7 @@ object RealMain {
     "maincls" -> "",
     "debug_clazz_bytecode" -> null,
     "cluster_code" -> "dj-cluster-default-code", // the code code that the nodes use to identify to eachother
+    "cluster_conn" -> "dummy", // will start up two processes in the same jvm
     "mode" -> "master"
   )
 
@@ -82,21 +86,40 @@ object RealMain {
           }
         }
 
+        val dummy_f = if(arguments("cluster_conn") == "dummy") {
+          // start up a dummy connection so we can at least have to different systems talking with eachother
+          Future {
+            val comm = new NetworkManager(arguments("cluster_code"), "dummy")
+            comm.runClient
+          }
+        } else null
+
         val config = new Config(
           debug_clazz_bytecode = arguments("debug_clazz_bytecode"),
-          cluster_code = arguments("cluster_code")
+          cluster_code = arguments("cluster_code"),
+          cluster_conn_mode = arguments("cluster_conn")
         )
+
 
         val man = new MasterManager(config, clsp)
         println("Starting program: " + maincls)
         man.startMain(maincls, argsp.toArray)
+
+
       }
       case "client" => {
-
+        if(arguments("cluster_conn") == "dummy")
+          arguments("cluster_conn") = "hazelcast" // it does not make since to make to make a single node with the dummy client
+        startClient(arguments("cluster_conn"), arguments("cluster_code"))
       }
       case _ => {
         help
       }
     }
+  }
+
+  def startClient(cmode: String, code: String) = {
+    val comm = new NetworkManager(code, cmode)
+    comm.runClient
   }
 }

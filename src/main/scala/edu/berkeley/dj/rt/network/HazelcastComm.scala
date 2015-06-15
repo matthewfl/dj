@@ -21,7 +21,9 @@ import scala.util.{Success, Failure}
  * This is the basic interface for hazelcast, which is good for running over a typical network
  *
  */
-class HazelcastComm(recever: NetworkRecever, private val appId: String, private val host: HazelcastHost) extends NetworkCommunication(recever) {
+class HazelcastComm(recever: NetworkRecever,
+                    private val appId: String,
+                    private val host: HazelcastHost) extends NetworkCommunication(recever) {
 
   private def app_id_key = "DJ_app_id_"+appId
 
@@ -110,7 +112,8 @@ class HazelcastComm(recever: NetworkRecever, private val appId: String, private 
 
 
 
-class HazelcastHost(private val gcode: String, val commMan: NetworkManager) extends NetworkHost {
+class HazelcastHost(private val gcode: String,
+                    val commMan: NetworkManager) extends NetworkHost {
 
   // gcode should be a long (~20-30) random string of characters
   assert(gcode.length > 10)
@@ -216,7 +219,8 @@ class HazelcastHost(private val gcode: String, val commMan: NetworkManager) exte
 }
 
 object HazelcastHost {
-  private class startProgram (private val appId: String, private val selfId: Int) extends Runnable with Serializable with HazelcastInstanceAware {
+  private class startProgram (private val appId: String,
+                              private val selfId: Int) extends Runnable with Serializable with HazelcastInstanceAware {
 
     @transient var instance: HazelcastInstance = null
 
@@ -227,8 +231,8 @@ object HazelcastHost {
     override def run() = {
       instance.getCluster.getLocalMember.setIntAttribute("DJ_app_id_"+appId, selfId)
       val recvr = getHost.commMan.makeClientApplication(appId)
-      getHost.getApplicationComm(appId, false, recvr)
-      recvr.start
+      val nc = getHost.getApplicationComm(appId, false, recvr)
+      recvr.start(nc)
       println(s"-------------------> starting application: $appId on $selfId")
     }
   }
@@ -283,6 +287,7 @@ object HazelcastComm {
   }
 }
 
+// dummy test server that echos replies back to whoever sent it
 object testd {
   def main(args: Array[String]) = {
     val comm = new NetworkManager("test"*3, "hazelcast") {
@@ -303,7 +308,7 @@ object testd {
             }
           }
 
-          override def start: Unit = {
+          override def start(nc: NetworkCommunication): Unit = {
             println(s"start with $identifier nop")
           }
         }

@@ -15,6 +15,12 @@ public class InternalInterface {
 
     static private InternalInterface ii = null;
 
+    static private boolean isMaster = true;
+
+    static void _setIsClient() { isMaster = false; }
+
+    static public boolean isMaster() { return isMaster; }
+
     static void setInternalInterface(Object o) {
         if(!o.getClass().getName().equals("edu.berkeley.dj.rt.RunningInterface"))
             throw new RuntimeException("Invalid class for running interface");
@@ -22,6 +28,7 @@ public class InternalInterface {
             throw new RuntimeException("Running interface already set");
         ii = new InternalInterfaceWrap(o);
 
+        // TODO: this is wrong, we only want to do this on the main one rather then on the clients as well
         // set the main thread
         ThreadHelpers.init();
     }
@@ -90,6 +97,8 @@ public class InternalInterface {
     public void exit(int i) {
         throw new InterfaceException();
     }
+
+    public void registerClient() { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
@@ -195,6 +204,9 @@ class InternalInterfaceWrap extends  InternalInterface {
     public void exit(int i) {
         invoke("exit", new Class[]{int.class}, i);
     }
+
+    @Override
+    public void registerClient() { invoke("registerClient", new Class[]{}); }
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream

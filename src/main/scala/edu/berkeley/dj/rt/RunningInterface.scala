@@ -86,9 +86,15 @@ class RunningInterface (private val config : Config, private val manager: Manage
   }
 
   def exit(code: Int): Unit = {
-    System.exit(code)
+    /*if(manager.isMaster)
+      System.exit(code)
+      */
+    for(n <- manager.networkInterface.getAllHosts) {
+      if(n != manager.networkInterface.getSelfId)
+        manager.networkInterface.send(n, 1, Array[Byte](code.asInstanceOf[Byte]))
+    }
   }
 
-
+  def registerClient = ???
 
 }

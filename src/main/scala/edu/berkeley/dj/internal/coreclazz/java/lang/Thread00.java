@@ -176,9 +176,13 @@ public class Thread00 implements Runnable {
     }
 
     static {
-        Thread00 mainThread = new Thread00(1);
-        ThreadHelpers.setCurrentThread(mainThread);
-        ThreadHelpers.allThreads.get().put(mainThread.getId(), mainThread);
+        if(InternalInterface.isMaster()) {
+            // we only want to have one instance of the main thread so we use isMaster
+            // to only run this code once
+            Thread00 mainThread = new Thread00(1);
+            ThreadHelpers.setCurrentThread(mainThread);
+            ThreadHelpers.allThreads.get().put(mainThread.getId(), mainThread);
+        }
     }
 
     private volatile char  name[];
