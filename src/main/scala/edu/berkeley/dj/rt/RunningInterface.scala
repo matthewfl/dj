@@ -1,6 +1,10 @@
 package edu.berkeley.dj.rt
 
+import java.nio.ByteBuffer
+
 import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 /**
  * Created by matthewfl
@@ -37,7 +41,7 @@ class RunningInterface (private val config : Config, private val manager: Manage
     callInMth.setAccessible(true)
   }
 
-  private def callIn(action : Int, args: Object*): Any = {
+  def callIn(action : Int, args: Any*): Any = {
     callInMth.invoke(callIn, Integer.valueOf(action), args.toArray.asInstanceOf[Array[Object]])
   }
 
@@ -57,32 +61,54 @@ class RunningInterface (private val config : Config, private val manager: Manage
   }
 
   // some sort of locking when distribuited
+  // going to just make the master node hold all the "distribuited" locks
   val tempLockSet = new mutable.HashSet[String]()
 
   def lock(name: String): Boolean = {
-    tempLockSet.synchronized {
-      if(tempLockSet.contains(name))
-        return false
-      tempLockSet += name
-      return true
+    if(manager.isMaster) {
+      tempLockSet.synchronized {
+        if(tempLockSet.contains(name))
+          return false
+        tempLockSet += name
+        return true
+      }
+    } else {
+      Await.result(manager.networkInterface.sendWrpl(0, 3, name.getBytes()), 60 seconds) == 1
     }
   }
 
   def unlock(name: String) = {
-    tempLockSet.synchronized {
-      tempLockSet -= name
+    if(manager.isMaster) {
+      tempLockSet.synchronized {
+        tempLockSet -= name
+      }
+    } else {
+      Await.result(manager.networkInterface.sendWrpl(0, 4, name.getBytes()), 60 seconds)
     }
   }
 
-  val tempDistributiedMap = new mutable.HashMap[String,Object]()
+  val tempDistributiedMap = new mutable.HashMap[String,Array[Byte]]()
 
-  def setDistributed(name: String, o: Object): Unit = {
-    val i: (String,Object) = (name, o)
-    tempDistributiedMap += i
+  def setDistributed(name: String, o: Array[Byte]): Unit = tempDistributiedMap.synchronized {
+    if(manager.isMaster) {
+      val i: (String, Array[Byte]) = (name, o)
+      tempDistributiedMap += i
+    } else {
+      val nba = name.getBytes()
+      val bb = ByteBuffer.allocate(nba.length + o.length + 4)
+      bb.putInt(nba.length)
+      bb.put(nba)
+      bb.put(o)
+      Await.result(manager.networkInterface.sendWrpl(0, 5, bb), 60 seconds)
+    }
   }
 
-  def getDistributed(name: String): Object = {
-    tempDistributiedMap.getOrElse(name, null)
+  def getDistributed(name: String): Array[Byte] = tempDistributiedMap.synchronized {
+    if(manager.isMaster) {
+      tempDistributiedMap.getOrElse(name, Array[Byte]())
+    } else {
+      Await.result(manager.networkInterface.sendWrpl(0, 6, name.getBytes()), 60 seconds)
+    }
   }
 
   def exit(code: Int): Unit = {
@@ -95,6 +121,13 @@ class RunningInterface (private val config : Config, private val manager: Manage
     }
   }
 
-  def registerClient = ???
+  def registerClient = {
+    // notifiy the master that there is a new running client
+    manager.networkInterface.send(0, 102, Array[Byte]())
+  }
+
+  def getSelfId: Int = manager.networkInterface.getSelfId
+
+  def getAllHosts: Array[Int] = manager.networkInterface.getAllHosts.toArray
 
 }

@@ -1,8 +1,11 @@
 package edu.berkeley.dj.rt.network
 
+import java.nio.ByteBuffer
+
 import edu.berkeley.dj.rt.{NetworkCommInterface, ClientManager, Config}
 
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by matthewfl
@@ -12,6 +15,39 @@ abstract class NetworkCommunication(private val recever: NetworkRecever) {
   def send(to: Int, action: Int, msg: Array[Byte]): Unit
 
   def sendWrpl(to: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]]
+
+  // TODO: change the internal apis to use ByteBuffers so that it can avoid copying often
+  // can override the seralization method of the comm system to only write a subset of the bytes from a given
+  // bytebuffer which would avoid copying items another time
+  def send(to: Int, action: Int, msg: ByteBuffer): Unit = {
+    val arrmsg: Array[Byte] = if(msg.limit() == msg.position()) {
+      msg.array()
+    } else {
+      val g = new Array[Byte](msg.position())
+      Array.copy(msg.array, 0, g, 0, msg.position())
+      g
+    }
+    send(to, action, arrmsg)
+  }
+
+  def sendWrpl(to: Int, action: Int, msg: ByteBuffer): Future[ByteBuffer] = {
+    val arrmsg: Array[Byte] = if(msg.limit() == msg.position()) {
+      msg.array()
+    } else {
+      val g = new Array[Byte](msg.position())
+      Array.copy(msg.array, 0, g, 0, msg.position())
+      g
+    }
+    val ret = Promise[ByteBuffer]()
+    val ss = sendWrpl(to, action, arrmsg)
+    ss.onSuccess {
+      case a => ret.success(ByteBuffer.wrap(a))
+    }
+    ss.onFailure {
+      case e => ret.failure(e)
+    }
+    ret.future
+  }
 
   protected def recv(from: Int, action: Int, msg: Array[Byte]): Unit = recever.recv(from, action, msg)
 

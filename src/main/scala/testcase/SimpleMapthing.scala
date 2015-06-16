@@ -14,6 +14,8 @@ object SimpleMapthing {
 
   def main(args: Array[String]) = {
 
+    Thread.sleep(120000);
+
     val map = new util.TreeMap[Int, Struct]()
 
     for(i <- 0 until 10000) {
@@ -21,6 +23,8 @@ object SimpleMapthing {
     }
 
     println("the simple map thing has finished")
+
+    Thread.sleep(120000);
 
   }
 

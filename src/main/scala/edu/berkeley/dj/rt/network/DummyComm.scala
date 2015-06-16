@@ -27,12 +27,21 @@ class DummyComm(recever: NetworkRecever,
 
   override def sendWrpl(to: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = {
     DummyHost.comms.get((appId, to)) match {
-      case Some(h) => Future {
+      case Some(h) => {
+        val ret = Promise[Array[Byte]]()
+        // doing it this way disconnects the calls between these two operations
+        // so they can happen concurrently
+        Future {
+          h.recvWrpl(selfid, action, msg).onComplete(ret.complete)
+        }
+        ret.future
+      }
+        /*Future {
         // this recvWrpl returns a future so it can do an async reply
         // normally we would attach callbacks to send the result back to the sending machine
         // but here we are just using await since this is designed to be used with unit tests etc
-        Await.result(h.recvWrpl(selfid, action, msg), 1 minute)
-      }
+        Await.result(h.recvWrpl(selfid, action, msg), 3 minute)
+      }*/
       case None => throw new RuntimeException("host not found: "+to)
     }
   }
@@ -81,7 +90,7 @@ class DummyHost(val man: NetworkManager) extends NetworkHost {
   override def runClient(man: NetworkManager) = {
     var exit = false
     while(!exit) {
-      val act = Await.result(waitLock.future, 0 nanos)
+      val act = Await.result(waitLock.future, 120 seconds)
       if(act == "exit") exit = true
       else {
         val rc = man.makeClientApplication(act)

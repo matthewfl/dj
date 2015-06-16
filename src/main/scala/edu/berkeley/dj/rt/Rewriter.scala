@@ -381,6 +381,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           case accessM: RewriteAddAccessorMethods => {
             addAccessorMethods(cls)
           }
+          case _: RewriteUseAccessorMethods => {
+            // TODO:
+          }
           case sp: SetSuperclass => {
             // force the super class to be something else
             if(clsa == cls)

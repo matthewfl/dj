@@ -65,6 +65,10 @@ public class ThreadHelpers {
         Thread00.currentThread().__dj_exit();
     }
 
+    static public void sleep(long u) throws InterruptedException {
+        Thread.sleep(u);
+    }
+
 
 
 }

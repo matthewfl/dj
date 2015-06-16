@@ -78,6 +78,8 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
     val cls = loader.loadClass("edu.berkeley.dj.internal.PreMain")
     runningInterface = new RunningInterface(config, this)
     networkInterface = nmanager.getApplication(config.uuid, true, new NetworkCommInterface(this))
+    nmanager.createNewApp(config.uuid)
+
     // HACK: some complication with using getDeclaredMethod from scala
     val premain = cls.getDeclaredMethods.filter(_.getName == "premain")(0)
     try {
@@ -101,16 +103,18 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
  */
 private [rt] class ClientManager (val config: Config) extends Manager {
 
-  override def classRename(name: String): String = {
-    throw new NotImplementedError()
-  }
+  override def classRename(name: String): String = innerClassRename(name)
 
-  private lazy val innerClassRename: String ==> Boolean = Memo { case name: String =>
+  private lazy val innerClassRename: String ==> String = Memo { case name: String =>
     // send a request to the master node asking about this class name
     // wait at most 60 seconds
     // if we get a non zero value for the first byte, then we must end up renaming this class
     // memorize it so that we can have a faster op in the future
-    Await.result(networkInterface.sendWrpl(0, 2, name.getBytes), 60 seconds)(0) != 0
+    val res = Await.result(networkInterface.sendWrpl(0, 2, name.getBytes), 60 seconds)
+    if(res.length == 0)
+      null
+    else
+      new String(res)
   }
 
   val loader = new RemoteLoaderProxy(this, ClassPool.getDefault)

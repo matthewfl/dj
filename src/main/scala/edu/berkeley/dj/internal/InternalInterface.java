@@ -17,7 +17,9 @@ public class InternalInterface {
 
     static private boolean isMaster = true;
 
-    static void _setIsClient() { isMaster = false; }
+    static void _setIsClient() {
+        isMaster = false;
+    }
 
     static public boolean isMaster() { return isMaster; }
 
@@ -77,11 +79,11 @@ public class InternalInterface {
         throw new InterfaceException();
     }
 
-    public void setDistributed(String name, Object value) {
+    public void setDistributed(String name, byte[] value) {
         throw new InterfaceException();
     }
 
-    public Object getDistributed(String name) {
+    public byte[] getDistributed(String name) {
         throw new InterfaceException();
     }
 
@@ -99,6 +101,10 @@ public class InternalInterface {
     }
 
     public void registerClient() { throw new InterfaceException(); }
+
+    public int getSelfId() { throw new InterfaceException(); }
+
+    public int[] getAllHosts() { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
@@ -183,7 +189,7 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public void setDistributed(String name, Object o) {
+    public void setDistributed(String name, byte[] o) {
         if(!(o instanceof ObjectBase)) {
             throw new InterfaceException("can not set distributed of non object base");
         }
@@ -191,7 +197,7 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public Object getDistributed(String name) {
+    public byte[] getDistributed(String name) {
         return invoke("getDistributed", new Class[]{String.class}, name);
     }
 
@@ -206,7 +212,19 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public void registerClient() { invoke("registerClient", new Class[]{}); }
+    public void registerClient() {
+        invoke("registerClient", new Class[]{});
+    }
+
+    @Override
+    public int getSelfId() {
+        return (int)invoke("getSelfId", new Class[]{});
+    }
+
+    @Override
+    public int[] getAllHosts() {
+        return (int[])invoke("getAllHosts", new Class[]{});
+    }
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
@@ -222,6 +240,9 @@ class InternalInterfaceWrap extends  InternalInterface {
                 // callback for creating a new thread
                 ThreadHelpers.newThreadCallback(args[0]);
                 return null;
+            case 2:
+                // callback for the existence of a new client
+
         }
         return null;
     }

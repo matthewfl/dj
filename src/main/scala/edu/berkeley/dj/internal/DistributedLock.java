@@ -28,4 +28,9 @@ final public class DistributedLock {
         InternalInterface.getInternalInterface().unlock(name);
         hasLock = false;
     }
+
+    protected void finalize() {
+        // ensure that we still do not own the lock
+        assert(hasLock == false);
+    }
 }

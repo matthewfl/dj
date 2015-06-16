@@ -1,6 +1,7 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.ClassManager;
+import edu.berkeley.dj.internal.RewriteAllBut;
 import edu.berkeley.dj.internal.SeralizeManager;
 
 /**
@@ -14,8 +15,7 @@ import edu.berkeley.dj.internal.SeralizeManager;
  * so that we can still reference original java.lang.Object when compiling, but the 2 suffix will
  * be removed when the class is loaded.
  */
-//@RewriteAllBut(nonModClasses = {"java/lang/Object"})
-//@SetSuperclass(superclass = "java.lang.Object")
+@RewriteAllBut(nonModClasses = {})
 public interface Object00 {
 
     int __dj_getClassMode();

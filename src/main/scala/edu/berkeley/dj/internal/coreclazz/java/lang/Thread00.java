@@ -349,6 +349,7 @@ public class Thread00 implements Runnable {
      *          cleared when this exception is thrown.
      */
     public static void sleep(long millis) throws InterruptedException {
+        ThreadHelpers.sleep(millis);
         throw new NotImplementedException();
         // TODO:
     }
