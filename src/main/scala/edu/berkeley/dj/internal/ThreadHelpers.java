@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by matthewfl
  */
-
 @RewriteAllBut(nonModClasses = {"java/lang/Thread", "java/lang/ThreadLocal"})
 public class ThreadHelpers {
 
@@ -38,6 +37,8 @@ public class ThreadHelpers {
     static public void init() {
         // set the main thread
         try {
+            // this is directly calling the method on class, however that should be ok
+            // since we have already prefixed the class that we are loading
             Class.forName("edu.berkeley.dj.internal.coreclazz.java.lang.Thread");
         } catch (ClassNotFoundException e) {}
         /*Thread00 t = new Thread00("DJ main thread");

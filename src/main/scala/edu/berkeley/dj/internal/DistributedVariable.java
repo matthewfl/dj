@@ -1,6 +1,5 @@
 package edu.berkeley.dj.internal;
 
-import org.omg.CORBA.INTERNAL;
 
 /**
  * Created by matthewfl
@@ -24,7 +23,7 @@ public class DistributedVariable<T> {
 
     public DistributedVariable(String name) {
         this.name = name;
-        this.lock = new DistributedLock("DJ_lock_"+name);
+        this.lock = new DistributedLock("DJ_var_lock_"+name);
     }
 
     public DistributedVariable(String name, T init) {
@@ -34,12 +33,12 @@ public class DistributedVariable<T> {
 
     ObjectHolder getHolder() {
         if(objectId == null) {
-            lock.lock();
+            lock();
             try {
                 byte[] da = InternalInterface.getInternalInterface().getDistributed(name);
                 if(da.length == 0) {
                     ObjectHolder h = new ObjectHolder();
-                    objectId = DistributedObjectHelper.getDistribuitedId(h);
+                    objectId = DistributedObjectHelper.getDistributedId(h);
                     InternalInterface.getInternalInterface().setDistributed(name, objectId.toArr());
                     return h;
                 } else {
@@ -47,18 +46,18 @@ public class DistributedVariable<T> {
                 }
 
             } finally {
-                lock.unlock();
+                unlock();
             }
         }
         return (ObjectHolder)DistributedObjectHelper.getObject(objectId);
     }
 
     public void set(T t) {
-
+        getHolder().set(t);
     }
 
     public T get() {
-        return (T)InternalInterface.getInternalInterface().getDistributed(name);
+        return (T)getHolder().get();
     }
 
     public void setIfNull(T t) {

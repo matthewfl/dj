@@ -9,7 +9,7 @@ import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
  * it will have to override methods such as lock or wait to make them work in a distribuited fashion
  */
 @RewriteClassRef(
-        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object2",
+        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object00",
         newName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object"
 )
 public class ObjectBase implements Object00 {

@@ -11,7 +11,7 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer"})
+@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID"})
 public class DistributedObjectHelper {
 
     private DistributedObjectHelper() {}
@@ -60,19 +60,19 @@ public class DistributedObjectHelper {
         }
     }
 
-    static private HashMap<UUID, Object00> localDistribuitedObjects = new HashMap<>();
+    static private HashMap<UUID, Object00> localDistributedObjects = new HashMap<>();
 
     // give the Object some uuid so that it will be distribuited
     static public void makeDistribuited(ObjectBase o) {
         if(o.__dj_class_manager == null) {
             o.__dj_class_manager = new ClassManager(o);
-            synchronized (localDistribuitedObjects) {
-                localDistribuitedObjects.put(o.__dj_class_manager.distribuitedObjectId, o);
+            synchronized (localDistributedObjects) {
+                localDistributedObjects.put(o.__dj_class_manager.distribuitedObjectId, o);
             }
         }
     }
 
-    static public DistributedObjectId getDistribuitedId(ObjectBase o) {
+    static public DistributedObjectId getDistributedId(ObjectBase o) {
         makeDistribuited(o);
         int h = o.__dj_class_manager.owning_machine;
         if(h == -1)
@@ -80,9 +80,16 @@ public class DistributedObjectHelper {
         return new DistributedObjectId(o.__dj_class_manager.distribuitedObjectId, h, o.getClass().getName());
     }
 
+    static public DistributedObjectId getDistributedId(Object o) {
+        if(!(o instanceof ObjectBase)) {
+            throw new RuntimeException("something that is not an object base: "+o);
+        }
+        return getDistributedId((ObjectBase) o);
+    }
+
     static public Object getObject(DistributedObjectId id) {
-        synchronized (localDistribuitedObjects) {
-            Object00 h = localDistribuitedObjects.get(id.identifier);
+        synchronized (localDistributedObjects) {
+            Object00 h = localDistributedObjects.get(id.identifier);
             if(h != null)
                 return h;
             // we do not have some proxy of this object locally so we need to construct some proxy for it
@@ -91,7 +98,7 @@ public class DistributedObjectHelper {
                 ObjectBase obj = (ObjectBase) Unsafe00.getUnsafe().allocateInstance(cls);
                 obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
                 obj.__dj_class_mode |= CONSTS.OBJECT_INITED | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITE;
-                localDistribuitedObjects.put(id.identifier, obj);
+                localDistributedObjects.put(id.identifier, obj);
                 return obj;
             } catch(ClassNotFoundException e) {
                 throw new RuntimeException(e);
@@ -101,5 +108,12 @@ public class DistributedObjectHelper {
         }
     }
 
+    static public boolean isLocal(ObjectBase o) {
+        if(o.__dj_class_manager == null)
+            return true;
+        if(o.__dj_class_manager.owning_machine == -1)
+            return true;
+        return false;
+    }
 
 }

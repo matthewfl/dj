@@ -106,6 +106,8 @@ public class InternalInterface {
 
     public int[] getAllHosts() { throw new InterfaceException(); }
 
+    public void runOnRemote(int id, byte[] arr) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -190,15 +192,12 @@ class InternalInterfaceWrap extends  InternalInterface {
 
     @Override
     public void setDistributed(String name, byte[] o) {
-        if(!(o instanceof ObjectBase)) {
-            throw new InterfaceException("can not set distributed of non object base");
-        }
-        invoke("setDistributed", new Class[]{String.class, Object.class}, name, o);
+        invoke("setDistributed", new Class[]{String.class, byte[].class}, name, o);
     }
 
     @Override
     public byte[] getDistributed(String name) {
-        return invoke("getDistributed", new Class[]{String.class}, name);
+        return (byte[])invoke("getDistributed", new Class[]{String.class}, name);
     }
 
     @Override
@@ -226,6 +225,11 @@ class InternalInterfaceWrap extends  InternalInterface {
         return (int[])invoke("getAllHosts", new Class[]{});
     }
 
+    @Override
+    public void runOnRemote(int id, byte[] arr) {
+        invoke("runOnRemote", new Class[]{int.class, byte[].class}, id, arr);
+    }
+
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
         invoke("printStdout", new Class[]{int.class}, i);
@@ -242,6 +246,12 @@ class InternalInterfaceWrap extends  InternalInterface {
                 return null;
             case 2:
                 // callback for the existence of a new client
+                return null;
+            case 3:
+                // callin to run a task on this machine as sent by another machine
+                // this should be called in a new thread already so we can just start
+                DistributedRunner.runRunnable((Integer)args[0], (byte[])args[1]);
+                return null;
 
         }
         return null;

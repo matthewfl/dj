@@ -350,7 +350,7 @@ public class Thread00 implements Runnable {
      */
     public static void sleep(long millis) throws InterruptedException {
         ThreadHelpers.sleep(millis);
-        throw new NotImplementedException();
+        //throw new NotImplementedException();
         // TODO:
     }
 

@@ -1,8 +1,11 @@
 package edu.berkeley.dj.rt
 
+import java.nio.ByteBuffer
+
 import edu.berkeley.dj.rt.network.{NetworkCommunication, NetworkRecever}
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by matthewfl
@@ -10,6 +13,8 @@ import scala.concurrent.Future
  * The interface for receving messages from other nodes on the network
  */
 class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
+
+  private implicit def arr2Future(a: Array[Byte]) = Future.successful(a)
 
   override def recv(from: Int, action: Int, msg: Array[Byte]) = action match {
     case 101 => {
@@ -19,6 +24,12 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
     case 102 => {
       // register that a new client is present and ready
       man.runningInterface.callIn(2, from)
+    }
+    case 103 => {
+      // run a command on this machine as send by a remote machine
+      Future {
+        man.runningInterface.callIn(3, from, msg)
+      }
     }
   }
 
@@ -39,7 +50,10 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
     case 3 => {
       // lock a given string
       val lname = new String(msg)
-      man.runningInterface.lock(lname)
+      man.runningInterface.lock(lname) match {
+        case true => Array[Byte](1)
+        case false => Array[Byte](0)
+      }
     }
     case 4 => {
       // unlock a given string
@@ -49,18 +63,19 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
     }
     case 5 => {
       // set a byte array for the distributed map
-
+      val buff = ByteBuffer.wrap(msg)
+      val len = buff.getInt()
+      val name = new String(msg, 0, len)
+      val arr = new Array[Byte](msg.length - len - 4)
+      Array.copy(msg, 4, arr, 0, arr.length)
+      man.runningInterface.setDistributed(name, arr)
+      Array[Byte]()
     }
     case 6 => {
       // get a byte array from the map
       val name = new String(msg)
       man.runningInterface.getDistributed(name)
     }
-  }
-
-  implicit def booleanToArr(b: Boolean) = b match {
-    case true => Array[Byte](1)
-    case false => Array[Byte](0)
   }
 
   override def start(nc: NetworkCommunication) = {

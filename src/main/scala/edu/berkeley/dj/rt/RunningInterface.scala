@@ -3,8 +3,9 @@ package edu.berkeley.dj.rt
 import java.nio.ByteBuffer
 
 import scala.collection.mutable
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by matthewfl
@@ -52,12 +53,19 @@ class RunningInterface (private val config : Config, private val manager: Manage
   def threadId = Thread.currentThread().getId
 
   def startThread(obj: Object) = {
+    // TODO: change this to use a threadpool that is specific to this application
+    // atm this is using the implict threadpool from scala
+    Future {
+      callIn(1, obj)
+    }
+    /*
     val thread = new Thread() {
       override def run() = {
         callIn(1, obj)
       }
     }
     thread.start()
+    */
   }
 
   // some sort of locking when distribuited
@@ -73,7 +81,7 @@ class RunningInterface (private val config : Config, private val manager: Manage
         return true
       }
     } else {
-      Await.result(manager.networkInterface.sendWrpl(0, 3, name.getBytes()), 60 seconds) == 1
+      Await.result(manager.networkInterface.sendWrpl(0, 3, name.getBytes()), 60 seconds)(0) == 1
     }
   }
 
@@ -129,5 +137,9 @@ class RunningInterface (private val config : Config, private val manager: Manage
   def getSelfId: Int = manager.networkInterface.getSelfId
 
   def getAllHosts: Array[Int] = manager.networkInterface.getAllHosts.toArray
+
+  def runOnRemote(id: Int, arr: Array[Byte]) = {
+    manager.networkInterface.send(id, 103, arr)
+  }
 
 }

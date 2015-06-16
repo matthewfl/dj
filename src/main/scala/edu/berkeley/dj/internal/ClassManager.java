@@ -11,6 +11,7 @@ import java.util.UUID;
  * Represents the backing information for a class that is shared between multiple machines
  *
  */
+@RewriteAllBut(nonModClasses = {"java/util/UUID"}) // tmp
 public class ClassManager {
 
     UUID distribuitedObjectId = null; // "OB_HEX_UUID"
