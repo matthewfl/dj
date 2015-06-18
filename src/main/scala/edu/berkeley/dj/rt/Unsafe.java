@@ -15,7 +15,6 @@ public class Unsafe {
             Field f = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
             f.setAccessible(true);
             v = (sun.misc.Unsafe) f.get(null);
-            f.setAccessible(false);
         }
         catch (NoSuchFieldException e) {}
         catch (IllegalArgumentException e) {}

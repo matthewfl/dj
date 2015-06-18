@@ -2,11 +2,10 @@ package edu.berkeley.dj.rt
 
 import java.lang.reflect.UndeclaredThrowableException
 import javassist._
-import javassist.bytecode.{Descriptor, MethodInfo, SignatureAttribute}
+import javassist.bytecode.{Descriptor, MethodInfo}
 
 import edu.berkeley.dj.internal._
-import edu.berkeley.dj.rt.convert.CodeConverter
-import edu.berkeley.dj.rt.convert._
+import edu.berkeley.dj.rt.convert.{CodeConverter, _}
 import edu.berkeley.dj.utils.Memo
 
 
@@ -52,7 +51,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader"),
-    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader")
+    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader"),
+
+    // rewrite the string init method since this is package private
+    // this just gets the field inside the class and sets it to the char array
+    ("<init>", "([CZ)V", "java.lang.String") -> ("packageStringConstructor", s"${config.internalPrefix}AugmentedString")
   )
 
   // if these methods are anywhere
@@ -176,6 +179,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         Map[String, CtMethod]()
     }).reduce(_ ++ _)))*/
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
+    codeConverter.addTransform(new SpecialConverter(codeConverter.prevTransforms))
 
     //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
 

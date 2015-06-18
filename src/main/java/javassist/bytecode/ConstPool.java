@@ -16,17 +16,13 @@
 
 package javassist.bytecode;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
-import java.io.IOException;
+import javassist.CtClass;
+
+import java.io.*;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import javassist.CtClass;
 
 /**
  * Constant pool table.
@@ -835,7 +831,7 @@ public final class ConstPool {
                 if(memberName != null && !getUtf8Info(ntinfo.memberName).equals(memberName))
                     continue;
                 if(typeSig != null && !getUtf8Info(ntinfo.typeDescriptor).equals(typeSig))
-                    continue;;
+                    continue;
                 if(className != null && !getUtf8Info(minfo.classIndex).equals(className))
                     continue;
                 return i;
