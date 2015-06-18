@@ -272,19 +272,19 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
         // TODO: deal with static variables
 
-        val cls_mode = if (Modifier.isInterface(modifiers)) {
-          "__dj_getClassMode()"
+        val (cls_mode, cls_manager) = if (Modifier.isInterface(modifiers)) {
+          ("__dj_getClassMode()", "__dj_getManager()")
         } else {
-          "__dj_class_mode"
+          ("__dj_class_mode", "__dj_class_manager")
         }
 
         if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
           val write_method =
             s"""
                   static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
-                    edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
+                    //edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
                     if((self.${cls_mode} & 0x02) != 0) {
-
+                      //self.${cls_manager}
                     } else {
                       self.``${name}`` = val;
                     }
@@ -293,8 +293,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           val read_method =
             s"""
                static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
-                 edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
+                 //edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
                  if((self.${cls_mode} & 0x01) != 0) {
+                   //return self.${cls_manager}.
                    return self.``${name}``;
                  } else {
                    return self.``${name}``;
@@ -302,8 +303,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                }
                   """
           try {
-            println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
-            println(write_method)
+            //println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
+            //println(write_method)
             cls.addMethod(CtMethod.make(write_method, cls))
             cls.addMethod(CtMethod.make(read_method, cls))
           } catch {

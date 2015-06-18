@@ -259,7 +259,7 @@ object HazelcastComm {
     override def run() = {
       // TODO: optimize this so that we are not doing a hashtable lookup on the receving end
       // could have the apps have some static int and just hold them in an array or something
-      println(s"========================== running on remote $from $action")
+      //println(s"========================== running on remote $from $action")
       getHost.running_apps.get(appId) match {
         case Some(app) => app.processMsg(from, action, msg, msgReplyId)
         case None => throw new RuntimeException(s"unable to find application $appId on $instance")
@@ -287,7 +287,7 @@ object HazelcastComm {
   }
 }
 
-// dummy test server that echos replies back to whoever sent it
+// dummy test server that echos replies back to whoeversent it
 object testd {
   def main(args: Array[String]) = {
     val comm = new NetworkManager("test"*3, "hazelcast") {

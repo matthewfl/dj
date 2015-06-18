@@ -29,7 +29,7 @@ public class DistributedRunner {
         }
     }
 
-    static public <T> Future<T> runOnMachine(int id, Callable<T> r) {
+    static public <T> Future<T> runOnRemote(int id, Callable<T> r) {
         throw new NotImplementedException();
     }
 

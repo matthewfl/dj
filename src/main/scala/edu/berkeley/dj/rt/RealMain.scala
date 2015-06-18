@@ -18,7 +18,7 @@ object RealMain {
     "cp"-> "",
     "maincls" -> "",
     "debug_clazz_bytecode" -> null,
-    "cluster_code" -> "dj-cluster-default-code", // the code code that the nodes use to identify to eachother
+    "cluster_code" -> "dummy", // the code code that the nodes use to identify to eachother
     "cluster_conn" -> "dummy", // will start up two processes in the same jvm
     "mode" -> "master"
   )
@@ -84,6 +84,10 @@ object RealMain {
             help
             return
           }
+        }
+
+        if(arguments("cluster_code") != "dummy" && arguments("cluster_conn") == "dummy") {
+          arguments("cluster_conn") = "hazelcast"
         }
 
         val dummy_f = if(arguments("cluster_conn") == "dummy") {

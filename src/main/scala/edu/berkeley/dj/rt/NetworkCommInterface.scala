@@ -36,8 +36,12 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
   override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = action match {
     case 1 => {
       // load a class from the parent class loader
-      val cname = new String(msg)
-      Future.successful(man.asInstanceOf[MasterManager].loader.getClassBytes(cname))
+      if(man.isMaster) {
+        val cname = new String(msg)
+        Future.successful(man.asInstanceOf[MasterManager].loader.getClassBytes(cname))
+      } else {
+        Future.failed(new RuntimeException("This is not the master machine"))
+      }
     }
     case 2 => {
       // check if we need to rename this class

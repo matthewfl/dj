@@ -127,6 +127,7 @@ class RunningInterface (private val config : Config, private val manager: Manage
       if(n != manager.networkInterface.getSelfId)
         manager.networkInterface.send(n, 1, Array[Byte](code.asInstanceOf[Byte]))
     }
+    System.exit(code)
   }
 
   def registerClient = {
