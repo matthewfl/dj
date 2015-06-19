@@ -69,6 +69,7 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
 
   override def get(classname: String): CtClass = {
     if(classname.startsWith(manager.config.internalPrefix) && classname.endsWith("00")) {
+      // this ends up getting called when getDeclaringClass is used before we rewriter all the class name references
       super.get(classname.substring(0, classname.length - 2))
     } else
       super.get(classname)

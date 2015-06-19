@@ -1,6 +1,7 @@
 package edu.berkeley.dj.rt
 
-import java.nio.ByteBuffer
+import java.nio._
+import java.util.UUID
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Await}
@@ -15,6 +16,8 @@ class RunningInterface (private val config : Config, private val manager: Manage
   private var callIn : Object = null
   private var callInCls : java.lang.Class[_] = null
   private var callInMth : java.lang.reflect.Method = null
+
+  private def block[T](f: Future[T]): T = Await.result(f, 60 seconds)
 
   override def toString = "RunningInterface (" + config.uuid + ")"
 
@@ -141,6 +144,16 @@ class RunningInterface (private val config : Config, private val manager: Manage
 
   def runOnRemote(id: Int, arr: Array[Byte]) = {
     manager.networkInterface.send(id, 103, arr)
+  }
+
+
+
+  def readField_I(om: Int, id: UUID, fid: Int): Int = {
+    val buf = ByteBuffer.allocate(20)
+    buf.putLong(id.getMostSignificantBits)
+    buf.putLong(id.getLeastSignificantBits)
+    buf.putInt(fid)
+    block(manager.networkInterface.sendWrpl(om, 11, buf)).getInt
   }
 
 }

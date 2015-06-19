@@ -5,6 +5,8 @@ package edu.berkeley.dj.internal;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
+import java.util.UUID;
 
 /**
  * Created by matthewfl
@@ -107,6 +109,8 @@ public class InternalInterface {
     public int[] getAllHosts() { throw new InterfaceException(); }
 
     public void runOnRemote(int id, byte[] arr) { throw new InterfaceException(); }
+
+    public ByteBuffer readField(ByteBuffer req, int op, int machine) { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
@@ -230,6 +234,11 @@ class InternalInterfaceWrap extends  InternalInterface {
         invoke("runOnRemote", new Class[]{int.class, byte[].class}, id, arr);
     }
 
+    @Override
+    public ByteBuffer readField(ByteBuffer req, int op, int to) {
+        return (ByteBuffer)invoke("readField", new Class[]{ByteBuffer.class, int.class, int.class}, req, op, to);
+    }
+
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
         invoke("printStdout", new Class[]{int.class}, i);
@@ -251,6 +260,10 @@ class InternalInterfaceWrap extends  InternalInterface {
                 // callin to run a task on this machine as sent by another machine
                 // this should be called in a new thread already so we can just start
                 DistributedRunner.runRunnable((Integer)args[0], (byte[])args[1]);
+                return null;
+            case 4:
+                // update the location for an object
+                DistributedObjectHelper.updateObjectLocation((UUID)args[0], (int)args[1]);
                 return null;
 
         }

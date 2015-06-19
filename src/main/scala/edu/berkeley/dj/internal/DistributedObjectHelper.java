@@ -116,4 +116,14 @@ public class DistributedObjectHelper {
         return false;
     }
 
+    static public void updateObjectLocation(UUID id, int machine_location) {
+        Object00 h;
+        synchronized (localDistributedObjects) {
+            h = localDistributedObjects.get(id);
+        }
+        if(h == null)
+            return;
+        h.__dj_getManager().owning_machine = machine_location;
+    }
+
 }

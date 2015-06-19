@@ -146,7 +146,7 @@ public class ThreadLocal00<T> {
      * @throws NullPointerException if the specified supplier is null
      * @since 1.8
      */
-    public static <S> ThreadLocal<S> withInitial(Supplier<? extends S> supplier) {
+    public static <S> ThreadLocal00<S> withInitial(Supplier<? extends S> supplier) {
         return new SuppliedThreadLocal<>(supplier);
     }
 
@@ -280,7 +280,7 @@ public class ThreadLocal00<T> {
      * An extension of ThreadLocal that obtains its initial value from
      * the specified {@code Supplier}.
      */
-    static final class SuppliedThreadLocal<T> extends ThreadLocal<T> {
+    static final class SuppliedThreadLocal<T> extends ThreadLocal00<T> {
 
         private final Supplier<? extends T> supplier;
 

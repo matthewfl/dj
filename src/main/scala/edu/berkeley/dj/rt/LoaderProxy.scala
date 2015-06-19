@@ -46,11 +46,12 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
   private val classBytecodes = new mutable.HashMap[String,Array[Byte]]()
 
   // what about when we want to force some class to be reloaded with new bytecode...
-  def getClassBytes(cn: String): Array[Byte] = {
-    // lock the classname that we are loading so that we do not attempt to load the same class twice
-    // at the same time
-    val classname = cn.intern()
-    classname.synchronized {
+  def getClassBytes(classname: String): Array[Byte] = {
+    // TODO: more fine grain sync here
+    // we should be able to load more then one class at a time
+    // but we would like to avoid loading two instances of the same class at the same time since that
+    // can lead to strange behavior
+    classBytecodes.synchronized {
       classBytecodes.getOrElseUpdate(classname, {
         val cls = pool get classname
         if (cls != null) {

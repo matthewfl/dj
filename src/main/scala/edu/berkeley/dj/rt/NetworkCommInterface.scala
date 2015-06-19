@@ -1,6 +1,7 @@
 package edu.berkeley.dj.rt
 
 import java.nio.ByteBuffer
+import java.util.UUID
 
 import edu.berkeley.dj.rt.network.{NetworkCommunication, NetworkRecever}
 
@@ -30,6 +31,11 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       Future {
         man.runningInterface.callIn(3, from, msg)
       }
+    }
+    case 104 => {
+      // update this machine with a new location for an object
+      val bb = ByteBuffer.wrap(msg)
+      man.runningInterface.callIn(4, new UUID(bb.getLong(), bb.getLong()), bb.getInt)
     }
   }
 
@@ -79,6 +85,33 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       // get a byte array from the map
       val name = new String(msg)
       man.runningInterface.getDistributed(name)
+    }
+    case 7 => {
+      // read boolean
+    }
+    case 8 => {
+      // read char
+    }
+    case 9 => {
+      // read byte
+    }
+    case 10 => {
+      // read short
+    }
+    case 11 => {
+      // read int
+    }
+    case 12 => {
+      // read long
+    }
+    case 13 => {
+      // read float
+    }
+    case 14 => {
+      // read double
+    }
+    case 15 => {
+      // read object
     }
   }
 

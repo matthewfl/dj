@@ -3,6 +3,7 @@ package edu.berkeley.dj.internal;
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
 
+import java.nio.ByteBuffer;
 import java.util.UUID;
 
 /**
@@ -11,8 +12,11 @@ import java.util.UUID;
  * Represents the backing information for a class that is shared between multiple machines
  *
  */
-@RewriteAllBut(nonModClasses = {"java/util/UUID"}) // tmp
-public class ClassManager {
+@RewriteAllBut(nonModClasses = {"java/util/UUID", "java/nio/ByteBuffer"}) // tmp
+final public class ClassManager {
+
+    // TODO: this is inheriting from ObjectBase that means that we have two extra fields here
+    // that we don't need, so remove that
 
     UUID distributedObjectId = null; // "OB_HEX_UUID"
 
@@ -63,7 +67,10 @@ public class ClassManager {
 
     public short readField_S(int id) { return 0; }
 
-    public int readField_I(int id) { return 0; }
+    public int readField_I(int id) {
+        return requestRead(id, 11);
+        //return 123;
+    }
 
     public long readField_J(int id) { return 0L; }
 
@@ -72,6 +79,15 @@ public class ClassManager {
     public double readField_D(int id) { return 0.0; }
 
     public Object readField_A(int id) { return null; }
+
+
+    private ByteBuffer requestRead(int fid, int op) {
+        ByteBuffer bb = ByteBuffer.allocate(20);
+        bb.putLong(distributedObjectId.getMostSignificantBits());
+        bb.putLong(distributedObjectId.getLeastSignificantBits());
+        bb.putInt(fid);
+        return InternalInterface.getInternalInterface().readField(bb, op, owning_machine);
+    }
 
 
 
