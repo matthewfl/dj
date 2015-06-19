@@ -86,33 +86,69 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       val name = new String(msg)
       man.runningInterface.getDistributed(name)
     }
-    case 7 => {
+    case 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 => {
+      // reading something that is local on this machine
+      man.runningInterface.callIn(5, action, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
+    }
+    /*case 10 => {
       // read boolean
     }
-    case 8 => {
+    case 11 => {
       // read char
     }
-    case 9 => {
+    case 12 => {
       // read byte
     }
-    case 10 => {
+    case 13 => {
       // read short
     }
-    case 11 => {
-      // read int
-    }
-    case 12 => {
-      // read long
-    }
-    case 13 => {
-      // read float
-    }
     case 14 => {
-      // read double
+      // read int
+      man.runningInterface.callIn()
     }
     case 15 => {
-      // read object
+      // read long
     }
+    case 16 => {
+      // read float
+    }
+    case 17 => {
+      // read double
+    }
+    case 18 => {
+      // read object
+    }*/
+
+      /*
+    case 20 => {
+      // write boolean
+    }
+    case 21 => {
+      // write char
+    }
+    case 22 => {
+      // write byte
+    }
+    case 23 => {
+      // write short
+    }
+    case 24 => {
+      // write int
+    }
+    case 25 => {
+      // write long
+    }
+    case 26 => {
+      // write float
+    }
+    case 27 => {
+      // write double
+    }
+    case 28 => {
+      // write object
+    }
+
+    */
   }
 
   override def start(nc: NetworkCommunication) = {

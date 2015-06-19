@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal;
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
@@ -124,6 +125,42 @@ public class DistributedObjectHelper {
         if(h == null)
             return;
         h.__dj_getManager().owning_machine = machine_location;
+    }
+
+
+
+    static public ByteBuffer readField(int op, ByteBuffer req) {
+        UUID id = new UUID(req.getLong(), req.getLong());
+        int fid = req.getInt();
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null)
+            throw new InterfaceException();
+        if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0) {
+            // need to redirect the request elsewhere
+            throw new NotImplementedException();
+        }
+        ByteBuffer ret;
+        switch(op) {
+            case 10:
+            case 11:
+            case 12:
+            case 13:
+                throw new NotImplementedException();
+            case 14:
+                ret = ByteBuffer.allocate(4);
+                ret.putInt(h.__dj_readFieldID_I(fid));
+                return ret;
+            case 15:
+            case 16:
+            case 17:
+            case 18:
+                throw new NotImplementedException();
+            default:
+                throw new InterfaceException();
+        }
     }
 
 }

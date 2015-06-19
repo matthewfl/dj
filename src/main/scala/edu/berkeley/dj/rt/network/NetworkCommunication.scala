@@ -54,6 +54,7 @@ abstract class NetworkCommunication(private val recever: NetworkRecever) {
   protected def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = try {
     recever.recvWrpl(from, action, msg)
   } catch {
+    case r: RedirectRequestToAlternateMachine => throw r
     case e: Throwable => Future.failed(e)
   }
 
@@ -64,6 +65,11 @@ abstract class NetworkCommunication(private val recever: NetworkRecever) {
   def getSelfId: Int
 
 }
+
+// this allows the current machine to forward the request to the one which the actual data
+// this should avoid having a round trip back to the original requesting machine
+// however there should be some message instructing the machine to route new messages of this type some way else
+class RedirectRequestToAlternateMachine(val altMachine: Int) extends Throwable {}
 
 trait NetworkRecever {
   // for recving when there will be no reply

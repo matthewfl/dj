@@ -1,12 +1,11 @@
 package edu.berkeley.dj.rt
 
 import java.nio._
-import java.util.UUID
 
 import scala.collection.mutable
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 /**
  * Created by matthewfl
@@ -147,13 +146,9 @@ class RunningInterface (private val config : Config, private val manager: Manage
   }
 
 
-
-  def readField_I(om: Int, id: UUID, fid: Int): Int = {
-    val buf = ByteBuffer.allocate(20)
-    buf.putLong(id.getMostSignificantBits)
-    buf.putLong(id.getLeastSignificantBits)
-    buf.putInt(fid)
-    block(manager.networkInterface.sendWrpl(om, 11, buf)).getInt
+  def readField(req: ByteBuffer, op: Int, to: Int): ByteBuffer = {
+    block(manager.networkInterface.sendWrpl(to, op, req))
   }
+
 
 }

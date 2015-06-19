@@ -68,8 +68,7 @@ final public class ClassManager {
     public short readField_S(int id) { return 0; }
 
     public int readField_I(int id) {
-        return requestRead(id, 11);
-        //return 123;
+        return requestRead(id, 14).getInt();
     }
 
     public long readField_J(int id) { return 0L; }

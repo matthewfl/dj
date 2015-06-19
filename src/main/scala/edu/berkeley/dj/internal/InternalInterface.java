@@ -265,6 +265,9 @@ class InternalInterfaceWrap extends  InternalInterface {
                 // update the location for an object
                 DistributedObjectHelper.updateObjectLocation((UUID)args[0], (int)args[1]);
                 return null;
+            // reading of fields
+            case 5:
+                return DistributedObjectHelper.readField((int)args[0], (ByteBuffer)args[1]);
 
         }
         return null;
