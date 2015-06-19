@@ -1,7 +1,7 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.ClassManager;
-import edu.berkeley.dj.internal.SeralizeManager;
+import edu.berkeley.dj.internal.SerializeManager;
 
 /**
  * Created by matthewfl
@@ -40,8 +40,8 @@ public interface Object00 {
 
     void __dj_monitorexit();
 
-    void __dj_seralize_obj(SeralizeManager man);
+    void __dj_serialize_obj(SerializeManager man);
 
-    void __dj_deseralize_obj(SeralizeManager man);
+    void __dj_deserialize_obj(SerializeManager man);
 }
 

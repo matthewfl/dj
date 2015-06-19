@@ -67,7 +67,7 @@ public class DistributedObjectHelper {
         if(o.__dj_class_manager == null) {
             o.__dj_class_manager = new ClassManager(o);
             synchronized (localDistributedObjects) {
-                localDistributedObjects.put(o.__dj_class_manager.distribuitedObjectId, o);
+                localDistributedObjects.put(o.__dj_class_manager.distributedObjectId, o);
             }
         }
     }
@@ -77,7 +77,7 @@ public class DistributedObjectHelper {
         int h = o.__dj_class_manager.owning_machine;
         if(h == -1)
             h = InternalInterface.getInternalInterface().getSelfId();
-        return new DistributedObjectId(o.__dj_class_manager.distribuitedObjectId, h, o.getClass().getName());
+        return new DistributedObjectId(o.__dj_class_manager.distributedObjectId, h, o.getClass().getName());
     }
 
     static public DistributedObjectId getDistributedId(Object o) {

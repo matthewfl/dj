@@ -14,23 +14,26 @@ import java.util.UUID;
 @RewriteAllBut(nonModClasses = {"java/util/UUID"}) // tmp
 public class ClassManager {
 
-    UUID distribuitedObjectId = null; // "OB_HEX_UUID"
+    UUID distributedObjectId = null; // "OB_HEX_UUID"
 
     int owning_machine = -1; // signify self
 
     // will need a week pointer to the object base
-    Object00 managedObject;
+    ObjectBase managedObject;
 
     ClassManager(Object00 o) {
-        managedObject = o;
-        distribuitedObjectId = UUID.randomUUID();
+        managedObject = (ObjectBase)o;
+        distributedObjectId = UUID.randomUUID();
     }
 
     ClassManager(Object00 o, UUID id, int owner) {
-        managedObject = o;
-        distribuitedObjectId = id;
+        managedObject = (ObjectBase)o;
+        distributedObjectId = id;
         owning_machine = owner;
     }
+
+    // TODO: I suppose that the identifier for the field can be a short, since that would be a limitation
+    // on the class already
 
     protected int getMode() { return  managedObject.__dj_getClassMode(); }
 
@@ -56,6 +59,19 @@ public class ClassManager {
 
     public char readField_C(int id) { return ' '; }
 
+    public byte readField_B(int id) { return 0; }
+
+    public short readField_S(int id) { return 0; }
+
+    public int readField_I(int id) { return 0; }
+
+    public long readField_J(int id) { return 0L; }
+
+    public float readField_F(int id) { return 0.0f; }
+
+    public double readField_D(int id) { return 0.0; }
+
+    public Object readField_A(int id) { return null; }
 
 
 

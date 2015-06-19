@@ -179,7 +179,7 @@ public class Thread00 implements Runnable {
         if(InternalInterface.isMaster()) {
             // we only want to have one instance of the main thread so we use isMaster
             // to only run this code once
-            Thread00 mainThread = new Thread00(1);
+            Thread00 mainThread = new Thread00(1L);
             ThreadHelpers.setCurrentThread(mainThread);
             ThreadHelpers.allThreads.get().put(mainThread.getId(), mainThread);
         }

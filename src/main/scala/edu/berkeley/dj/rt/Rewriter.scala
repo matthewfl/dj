@@ -8,6 +8,10 @@ import edu.berkeley.dj.internal._
 import edu.berkeley.dj.rt.convert.{CodeConverter, _}
 import edu.berkeley.dj.utils.Memo
 
+import scala.collection.mutable
+
+import java.lang.StringBuilder
+
 
 /**
  * Created by matthewfl
@@ -51,11 +55,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader"),
-    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader")
 
     // rewrite the string init method since this is package private
     // this just gets the field inside the class and sets it to the char array
-    ("<init>", "([CZ)V", "java.lang.String") -> ("packageStringConstructor", s"${config.internalPrefix}AugmentedString")
   )
 
   // if these methods are anywhere
@@ -69,9 +72,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     !NonMovableClasses.contains(cls.getName)
   }*/
 
-  private def getUsuableName(typ: CtClass): String = {
+  private def getUsableName(typ: CtClass): String = {
     if (typ.isArray) {
-      getUsuableName(typ.getComponentType) + "[]"
+      getUsableName(typ.getComponentType) + "[]"
     } else if (typ.isPrimitive) {
       typ.getName
     } else {
@@ -162,22 +165,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     //val manager = runningPool.makeClass("edu.berkeley.dj.internal.managers."+cls.getName, classMangerBase)
     //rewriteUsedClasses(cls)
     // TODO: actually determine if this class is movable before adding the move interface
+
     cls.addInterface(moveInterface)
     val codeConverter = new CodeConverter
-    /*rewriteMethodCalls.foreach(v => {
-      val mth = cls.getMethods.filter(_.getName == v._2)
-      if(!mth.isEmpty)
-        codeConverter.redirectMethodCall(v._1, mth(0))
-    })*/
-    /*codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls.map(n => {
-      // TODO: can't use this as it is causing issues with circular references to
-      // classes that aren't loaded yet
-      val mths = cls.getMethods.filter(_.getName == n._2)
-      if (!mths.isEmpty)
-        Map(n._1 -> mths(0))
-      else
-        Map[String, CtMethod]()
-    }).reduce(_ ++ _)))*/
+
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
     codeConverter.addTransform(new SpecialConverter(codeConverter.prevTransforms))
 
@@ -190,47 +181,81 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     // basically if some exception type and not inherited from ObjectBase
     val canRewrite = canRewriteClass(cls.getName)
-    val cls_name = getUsuableName(cls)
+    //val cls_name = getUsuableName(cls)
 
     cls.instrument(codeConverter)
 
     if (!isInterface && canRewrite) {
       addAccessorMethods(cls)
-      /*for(method <- cls.getMethods) {
-          if(!method.getName.startsWith(config.fieldPrefix) && Modifier.isSynchronized(method)) {
-            method.setWrappedBody()
-          }
-        }*/
-
-
-
-      /*for (field <- cls.getDeclaredFields) {
-        if (field.getType.isPrimitive) {
-          seralize_obj_method +=
-            s"""
-              man.put_value_${field.getType.getName}(this.``${field.getName}``);
-            """
-          deseralize_obj_method +=
-            s"""
-             this.``${field.getName}`` = man.get_value_${field.getType.getName}();
-           """
-        } else {
-          // for object should check if the object is movable first
-          if (isClassMovable(field.getType)) {
-
-          } else {
-            // TODO: seralize a proxy object so we can still use this later
-          }
-        }
-      }*/
-
-
+      addSeralizeMethods(cls)
     }
     // TODO: need to handle interfaces that can have methods on them
   }
 
-  private def addAccessorMethods(cls: CtClass) = {
-    val cls_name = getUsuableName(cls)
+  private val fieldCount = new mutable.HashMap[String,Int]()
+
+  private def getFieldCount(classname: String) = {
+    if(classname == "edu.berkeley.dj.internal.ObjectBase")
+      10
+    else {
+      if(fieldCount.contains(classname)) {
+        fieldCount.getOrElse(classname, 10)
+      } else {
+        runningPool.get(classname)
+        fieldCount.getOrElse(classname, 10)
+      }
+    }
+  }
+
+  private def addAccessorMethods(cls: CtClass): Unit = {
+    // an interface in java can not have variables
+    // so there is no need to add the accessor methods to the interface
+    // also the super class of an interface will be Object so we can't use super.....
+    // for calling the __dj_readFieldID_...
+    if(Modifier.isInterface(cls.getModifiers))
+      return
+
+    val cls_name = getUsableName(cls)
+
+    // if a method is on an interface it has to use another method of accessing the variables
+    // but can't have variables on interface so not sure how useful this is atm
+    val (cls_mode, cls_manager) = if (Modifier.isInterface(cls.getModifiers)) {
+      ("__dj_getClassMode()", "__dj_getManager()")
+    } else {
+      ("__dj_class_mode", "__dj_class_manager")
+    }
+
+    val accessWrites = new mutable.HashMap[String,StringBuilder]()
+    val accessReads = new mutable.HashMap[String,StringBuilder]()
+
+    var nextFieldId = getFieldCount(cls.getSuperclass.getName)
+
+    for(b <- CtClass.primitiveTypes.toSeq :+ null) {
+      val (pt, uname) = if(b != null) {
+        (b.asInstanceOf[CtPrimitiveType].getDescriptor.toString, getUsableName(b))
+      } else {
+        ("A", "java.lang.Object")
+      }
+      if(pt != "V") {
+        accessWrites += (pt -> new StringBuilder( s"""
+           public void __dj_writeFieldID_${pt}(int id, ${uname} val) {
+             if(id < ${nextFieldId}) {
+              super.__dj_writeFieldID_${pt}(id, val);
+             } else {
+               switch(id) {
+         """)
+          )
+        accessReads += (pt ->
+          new StringBuilder( s"""
+           public ${uname} __dj_readFieldID_${pt}(int id) {
+             if(id < ${nextFieldId}) {
+               return super.__dj_readFieldID_${pt}(id);
+             } else {
+               switch(id) {
+         """))
+      }
+    }
+
     for (field <- cls.getDeclaredFields) {
       val name = field.getName
       println("field name: " + name)
@@ -238,8 +263,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
         //val typ = field.getType
 
-        val typ_name = getUsuableName(field.getType)
+        val typ_name = getUsableName(field.getType)
         val modifiers = field.getModifiers
+
+        val field_id = nextFieldId
+        nextFieldId += 1
+
 
         //SignatureAttribute.toFieldSignature(field.getGenericSignature)
 
@@ -265,18 +294,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           //field.setModifiers(modifiers & ~Modifier.FINAL)
         }
 
-        // TODO: problem right now that there is an issue dealing with templated
-        // I wonder if this has more to deal with the fact that it should use invoke special rather then invokevirtual
-        // since it is a method on the current class, so if the value is package private or private then
-        // the invoke method used should change
-
-        // TODO: deal with static variables
-
-        val (cls_mode, cls_manager) = if (Modifier.isInterface(modifiers)) {
-          ("__dj_getClassMode()", "__dj_getManager()")
-        } else {
-          ("__dj_class_mode", "__dj_class_manager")
-        }
+        val redirect_method_type = if(field.getType.isPrimitive) {
+          field.getType.asInstanceOf[CtPrimitiveType].getDescriptor.toString
+        } else "A"
 
         if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
           val write_method =
@@ -284,7 +304,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                   static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
                     //edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
                     if((self.${cls_mode} & 0x02) != 0) {
-                      //self.${cls_manager}
+                      self.${cls_manager}.writeField_${redirect_method_type}(${field_id}, ${if(redirect_method_type=="A") "(java.lang.Object)" else ""} val);
                     } else {
                       self.``${name}`` = val;
                     }
@@ -295,8 +315,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
                  //edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
                  if((self.${cls_mode} & 0x01) != 0) {
-                   //return self.${cls_manager}.
-                   return self.``${name}``;
+                   return (${typ_name})self.${cls_manager}.readField_${redirect_method_type}(${field_id});
                  } else {
                    return self.``${name}``;
                  }
@@ -311,26 +330,51 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             // TODO: remove
             case ee: Throwable => {
               println("Compile of method failed: " + ee)
+              throw ee
             }
           }
+          // add this field to the accessor methods
+          accessReads(redirect_method_type).append(s"case ${field_id}: return this.``${name}``;\n")
+          accessWrites(redirect_method_type).append(s"case ${field_id}: this.``${name}`` = (${typ_name})val; return;\n")
         } else {
           // TODO: static field
         }
       }
     }
+    fieldCount.put(cls.getName, nextFieldId)
+
+    try {
+      // create the accessor methods
+      for (t <- accessReads) {
+        val f = t._2
+        f.append(" default: throw new edu.berkeley.dj.internal.DJError(); } } }")
+        cls.addMethod(CtMethod.make(f.toString, cls))
+      }
+      for (t <- accessWrites) {
+        val f = t._2
+        f.append(" default: throw new edu.berkeley.dj.internal.DJError(); } } }")
+        cls.addMethod(CtMethod.make(f.toString, cls))
+      }
+    } catch {
+      case ee: Throwable => {
+        println("comp of methoded failed: "+ee)
+        throw ee
+      }
+    }
+
   }
 
   private def addSeralizeMethods(cls: CtClass) = {
     // TODO:
-    var seralize_obj_method =
+    var serialize_obj_method =
       """
-            public void __dj_seralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
-            super.__dj_seralize_obj(man);
+            public void __dj_serialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
+            super.__dj_serialize_obj(man);
       """
-    var deseralize_obj_method =
+    var deserialize_obj_method =
       """
-            public void __dj_deseralize_obj(edu.berkeley.dj.internal.SeralizeManager man) {
-            super.__dj_deseralize_obj(man);
+            public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
+            super.__dj_deserialize_obj(man);
       """
   }
 
@@ -428,7 +472,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private def makeDummyValue(cls: CtClass) = {
     if(cls.isArray) {
-      s"new ${getUsuableName(cls.getComponentType)}[0]"
+      s"new ${getUsableName(cls.getComponentType)}[0]"
     } else if(cls.isPrimitive) {
       // need to determine what primitive type this is, and return some dummy value for that
       import CtClass._
@@ -479,7 +523,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val static = if(Modifier.isStatic(m.getModifiers)) "static" else ""
 
       val mth_code = s"""
-           ${getAccessControl(m.getModifiers)} ${static} ${getUsuableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsuableName(v._1) + " a" + v._2).mkString(", ")}) {
+           ${getAccessControl(m.getModifiers)} ${static} ${getUsableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsableName(v._1) + " a" + v._2).mkString(", ")}) {
              edu.berkeley.dj.internal.InternalInterface.getInternalInterface().simplePrint("\t\tcall native: ${cls.getName} ${m.getName}");
              ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
            }

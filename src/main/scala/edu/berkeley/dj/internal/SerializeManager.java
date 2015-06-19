@@ -4,11 +4,11 @@ package edu.berkeley.dj.internal;
  * Created by matthewfl
  *
  * This class represent that an object or a set of objects
- * are getting seralize or deseralized
+ * are getting serialize or deserialized
  *
  *
  */
-public class SeralizeManager {
+public class SerializeManager {
 
     public int depth_left;
 
