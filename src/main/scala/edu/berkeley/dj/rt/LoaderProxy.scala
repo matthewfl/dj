@@ -4,7 +4,6 @@ package edu.berkeley.dj.rt
 //import javassist.{ClassPool,Translator}
 
 import java.io.{File, FileOutputStream}
-import java.lang.reflect.InvocationTargetException
 import java.net.URL
 import javassist._
 
@@ -47,21 +46,28 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
   private val classBytecodes = new mutable.HashMap[String,Array[Byte]]()
 
   // what about when we want to force some class to be reloaded with new bytecode...
-  def getClassBytes(classname: String): Array[Byte] = classBytecodes.getOrElseUpdate(classname, {
-    val cls = pool get classname
-    if(cls != null) {
-      cls.detach()
-      val clazz = cls.toBytecode()
-      if(manager.config.debug_clazz_bytecode != null) {
-        val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".","/")}.class")
-        fl.getParentFile.mkdirs()
-        val f = new FileOutputStream(fl)
-        f.write(clazz)
-        f.close()
-      }
-      clazz
-    } else null
-  })
+  def getClassBytes(cn: String): Array[Byte] = {
+    // lock the classname that we are loading so that we do not attempt to load the same class twice
+    // at the same time
+    val classname = cn.intern()
+    classname.synchronized {
+      classBytecodes.getOrElseUpdate(classname, {
+        val cls = pool get classname
+        if (cls != null) {
+          cls.detach()
+          val clazz = cls.toBytecode()
+          if (manager.config.debug_clazz_bytecode != null) {
+            val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".", "/")}.class")
+            fl.getParentFile.mkdirs()
+            val f = new FileOutputStream(fl)
+            f.write(clazz)
+            f.close()
+          }
+          clazz
+        } else null
+      })
+    }
+  }
 
 
   override protected def findClass(classname: String) : Class[_] = {

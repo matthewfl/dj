@@ -258,7 +258,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     for (field <- cls.getDeclaredFields) {
       val name = field.getName
-      println("field name: " + name)
+      //println("field name: " + name)
       // TODO: manage arrays
       if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
         //val typ = field.getType
@@ -563,6 +563,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   def createCtClass(classname: String): CtClass = {
     MethodInfo.doPreverify = true
+
+    if(classname.startsWith(config.coreprefix) && classname.endsWith("00")) {
+      // we should not loading these classes with 00 suffix
+      // something somewhere else in the rewriter must have gone wrong to cause us to load this
+      throw new ClassNotFoundException(classname)
+    }
 
     if (classname.startsWith("edu.berkeley.dj.rt")) {
       // do not allow loading the runtime into the runtime

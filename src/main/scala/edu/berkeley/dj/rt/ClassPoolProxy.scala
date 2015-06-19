@@ -1,7 +1,6 @@
 package edu.berkeley.dj.rt
 
 import javassist.CtClass
-import javassist.bytecode.Descriptor
 
 import scala.collection.mutable
 
@@ -66,6 +65,13 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
     else
       ret
       */
+  }
+
+  override def get(classname: String): CtClass = {
+    if(classname.startsWith(manager.config.internalPrefix) && classname.endsWith("00")) {
+      super.get(classname.substring(0, classname.length - 2))
+    } else
+      super.get(classname)
   }
 
   /*override def get(classname : String) : CtClass = {
