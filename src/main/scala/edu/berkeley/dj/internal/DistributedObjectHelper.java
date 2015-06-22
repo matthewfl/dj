@@ -145,18 +145,87 @@ public class DistributedObjectHelper {
         ByteBuffer ret;
         switch(op) {
             case 10:
+                ret = ByteBuffer.allocate(1);
+                if(h.__dj_readFieldID_Z(fid)) {
+                    ret.put((byte)1);
+                } else {
+                    ret.put((byte)0);
+                }
+                return ret;
             case 11:
+                ret = ByteBuffer.allocate(4);
+                ret.putChar(h.__dj_readFieldID_C(fid));
+                return ret;
             case 12:
+                ret = ByteBuffer.allocate(1);
+                ret.put(h.__dj_readFieldID_B(fid));
+                return ret;
             case 13:
-                throw new NotImplementedException();
+                ret = ByteBuffer.allocate(2);
+                ret.putShort(h.__dj_readFieldID_S(fid));
+                return ret;
             case 14:
                 ret = ByteBuffer.allocate(4);
                 ret.putInt(h.__dj_readFieldID_I(fid));
                 return ret;
             case 15:
+                ret = ByteBuffer.allocate(8);
+                ret.putLong(h.__dj_readFieldID_J(fid));
+                return ret;
             case 16:
+                ret = ByteBuffer.allocate(4);
+                ret.putFloat(h.__dj_readFieldID_F(fid));
+                return ret;
             case 17:
-            case 18:
+                ret = ByteBuffer.allocate(8);
+                ret.putDouble(h.__dj_readFieldID_D(fid));
+                return ret;
+            case 18: // OBJECT
+                throw new NotImplementedException();
+            default:
+                throw new InterfaceException();
+        }
+    }
+
+    static public void writeField(int op, ByteBuffer req) {
+        UUID id = new UUID(req.getLong(), req.getLong());
+        int fid = req.getInt();
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null)
+            throw new InterfaceException();
+        if((h.__dj_class_mode & CONSTS.REMOTE_WRITE) != 0) {
+            // need to redirect the request elsewhere
+            throw new NotImplementedException();
+        }
+        switch(op) {
+            case 20:
+                h.__dj_writeFieldID_Z(fid, req.get() == 1);
+                return;
+            case 21:
+                h.__dj_writeFieldID_C(fid, req.getChar());
+                return;
+            case 22:
+                h.__dj_writeFieldID_B(fid, req.get());
+                return;
+            case 23:
+                h.__dj_writeFieldID_S(fid, req.getShort());
+                return;
+            case 24:
+                h.__dj_writeFieldID_I(fid, req.getInt());
+                return;
+            case 25:
+                h.__dj_writeFieldID_J(fid, req.getLong());
+                return;
+            case 26:
+                h.__dj_writeFieldID_F(fid, req.getFloat());
+                return;
+            case 27:
+                h.__dj_writeFieldID_D(fid, req.getDouble());
+                return;
+            case 28: // OBJECT
                 throw new NotImplementedException();
             default:
                 throw new InterfaceException();

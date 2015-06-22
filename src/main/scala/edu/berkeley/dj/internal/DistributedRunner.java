@@ -2,8 +2,7 @@ package edu.berkeley.dj.internal;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * Created by matthewfl
@@ -29,7 +28,32 @@ public class DistributedRunner {
         }
     }
 
-    static public <T> Future<T> runOnRemote(int id, Callable<T> r) {
+    static public <T> Future<T> runOnRemote(int id, Callable<T> c) {
+        DistributedFuture<T> ff = new DistributedFuture<>();
+
+        //ff
+
+        Runnable ru = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ff.success(c.call());
+                } catch (Throwable e) {
+                    ff.failure(e);
+                }
+            }
+        };
+
+
+
+        if(id == -1 || id == InternalInterface.getInternalInterface().getSelfId()) {
+            // have to run it asnyc
+            throw new NotImplementedException();
+        } else {
+            //byte[] run_id = DistributedObjectHelper.getDistributedId(r).toArr();
+            //InternalInterface.getInternalInterface()
+        }
+
         throw new NotImplementedException();
     }
 
@@ -39,6 +63,57 @@ public class DistributedRunner {
     }
 
 
+    private static class DistributedFuture<T> implements Future<T> {
+        T value;
+        Throwable err;
+        boolean done = false;
+
+        void success(T v) {
+            value = v;
+            done = true;
+            notifyAll();
+        }
+
+        void failure(Throwable e) {
+            err = e;
+            done = true;
+            notifyAll();
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            throw new NotImplementedException();
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return false;
+        }
+
+        public boolean isDone() {
+            return done;
+        }
+
+        public T get() throws InterruptedException, ExecutionException {
+            if (done) {
+                if (err != null)
+                    throw new ExecutionException(err);
+                return value;
+            }
+            // TODO: fix race condition here
+            wait();
+            return get();
+        }
+
+        public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            if(done) {
+                return get();
+            }
+            wait(unit.toMillis(timeout));
+            if(!done) throw new TimeoutException();
+            return get();
+        }
+    }
 
 
 }

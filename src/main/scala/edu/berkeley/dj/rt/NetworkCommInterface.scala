@@ -90,6 +90,11 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       // reading something that is local on this machine
       man.runningInterface.callIn(5, action, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
     }
+    case 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 => {
+      man.runningInterface.callIn(6, action, ByteBuffer.wrap(msg))
+      Array[Byte]()
+    }
+
     /*case 10 => {
       // read boolean
     }

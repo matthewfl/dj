@@ -112,6 +112,8 @@ public class InternalInterface {
 
     public ByteBuffer readField(ByteBuffer req, int op, int machine) { throw new InterfaceException(); }
 
+    public void writeField(ByteBuffer req, int op, int machine) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -239,6 +241,11 @@ class InternalInterfaceWrap extends  InternalInterface {
         return (ByteBuffer)invoke("readField", new Class[]{ByteBuffer.class, int.class, int.class}, req, op, to);
     }
 
+    @Override
+    public void writeField(ByteBuffer req, int op, int to) {
+        invoke("writeField", new Class[]{ByteBuffer.class, int.class, int.class}, req, op, to);
+    }
+
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
         invoke("printStdout", new Class[]{int.class}, i);
@@ -265,9 +272,13 @@ class InternalInterfaceWrap extends  InternalInterface {
                 // update the location for an object
                 DistributedObjectHelper.updateObjectLocation((UUID)args[0], (int)args[1]);
                 return null;
-            // reading of fields
             case 5:
+                // reading of fields
                 return DistributedObjectHelper.readField((int)args[0], (ByteBuffer)args[1]);
+            case 6:
+                // writing of fields
+                DistributedObjectHelper.writeField((int)args[0], (ByteBuffer)args[1]);
+                return null;
 
         }
         return null;

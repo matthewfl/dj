@@ -59,33 +59,56 @@ final public class ClassManager {
 
     public void writeField_A(int id, Object v) {}
 
-    public boolean readField_Z(int id) { return false; }
+    public boolean readField_Z(int id) {
+        return requestRead(id, 10).get() != 0;
+    }
 
-    public char readField_C(int id) { return ' '; }
+    public char readField_C(int id) {
+        return requestRead(id, 11).getChar();
+    }
 
-    public byte readField_B(int id) { return 0; }
+    public byte readField_B(int id) {
+        return requestRead(id, 12).get();
+    }
 
-    public short readField_S(int id) { return 0; }
+    public short readField_S(int id) {
+        return requestRead(id, 13).getShort();
+    }
 
     public int readField_I(int id) {
         return requestRead(id, 14).getInt();
     }
 
-    public long readField_J(int id) { return 0L; }
+    public long readField_J(int id) {
+        return requestRead(id, 15).getLong();
+    }
 
-    public float readField_F(int id) { return 0.0f; }
+    public float readField_F(int id) {
+        return requestRead(id, 16).getFloat();
+    }
 
-    public double readField_D(int id) { return 0.0; }
+    public double readField_D(int id) {
+        return requestRead(id, 17).getDouble();
+    }
 
     public Object readField_A(int id) { return null; }
 
 
     private ByteBuffer requestRead(int fid, int op) {
-        ByteBuffer bb = ByteBuffer.allocate(20);
+        ByteBuffer bb = requestRemote(fid, 0);
+        return InternalInterface.getInternalInterface().readField(bb, op, owning_machine);
+    }
+
+    private ByteBuffer requestRemote(int fid, int exces) {
+        ByteBuffer bb = ByteBuffer.allocate(20 + exces);
         bb.putLong(distributedObjectId.getMostSignificantBits());
         bb.putLong(distributedObjectId.getLeastSignificantBits());
         bb.putInt(fid);
-        return InternalInterface.getInternalInterface().readField(bb, op, owning_machine);
+        return bb;
+    }
+
+    private void requestWrite(ByteBuffer bb, int op) {
+        InternalInterface.getInternalInterface().writeField(bb, op, owning_machine);
     }
 
 
