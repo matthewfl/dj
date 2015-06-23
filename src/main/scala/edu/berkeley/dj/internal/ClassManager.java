@@ -226,6 +226,59 @@ final public class ClassManager {
 
     }
 
+    private ByteBuffer objectId() {
+        ByteBuffer b = ByteBuffer.allocate(16);
+        b.putLong(distributedObjectId.getMostSignificantBits());
+        b.putLong(distributedObjectId.getLeastSignificantBits());
+        return b;
+    }
+
+
+    public void acquireMonitor() {
+        synchronized (this) {
+            if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
+                // we have to communicate with the master
+                InternalInterface.getInternalInterface().acquireObjectMonitor(objectId(), owning_machine);
+                synchronized (managedObject) {
+                    managedObject.__dj_class_mode |= CONSTS.MONITOR_LOCK;
+                    return;
+                }
+            } else {
+                // we are the master
+                while(true) {
+                    synchronized (managedObject) {
+                        // spinning
+                        // TODO: maybe use violate reads from unsafe...
+                        if((managedObject.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0) {
+                            managedObject.__dj_class_mode |= CONSTS.MONITOR_LOCK;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void releaseMonitor() {
+        synchronized (this) {
+            if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
+                // communicate with the master
+                synchronized (managedObject) {
+                    managedObject.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
+                }
+                InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine);
+            } else {
+                synchronized (managedObject) {
+                    assert((managedObject.__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
+                    managedObject.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
+                    return;
+                }
+            }
+        }
+    }
+
+
+
     // there should be some seralization methods added to the class
 
 }

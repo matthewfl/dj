@@ -260,4 +260,45 @@ public class DistributedObjectHelper {
         // TODO:
     }
 
+    static public boolean lockMonitor(ByteBuffer obj, boolean spin) {
+        UUID id = new UUID(obj.getLong(), obj.getLong());
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null)
+            throw new InterfaceException();
+        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
+            // redirect to the correct machine
+            throw new NotImplementedException();
+        synchronized (h) {
+            // we have a param for spinning since we do not want to block the io threads with spinning on an object
+            do {
+                if ((h.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0) {
+                    h.__dj_class_mode |= CONSTS.MONITOR_LOCK;
+                    return true;
+                }
+            } while(spin);
+            return false;
+        }
+    }
+
+    static public void unlockMonitor(ByteBuffer obj) {
+        UUID id = new UUID(obj.getLong(), obj.getLong());
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null)
+            throw new InterfaceException();
+        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
+            // redirect to the correct machine
+            throw new NotImplementedException();
+        synchronized (h) {
+            assert((h.__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
+            h.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
+        }
+    }
+
+
 }

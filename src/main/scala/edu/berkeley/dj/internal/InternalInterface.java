@@ -116,6 +116,10 @@ public class InternalInterface {
 
     public void waitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
 
+    public void acquireObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
+
+    public void releaseObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -253,6 +257,16 @@ class InternalInterfaceWrap extends  InternalInterface {
         invoke("waitOnObject", new Class[]{byte[].class, int.class}, obj, machine);
     }
 
+    @Override
+    public void acquireObjectMonitor(ByteBuffer obj, int machine) {
+        invoke("acquireObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
+    }
+
+    @Override
+    public void releaseObjectMonitor(ByteBuffer obj, int machine) {
+        invoke("releaseObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
+    }
+
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
         invoke("printStdout", new Class[]{int.class}, i);
@@ -289,6 +303,12 @@ class InternalInterfaceWrap extends  InternalInterface {
             case 7:
                 DistributedObjectHelper.waitingFrom((int)args[0], (ByteBuffer)args[1]);
                 return null;
+            case 8:
+                return DistributedObjectHelper.lockMonitor((ByteBuffer)args[0], (boolean)args[1]);
+            case 9:
+                DistributedObjectHelper.unlockMonitor((ByteBuffer)args[0]);
+                return null;
+
         }
         return null;
     }

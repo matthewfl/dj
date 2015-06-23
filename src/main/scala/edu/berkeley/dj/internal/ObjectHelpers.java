@@ -1,5 +1,6 @@
 package edu.berkeley.dj.internal;
 
+import sun.misc.Unsafe;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
@@ -13,6 +14,8 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 public class ObjectHelpers {
 
     private ObjectHelpers() {}
+
+    private static Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
 
     public static void notify(Object o) {
         if(o instanceof ObjectBase) {
@@ -81,12 +84,46 @@ public class ObjectHelpers {
         }
     }
 
-    public static void monitorenter(Object o) {
-
+    public static void monitorEnter(Object o) {
+        if(o instanceof ObjectBase) {
+            ObjectBase ob = (ObjectBase)o;
+            if(ob.__dj_class_manager != null) {
+                ob.__dj_class_manager.acquireMonitor();
+            } else {
+                unsafe.monitorEnter(ob);
+                /*while(true) {
+                    synchronized (ob) {
+                        // spinning
+                        // TODO: maybe use violate reads from unsafe...
+                        if ((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0) {
+                            ob.__dj_class_mode |= CONSTS.MONITOR_LOCK;
+                            return;
+                        }
+                    }
+                }*/
+            }
+        } else {
+            unsafe.monitorEnter(o);
+        }
     }
 
-    public static void moniterexit(Object o) {
-
+    public static void monitorExit(Object o) {
+        if(o instanceof ObjectBase) {
+            ObjectBase ob = (ObjectBase)o;
+            if(ob.__dj_class_manager != null) {
+                ob.__dj_class_manager.releaseMonitor();
+            } else {
+                unsafe.monitorExit(ob);
+                /*
+                synchronized (ob) {
+                    assert((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
+                    ob.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
+                }
+                */
+            }
+        } else {
+            unsafe.monitorExit(o);
+        }
     }
 
 }

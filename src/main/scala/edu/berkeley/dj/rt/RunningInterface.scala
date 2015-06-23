@@ -157,4 +157,12 @@ class RunningInterface (private val config : Config, private val manager: Manage
     manager.networkInterface.send(to, 105, obj)
   }
 
+  def acquireObjectMonitor(obj: ByteBuffer, to: Int): Unit = {
+    block(manager.networkInterface.sendWrpl(to, 7, obj))
+  }
+
+  def releaseObjectMonitor(obj: ByteBuffer, to: Int): Unit = {
+    manager.networkInterface.send(to, 106, obj)
+  }
+
 }

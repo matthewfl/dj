@@ -25,6 +25,8 @@ object SimpleMapthing {
 
           var v = 5
 
+          def gg = v
+
           override def run(): Unit = {
             InternalInterface.debug("\n\n\n\n\n--------------------> running on some remote host\n\n\n\n" + v)
             System.out.println("Another printing on the remote host")
@@ -33,7 +35,10 @@ object SimpleMapthing {
         }
         DistributedRunner.runOnRemote(h, r)
         Thread.sleep(1500)
-        InternalInterface.debug("\n\n\n------New value for v"+r.v)
+        // TODO: issue with scala using reflection to get the value of r.v, will require something that
+        // is remapping the reflection
+        //val rr = r.gg
+        //InternalInterface.debug("\n\n\n------New value for v"+r.v)
       }
     }
     Thread.sleep(120000)

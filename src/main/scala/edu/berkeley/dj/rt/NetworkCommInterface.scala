@@ -40,6 +40,9 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
     case 105 => {
       man.runningInterface.callIn(7, from, ByteBuffer.wrap(msg))
     }
+    case 106 => {
+      man.runningInterface.callIn(9, ByteBuffer.wrap(msg))
+    }
   }
 
   override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = action match {
@@ -88,6 +91,21 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       // get a byte array from the map
       val name = new String(msg)
       man.runningInterface.getDistributed(name)
+    }
+    case 7 => {
+      // lock an object
+      val res = man.runningInterface.callIn(8, ByteBuffer.wrap(msg), false).asInstanceOf[Boolean]
+      if(!res) {
+        // we did not lock
+        Future {
+          // this will block until it gets the lock
+          man.runningInterface.callIn(8, ByteBuffer.wrap(msg), true)
+          Array[Byte]()
+        }
+      } else {
+        // we got the lock send reply
+        Array[Byte]()
+      }
     }
     case 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 => {
       // reading something that is local on this machine
