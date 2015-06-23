@@ -145,10 +145,16 @@ class RunningInterface (private val config : Config, private val manager: Manage
     manager.networkInterface.send(id, 103, arr)
   }
 
-
   def readField(req: ByteBuffer, op: Int, to: Int): ByteBuffer = {
     block(manager.networkInterface.sendWrpl(to, op, req))
   }
 
+  def writeField(req: ByteBuffer, op: Int, to: Int): Unit = {
+    block(manager.networkInterface.sendWrpl(to, op, req))
+  }
+
+  def waitOnObject(obj: Array[Byte], to: Int) = {
+    manager.networkInterface.send(to, 105, obj)
+  }
 
 }

@@ -76,6 +76,7 @@ public class ObjectBase implements Object00 {
         }
     }
 
+    /*
     // these are final on the java.lang.Object
     // and we can't change the java.lang.Object class
     // so rewrite all uses of these methods to call these instead
@@ -139,6 +140,8 @@ public class ObjectBase implements Object00 {
     }
 
     public final void __dj_wait() throws InterruptedException { __dj_wait(0); }
+
+*/
 
     protected /*final*/ void finalize () throws Throwable {
         // we can delete proxy classes

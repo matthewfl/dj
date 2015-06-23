@@ -21,15 +21,19 @@ object SimpleMapthing {
       println(s"see host $h")
       if(InternalInterface.getInternalInterface.getSelfId != h) {
         // going to try and run a command on an external machine
-        DistributedRunner.runOnRemote(h, new Runnable {
+        val r = new Runnable {
 
-          val v = 5
+          var v = 5
 
           override def run(): Unit = {
             InternalInterface.debug("\n\n\n\n\n--------------------> running on some remote host\n\n\n\n" + v)
             System.out.println("Another printing on the remote host")
+            v = 6
           }
-        })
+        }
+        DistributedRunner.runOnRemote(h, r)
+        Thread.sleep(1500)
+        InternalInterface.debug("\n\n\n------New value for v"+r.v)
       }
     }
     Thread.sleep(120000)

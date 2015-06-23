@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal;
 
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;
@@ -41,23 +42,60 @@ final public class ClassManager {
 
     protected int getMode() { return  managedObject.__dj_getClassMode(); }
 
-    public void writeField_Z(int id, boolean v) {}
+    public void writeField_Z(int id, boolean v) {
+        ByteBuffer b = requestRemote(id, 1);
+        if(v)
+            b.put((byte)1);
+        else
+            b.put((byte)0);
+        requestWrite(b, 20);
+    }
 
-    public void writeField_C(int id, char v) {}
+    public void writeField_C(int id, char v) {
+        ByteBuffer b = requestRemote(id, 4);
+        b.putChar(v);
+        requestWrite(b, 21);
+    }
 
-    public void writeField_B(int id, byte v) {}
+    public void writeField_B(int id, byte v) {
+        ByteBuffer b = requestRemote(id, 1);
+        b.put(v);
+        requestWrite(b, 22);
+    }
 
-    public void writeField_S(int id, short v) {}
+    public void writeField_S(int id, short v) {
+        ByteBuffer b = requestRemote(id, 2);
+        b.putShort(v);
+        requestWrite(b, 23);
+    }
 
-    public void writeField_I(int id, int v) {}
+    public void writeField_I(int id, int v) {
+        ByteBuffer b = requestRemote(id, 4);
+        b.putInt(v);
+        requestWrite(b, 24);
+    }
 
-    public void writeField_J(int id, long v) {}
+    public void writeField_J(int id, long v) {
+        ByteBuffer b = requestRemote(id, 8);
+        b.putLong(v);
+        requestWrite(b, 25);
+    }
 
-    public void writeField_F(int id, float v) {}
+    public void writeField_F(int id, float v) {
+        ByteBuffer b = requestRemote(id, 4);
+        b.putFloat(v);
+        requestWrite(b, 26);
+    }
 
-    public void writeField_D(int id, double v) {}
+    public void writeField_D(int id, double v) {
+        ByteBuffer b = requestRemote(id, 8);
+        b.putDouble(v);
+        requestWrite(b, 27);
+    }
 
-    public void writeField_A(int id, Object v) {}
+    public void writeField_A(int id, Object v) {
+        throw new NotImplementedException();
+    }
 
     public boolean readField_Z(int id) {
         return requestRead(id, 10).get() != 0;
@@ -91,7 +129,9 @@ final public class ClassManager {
         return requestRead(id, 17).getDouble();
     }
 
-    public Object readField_A(int id) { return null; }
+    public Object readField_A(int id) {
+        throw new NotImplementedException();
+    }
 
 
     private ByteBuffer requestRead(int fid, int op) {
@@ -112,8 +152,79 @@ final public class ClassManager {
     }
 
 
+    int[] waitingMachines;
 
-    // TODO: need to have a read and write field methods for all primitive types
+    void addMachineToWaiting(int id) {
+        synchronized (this) {
+            if (waitingMachines == null) {
+                waitingMachines = new int[]{id};
+            } else {
+                int[] n = new int[waitingMachines.length + 1];
+                System.arraycopy(waitingMachines, 0, n, 0, waitingMachines.length);
+                n[waitingMachines.length] = id;
+                waitingMachines = n;
+            }
+        }
+    }
+
+    private int getNextWaitingMachine() {
+        synchronized (this) {
+            if (waitingMachines == null) {
+                return -1;
+            }
+            if (waitingMachines.length == 1) {
+                int r = waitingMachines[0];
+                waitingMachines = null;
+                return r;
+            }
+            int r = waitingMachines[0];
+            int[] n = new int[waitingMachines.length - 1];
+            System.arraycopy(waitingMachines, 1, n, 0, waitingMachines.length - 1);
+            waitingMachines = n;
+            return r;
+        }
+    }
+
+    public void dj_notify() {
+        int n = getNextWaitingMachine();
+        if(n == -1) {
+            managedObject.notify();
+        } else {
+            // send the notification to another machine
+        }
+    }
+
+    public void dj_notifyAll() {
+        synchronized (this) {
+            if(waitingMachines == null) return;
+            for(int i = 0; i < waitingMachines.length; i++) {
+                if(waitingMachines[i] == -1) {
+                    managedObject.notify();
+                } else {
+                    // send notification to another machine
+                }
+            }
+        }
+    }
+
+    public void dj_wait() throws InterruptedException {
+        if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
+            // we are msater
+            addMachineToWaiting(-1);
+        } else {
+
+        }
+        managedObject.wait();
+    }
+
+    public void dj_wait(long timeout) throws InterruptedException {
+        // need to remove self from the queue somehow
+        // I guess the queue could also have the timeout for the object contained with them, but idk how well that would work
+    }
+
+    public void dj_wait(long timeout, long nanos) throws InterruptedException {
+
+    }
 
     // there should be some seralization methods added to the class
 

@@ -37,6 +37,9 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       val bb = ByteBuffer.wrap(msg)
       man.runningInterface.callIn(4, new UUID(bb.getLong(), bb.getLong()), bb.getInt)
     }
+    case 105 => {
+      man.runningInterface.callIn(7, from, ByteBuffer.wrap(msg))
+    }
   }
 
   override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = action match {
@@ -95,65 +98,6 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       Array[Byte]()
     }
 
-    /*case 10 => {
-      // read boolean
-    }
-    case 11 => {
-      // read char
-    }
-    case 12 => {
-      // read byte
-    }
-    case 13 => {
-      // read short
-    }
-    case 14 => {
-      // read int
-      man.runningInterface.callIn()
-    }
-    case 15 => {
-      // read long
-    }
-    case 16 => {
-      // read float
-    }
-    case 17 => {
-      // read double
-    }
-    case 18 => {
-      // read object
-    }*/
-
-      /*
-    case 20 => {
-      // write boolean
-    }
-    case 21 => {
-      // write char
-    }
-    case 22 => {
-      // write byte
-    }
-    case 23 => {
-      // write short
-    }
-    case 24 => {
-      // write int
-    }
-    case 25 => {
-      // write long
-    }
-    case 26 => {
-      // write float
-    }
-    case 27 => {
-      // write double
-    }
-    case 28 => {
-      // write object
-    }
-
-    */
   }
 
   override def start(nc: NetworkCommunication) = {

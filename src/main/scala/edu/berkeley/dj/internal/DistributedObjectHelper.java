@@ -59,6 +59,7 @@ public class DistributedObjectHelper {
             identifier = new UUID(b.getLong(), b.getLong());
             classname = new String(arr, 20, arr.length - 20);
         }
+
     }
 
     static private HashMap<UUID, Object00> localDistributedObjects = new HashMap<>();
@@ -98,7 +99,10 @@ public class DistributedObjectHelper {
                 Class<?> cls = AugmentedClassLoader.forName(id.classname);
                 ObjectBase obj = (ObjectBase) Unsafe00.getUnsafe().allocateInstance(cls);
                 obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
-                obj.__dj_class_mode |= CONSTS.OBJECT_INITED | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITE;
+                obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
+                        CONSTS.REMOTE_READS |
+                        CONSTS.REMOTE_WRITES |
+                        CONSTS.IS_NOT_MASTER;
                 localDistributedObjects.put(id.identifier, obj);
                 return obj;
             } catch(ClassNotFoundException e) {
@@ -126,8 +130,6 @@ public class DistributedObjectHelper {
             return;
         h.__dj_getManager().owning_machine = machine_location;
     }
-
-
 
     static public ByteBuffer readField(int op, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
@@ -196,7 +198,7 @@ public class DistributedObjectHelper {
         }
         if(h == null)
             throw new InterfaceException();
-        if((h.__dj_class_mode & CONSTS.REMOTE_WRITE) != 0) {
+        if((h.__dj_class_mode & CONSTS.REMOTE_WRITES) != 0) {
             // need to redirect the request elsewhere
             throw new NotImplementedException();
         }
@@ -230,6 +232,32 @@ public class DistributedObjectHelper {
             default:
                 throw new InterfaceException();
         }
+    }
+
+    static public void waitingFrom(int machine, ByteBuffer obj) {
+        UUID id = new UUID(obj.getLong(), obj.getLong());
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null)
+            throw new InterfaceException();
+        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
+            // we are not the master machine here, we should forward this request
+            throw new NotImplementedException();
+        }
+        h.__dj_class_manager.addMachineToWaiting(machine);
+    }
+
+    static public void notifyObject(ByteBuffer obj) {
+        UUID id = new UUID(obj.getLong(), obj.getLong());
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null)
+            throw new InterfaceException();
+        // TODO:
     }
 
 }

@@ -192,6 +192,14 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     // TODO: need to handle interfaces that can have methods on them
   }
 
+  private def monitorMethodsRewrite(cls: CtClass): Unit = {
+    for(m <- cls.getDeclaredMethods) {
+      //m.setWrappedBody()
+    }
+    // TODO:
+    ???
+  }
+
   private val fieldCount = new mutable.HashMap[String,Int]()
 
   private def getFieldCount(classname: String) = {

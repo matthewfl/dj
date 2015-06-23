@@ -26,6 +26,7 @@ public interface Object00 {
 
     boolean equals(Object00 obj);
 
+    /*
     void __dj_notify();
 
     void __dj_notifyAll();
@@ -39,6 +40,7 @@ public interface Object00 {
     void __dj_monitorenter();
 
     void __dj_monitorexit();
+    */
 
     void __dj_serialize_obj(SerializeManager man);
 
