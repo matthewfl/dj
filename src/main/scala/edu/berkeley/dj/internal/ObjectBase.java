@@ -153,7 +153,7 @@ public class ObjectBase implements Object00 {
     protected void __dj_client_finalize() throws Throwable {}
 
     // TODO: going to have to rewrite the monitor enter instructions
-    final public void __dj_monitorenter() {
+    /*final public void __dj_monitorenter() {
         // TODO: better locking management
         while(true) {
             synchronized (this) {
@@ -171,7 +171,7 @@ public class ObjectBase implements Object00 {
             assert((__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
             __dj_class_mode &= ~CONSTS.MONITOR_LOCK;
         }
-    }
+    }*/
 
     public void __dj_serialize_obj(SerializeManager man) {
 

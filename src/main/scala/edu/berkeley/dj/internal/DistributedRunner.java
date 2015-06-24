@@ -69,15 +69,19 @@ public class DistributedRunner {
         boolean done = false;
 
         void success(T v) {
-            value = v;
-            done = true;
-            notifyAll();
+            synchronized (this) {
+                value = v;
+                done = true;
+                notifyAll();
+            }
         }
 
         void failure(Throwable e) {
-            err = e;
-            done = true;
-            notifyAll();
+            synchronized (this) {
+                err = e;
+                done = true;
+                notifyAll();
+            }
         }
 
         @Override
@@ -95,22 +99,25 @@ public class DistributedRunner {
         }
 
         public T get() throws InterruptedException, ExecutionException {
-            if (done) {
-                if (err != null)
-                    throw new ExecutionException(err);
-                return value;
+            synchronized (this) {
+                if (done) {
+                    if (err != null)
+                        throw new ExecutionException(err);
+                    return value;
+                }
+                wait();
+                return get();
             }
-            // TODO: fix race condition here
-            wait();
-            return get();
         }
 
         public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-            if(done) {
-                return get();
+            synchronized (this) {
+                if(done) {
+                    return get();
+                }
+                wait(unit.toMillis(timeout));
+                if (!done) throw new TimeoutException();
             }
-            wait(unit.toMillis(timeout));
-            if(!done) throw new TimeoutException();
             return get();
         }
     }

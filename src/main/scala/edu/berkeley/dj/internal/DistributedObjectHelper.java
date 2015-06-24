@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID"})
+@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread"})
 public class DistributedObjectHelper {
 
     private DistributedObjectHelper() {}
@@ -67,9 +67,18 @@ public class DistributedObjectHelper {
     // give the Object some uuid so that it will be distribuited
     static public void makeDistribuited(ObjectBase o) {
         if(o.__dj_class_manager == null) {
-            o.__dj_class_manager = new ClassManager(o);
-            synchronized (localDistributedObjects) {
-                localDistributedObjects.put(o.__dj_class_manager.distributedObjectId, o);
+            boolean ownsLock = Thread.currentThread().holdsLock(o);
+            synchronized (o) {
+                o.__dj_class_manager = new ClassManager(o);
+                synchronized (localDistributedObjects) {
+                    localDistributedObjects.put(o.__dj_class_manager.distributedObjectId, o);
+                }
+                if(ownsLock) {
+                    // this thread is currently has a monitor lock on the object
+                    // but as we change it to be a distributed object we need to tracked the lock
+                    // different way since we may reference this object from another machine
+                    throw new NotImplementedException();
+                }
             }
         }
     }
@@ -274,9 +283,10 @@ public class DistributedObjectHelper {
         synchronized (h) {
             // we have a param for spinning since we do not want to block the io threads with spinning on an object
             do {
-                if ((h.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0) {
-                    h.__dj_class_mode |= CONSTS.MONITOR_LOCK;
-                    return true;
+                synchronized (h) {
+                    if(h.__dj_class_manager.monitor_lock_count != 0)
+                        continue;
+                    h.__dj_class_manager.monitor_lock_count = 1;
                 }
             } while(spin);
             return false;
@@ -294,9 +304,9 @@ public class DistributedObjectHelper {
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             // redirect to the correct machine
             throw new NotImplementedException();
-        synchronized (h) {
-            assert((h.__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
-            h.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
+        synchronized (h.__dj_class_manager) {
+            assert(h.__dj_class_manager.monitor_lock_count == 1);
+            h.__dj_class_manager.monitor_lock_count = 0;
         }
     }
 

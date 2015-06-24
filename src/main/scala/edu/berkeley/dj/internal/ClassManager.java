@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal;
 
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.nio.ByteBuffer;
@@ -22,6 +23,13 @@ final public class ClassManager {
     UUID distributedObjectId = null; // "OB_HEX_UUID"
 
     int owning_machine = -1; // signify self
+
+    Thread00 monitor_thread = null;
+
+    // TODO: if we move this thread elsewhere then we still need to have the count
+    // so I guess will have to make the master machien keep the count of the number of times the monitor has been
+    // aquired
+    int monitor_lock_count = 0;
 
     // will need a week pointer to the object base
     ObjectBase managedObject;
@@ -238,21 +246,27 @@ final public class ClassManager {
         synchronized (this) {
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // we have to communicate with the master
-                InternalInterface.getInternalInterface().acquireObjectMonitor(objectId(), owning_machine);
-                synchronized (managedObject) {
-                    managedObject.__dj_class_mode |= CONSTS.MONITOR_LOCK;
-                    return;
+                // first get the lock on the local object
+                while (true) {
+                    synchronized (this) {
+                        if(monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
+                            continue;
+                        }
+                        monitor_lock_count++;
+                        monitor_thread = Thread00.currentThread();
+                        break;
+                    }
                 }
+                InternalInterface.getInternalInterface().acquireObjectMonitor(objectId(), owning_machine);
             } else {
                 // we are the master
                 while(true) {
-                    synchronized (managedObject) {
-                        // spinning
-                        // TODO: maybe use violate reads from unsafe...
-                        if((managedObject.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0) {
-                            managedObject.__dj_class_mode |= CONSTS.MONITOR_LOCK;
-                            return;
+                    synchronized (this) {
+                        if (monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
+                            continue;
                         }
+                        monitor_lock_count++;
+                        monitor_thread = Thread00.currentThread();
                     }
                 }
             }
@@ -263,16 +277,23 @@ final public class ClassManager {
         synchronized (this) {
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // communicate with the master
-                synchronized (managedObject) {
-                    managedObject.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
+                synchronized (this) {
+                    assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
+                    if(monitor_lock_count == 1) {
+                        monitor_thread = null;
+                        InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine);
+                    }
+                    monitor_lock_count--;
                 }
-                InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine);
             } else {
-                synchronized (managedObject) {
-                    assert((managedObject.__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
-                    managedObject.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
-                    return;
+                synchronized (this) {
+                    assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
+                    if(monitor_lock_count == 1) {
+                        monitor_thread = null;
+                    }
+                    monitor_lock_count--;
                 }
+
             }
         }
     }

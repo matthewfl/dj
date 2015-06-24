@@ -30,6 +30,7 @@ public class ThreadHelpers {
     }
 
     static public void newThreadCallback(Object r) {
+        // The thread's run method is responsible for setting the current running thread
         ((Runnable)r).run();
     }
 
