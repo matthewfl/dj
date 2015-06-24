@@ -38,7 +38,7 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
 
   //override protected def delegateToParent(classname : String) = throw new ClassNotFoundException(classname)
   override  protected def delegateToParent(classname : String) = {
-    println("loading from parent class: "+classname)
+    //println("loading from parent class: "+classname)
     //assert(classname.startsWith("java.lang."))
     super.delegateToParent(classname)
   }
@@ -78,7 +78,7 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
     if(lbd != null)
       return lbd
 
-    println("loading class: "+classname)
+    //println("loading class: "+classname)
     val clazz : Array[Byte] = getClassBytes(classname)
     try {
       val lindx = classname.lastIndexOf(".")

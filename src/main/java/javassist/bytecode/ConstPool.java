@@ -827,7 +827,6 @@ public final class ConstPool {
                 NameAndTypeInfo ntinfo = (NameAndTypeInfo)getItem(minfo.nameAndTypeIndex);
                 if(ntinfo == null)
                     continue;
-                System.out.println(getUtf8Info(ntinfo.memberName));
                 if(memberName != null && !getUtf8Info(ntinfo.memberName).equals(memberName))
                     continue;
                 if(typeSig != null && !getUtf8Info(ntinfo.typeDescriptor).equals(typeSig))

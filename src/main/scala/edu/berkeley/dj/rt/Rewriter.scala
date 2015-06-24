@@ -389,9 +389,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
 
   private def modifyClass(cls: CtClass): Unit = {
-    println("rewriting class: " + cls.getName)
+    //println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
-    println("modifiers: " + Modifier.toString(mods))
+    //println("modifiers: " + Modifier.toString(mods))
     reassociateClass(cls)
 
     /*val sc = cls.getSuperclass
@@ -590,7 +590,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
 
     val cls = findBaseClass(classname)
-    println("create class name:" + classname)
+    //println("create class name:" + classname)
 
     // for edu.berkeley.dj.internal.coreclazz.
     if (classname.startsWith(config.coreprefix)) {
