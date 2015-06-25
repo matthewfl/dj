@@ -29,7 +29,9 @@ object SimpleMapthing {
 
           override def run(): Unit = {
             InternalInterface.debug("\n\n\n\n\n--------------------> running on some remote host\n\n\n\n" + v)
-            System.out.println("Another printing on the remote host")
+            this.synchronized {
+              System.out.println("Another printing on the remote host")
+            }
             v = 6
           }
         }

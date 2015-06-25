@@ -42,7 +42,7 @@ public class DistributedVariable<T> {
                     InternalInterface.getInternalInterface().setDistributed(name, objectId.toArr());
                     return h;
                 } else {
-                    objectId = new DistributedObjectHelper.DistributedObjectId();
+                    objectId = new DistributedObjectHelper.DistributedObjectId(da);
                 }
 
             } finally {

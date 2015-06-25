@@ -102,7 +102,17 @@ final public class ClassManager {
     }
 
     public void writeField_A(int id, Object v) {
-        throw new NotImplementedException();
+        if(v instanceof ObjectBase) {
+            ObjectBase ob = (ObjectBase) v;
+            byte[] did = DistributedObjectHelper.getDistributedId(ob).toArr();
+            ByteBuffer b = requestRemote(id, did.length);
+            b.put(did);
+            requestWrite(b, 28);
+        } else {
+            // TODO: have some sort of proxy object that we can then pass
+            // to wrap the object that we can't move
+            throw new NotImplementedException();
+        }
     }
 
     public boolean readField_Z(int id) {
@@ -138,7 +148,8 @@ final public class ClassManager {
     }
 
     public Object readField_A(int id) {
-        throw new NotImplementedException();
+        ByteBuffer res = requestRead(id, 18);
+        return DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(res.array()));
     }
 
 

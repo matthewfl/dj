@@ -16,7 +16,7 @@ import scala.concurrent.duration._
  * Created by matthewfl
  */
 
-private[rt] trait Manager {
+sealed private[rt] trait Manager {
   def config: Config
 
   //def runningPool : javassist.ClassPool

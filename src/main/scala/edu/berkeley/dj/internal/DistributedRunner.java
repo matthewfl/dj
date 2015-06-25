@@ -58,8 +58,10 @@ public class DistributedRunner {
     }
 
     static void runRunnable(int from_id, byte[] id) {
+        ThreadHelpers.registerWorkerThread();
         Runnable r = (Runnable)DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(id));
         r.run();
+        ThreadHelpers.unregisterWorkerThread();
     }
 
 

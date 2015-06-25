@@ -35,7 +35,7 @@ public class DistributedObjectHelper {
             return identifier.equals(((DistributedObjectId)o).identifier);
         }
 
-        DistributedObjectId() {}
+        private DistributedObjectId() {}
 
         DistributedObjectId(UUID u, int h, String cn) {
             this.identifier = u;
@@ -43,14 +43,18 @@ public class DistributedObjectHelper {
             this.classname = cn;
         }
 
-        public byte[] toArr() {
+        ByteBuffer toBB() {
             byte[] cn = classname.getBytes();
             ByteBuffer ret = ByteBuffer.allocate(cn.length + 20);
             ret.putInt(lastKnownHost);
             ret.putLong(identifier.getMostSignificantBits());
             ret.putLong(identifier.getLeastSignificantBits());
             ret.put(cn);
-            return ret.array();
+            return ret;
+        }
+
+        public byte[] toArr() {
+            return toBB().array();
         }
 
         public DistributedObjectId(byte[] arr) {
@@ -60,12 +64,18 @@ public class DistributedObjectHelper {
             classname = new String(arr, 20, arr.length - 20);
         }
 
+        DistributedObjectId(ByteBuffer b) {
+            lastKnownHost = b.getInt();
+            identifier = new UUID(b.getLong(), b.getLong());
+            classname = new String(b.array(), b.position(), b.limit() - b.position());
+        }
+
     }
 
     static private HashMap<UUID, Object00> localDistributedObjects = new HashMap<>();
 
     // give the Object some uuid so that it will be distribuited
-    static public void makeDistribuited(ObjectBase o) {
+    static public void makeDistributed(ObjectBase o) {
         if(o.__dj_class_manager == null) {
             boolean ownsLock = Thread.currentThread().holdsLock(o);
             synchronized (o) {
@@ -84,7 +94,7 @@ public class DistributedObjectHelper {
     }
 
     static public DistributedObjectId getDistributedId(ObjectBase o) {
-        makeDistribuited(o);
+        makeDistributed(o);
         int h = o.__dj_class_manager.owning_machine;
         if(h == -1)
             h = InternalInterface.getInternalInterface().getSelfId();
@@ -105,7 +115,9 @@ public class DistributedObjectHelper {
                 return h;
             // we do not have some proxy of this object locally so we need to construct some proxy for it
             try {
-                Class<?> cls = AugmentedClassLoader.forName(id.classname);
+                // shouldn't need the AugmentedClassLoader since the classname will already be augmented
+                // this will save a round trip communication with the master machine
+                Class<?> cls = Class.forName(id.classname);
                 ObjectBase obj = (ObjectBase) Unsafe00.getUnsafe().allocateInstance(cls);
                 obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
                 obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
@@ -192,7 +204,7 @@ public class DistributedObjectHelper {
                 ret.putDouble(h.__dj_readFieldID_D(fid));
                 return ret;
             case 18: // OBJECT
-                throw new NotImplementedException();
+                return DistributedObjectHelper.getDistributedId(h.__dj_readFieldID_A(fid)).toBB();
             default:
                 throw new InterfaceException();
         }
@@ -237,7 +249,8 @@ public class DistributedObjectHelper {
                 h.__dj_writeFieldID_D(fid, req.getDouble());
                 return;
             case 28: // OBJECT
-                throw new NotImplementedException();
+                h.__dj_writeFieldID_A(fid, DistributedObjectHelper.getObject(new DistributedObjectId(req)));
+                return;
             default:
                 throw new InterfaceException();
         }
@@ -287,6 +300,7 @@ public class DistributedObjectHelper {
                     if(h.__dj_class_manager.monitor_lock_count != 0)
                         continue;
                     h.__dj_class_manager.monitor_lock_count = 1;
+                    return true;
                 }
             } while(spin);
             return false;

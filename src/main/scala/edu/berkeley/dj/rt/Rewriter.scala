@@ -413,6 +413,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     var clsa = cls
     // if the class is internal to something, we still want the annotations for the file to be "active"
 
+    var rewriteUseAccessor = false
+
     while(clsa != null) {
       val anns = clsa.getAnnotations
       for (ann <- anns) {
@@ -440,6 +442,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           }
           case _: RewriteUseAccessorMethods => {
             // TODO:
+            rewriteUseAccessor = true
           }
           case sp: SetSuperclass => {
             // force the super class to be something else
@@ -451,6 +454,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
       clsa = clsa.getDeclaringClass
     }
+    val codeConverter = new CodeConverter
+
+    if(rewriteUseAccessor)
+      codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
+
+    cls.instrument(codeConverter)
 
 
     // TODO: maybe replace fields and method declerations

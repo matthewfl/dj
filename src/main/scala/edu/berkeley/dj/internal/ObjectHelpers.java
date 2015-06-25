@@ -120,16 +120,6 @@ public class ObjectHelpers {
                 ob.__dj_class_manager.acquireMonitor();
             } else {
                 unsafe.monitorEnter(ob);
-                /*while(true) {
-                    synchronized (ob) {
-                        // spinning
-                        // TODO: maybe use violate reads from unsafe...
-                        if ((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0) {
-                            ob.__dj_class_mode |= CONSTS.MONITOR_LOCK;
-                            return;
-                        }
-                    }
-                }*/
             }
         } else {
             unsafe.monitorEnter(o);
@@ -143,10 +133,6 @@ public class ObjectHelpers {
                 ob.__dj_class_manager.releaseMonitor();
             } else {
                 unsafe.monitorExit(ob);
-                /*synchronized (ob) {
-                    assert((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
-                    ob.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
-                }*/
             }
         } else {
             unsafe.monitorExit(o);

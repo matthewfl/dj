@@ -71,6 +71,16 @@ public class ThreadHelpers {
         Thread.sleep(u);
     }
 
+    static public void registerWorkerThread() {
+        // this is just some task that is running on this now, so we just want to register some worker task
+        currentThread.set(new Thread00(0L));
+    }
+
+    static public void unregisterWorkerThread() {
+        // TODO: have some pool of these items
+        currentThread.set(null);
+    }
+
 
 
 }

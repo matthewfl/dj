@@ -10,7 +10,7 @@ import scala.concurrent.{Await, Future}
 /**
  * Created by matthewfl
  */
-class RunningInterface (private val config : Config, private val manager: Manager) {
+class RunningInterface (private val config: Config, private val manager: Manager) {
 
   private var callIn : Object = null
   private var callInCls : java.lang.Class[_] = null
