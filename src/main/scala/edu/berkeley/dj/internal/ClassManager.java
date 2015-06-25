@@ -186,6 +186,24 @@ final public class ClassManager {
         }
     }
 
+    void removeMachineFromWaiting(int id) {
+        synchronized (this) {
+            int r = -1;
+            // find the last instances of this machine in the waiting queue
+            for(int i = waitingMachines.length - 1; i >= 0; i--) {
+                if(waitingMachines[i] == id) {
+                    r = i;
+                    break;
+                }
+            }
+            if(r == -1) return;
+            int[] n = new int[waitingMachines.length - 1];
+            System.arraycopy(waitingMachines, 0, n, 0, r);
+            System.arraycopy(waitingMachines, r + 1, n, r, waitingMachines.length - 1);
+            waitingMachines = n;
+        }
+    }
+
     private int getNextWaitingMachine() {
         synchronized (this) {
             if (waitingMachines == null) {
@@ -203,6 +221,8 @@ final public class ClassManager {
             return r;
         }
     }
+
+
 
     public void dj_notify() {
         int n = getNextWaitingMachine();
@@ -227,11 +247,13 @@ final public class ClassManager {
     }
 
     public void dj_wait() throws InterruptedException {
+        checkHasLock();
         if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
-            // we are msater
+            // we are master
             addMachineToWaiting(-1);
         } else {
-
+            InternalInterface.getInternalInterface().waitOnObject(objectId().array(),
+                    InternalInterface.getInternalInterface().getSelfId());
         }
         managedObject.wait();
     }
@@ -239,10 +261,11 @@ final public class ClassManager {
     public void dj_wait(long timeout) throws InterruptedException {
         // need to remove self from the queue somehow
         // I guess the queue could also have the timeout for the object contained with them, but idk how well that would work
+        throw new NotImplementedException();
     }
 
     public void dj_wait(long timeout, long nanos) throws InterruptedException {
-
+        throw new NotImplementedException();
     }
 
     private ByteBuffer objectId() {
@@ -254,7 +277,7 @@ final public class ClassManager {
 
 
     public void acquireMonitor() {
-        synchronized (this) {
+        //synchronized (this) {
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // we have to communicate with the master
                 // first get the lock on the local object
@@ -281,11 +304,11 @@ final public class ClassManager {
                     }
                 }
             }
-        }
+        //}
     }
 
     public void releaseMonitor() {
-        synchronized (this) {
+        //synchronized (this) {
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // communicate with the master
                 synchronized (this) {
@@ -304,8 +327,14 @@ final public class ClassManager {
                     }
                     monitor_lock_count--;
                 }
-
             }
+        //}
+    }
+
+    private void checkHasLock() {
+        synchronized (this) {
+            if(monitor_lock_count == 0 || monitor_thread != Thread00.currentThread())
+                throw new IllegalMonitorStateException();
         }
     }
 

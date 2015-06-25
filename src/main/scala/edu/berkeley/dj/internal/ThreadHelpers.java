@@ -25,17 +25,17 @@ public class ThreadHelpers {
         return currentThread.get();
     }
 
-    static public void startThread(Runnable r) {
+    static public void runAsync(Runnable r) {
         InternalInterface.getInternalInterface().startThread(r);
     }
 
-    static public void newThreadCallback(Object r) {
+    static void newThreadCallback(Object r) {
         // The thread's run method is responsible for setting the current running thread
         ((Runnable)r).run();
     }
 
 
-    static public void init() {
+    static void init() {
         // set the main thread
         try {
             // this is directly calling the method on class, however that should be ok

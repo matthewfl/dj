@@ -803,10 +803,10 @@ public class Thread00 implements Runnable {
 
     private void start0() {
         currentAlive = true;
-        ThreadHelpers.startThread(new Runnable() {
+        ThreadHelpers.runAsync(new Runnable() {
             @Override
             public void run() {
-                if(!Thread00.this.isDaemon())
+                if (!Thread00.this.isDaemon())
                     ThreadHelpers.incNonDaemon();
                 ThreadHelpers.setCurrentThread(Thread00.this);
                 Thread00.this.run();

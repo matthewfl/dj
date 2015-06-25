@@ -21,7 +21,7 @@ public class DistributedRunner {
         if(id == -1 || id == InternalInterface.getInternalInterface().getSelfId()) {
             // we want to run this on the local machine
             // so optimize and just run it async
-            ThreadHelpers.startThread(r);
+            ThreadHelpers.runAsync(r);
         } else {
             byte[] run_id = DistributedObjectHelper.getDistributedId(r).toArr();
             InternalInterface.getInternalInterface().runOnRemote(id, run_id);
@@ -30,8 +30,6 @@ public class DistributedRunner {
 
     static public <T> Future<T> runOnRemote(int id, Callable<T> c) {
         DistributedFuture<T> ff = new DistributedFuture<>();
-
-        //ff
 
         Runnable ru = new Runnable() {
             @Override
@@ -44,17 +42,16 @@ public class DistributedRunner {
             }
         };
 
-
-
         if(id == -1 || id == InternalInterface.getInternalInterface().getSelfId()) {
             // have to run it asnyc
-            throw new NotImplementedException();
+            ThreadHelpers.runAsync(ru);
         } else {
-            //byte[] run_id = DistributedObjectHelper.getDistributedId(r).toArr();
-            //InternalInterface.getInternalInterface()
+            byte[] run_id = DistributedObjectHelper.getDistributedId(ru).toArr();
+            InternalInterface.getInternalInterface().runOnRemote(id, run_id);
+
         }
 
-        throw new NotImplementedException();
+        return ff;
     }
 
     static void runRunnable(int from_id, byte[] id) {
@@ -65,24 +62,32 @@ public class DistributedRunner {
     }
 
 
-    private static class DistributedFuture<T> implements Future<T> {
+    @RewriteAddAccessorMethods
+    @RewriteUseAccessorMethods
+    private static class DistributedFuture<T> extends ObjectBase implements Future<T> {
         T value;
         Throwable err;
         boolean done = false;
 
         void success(T v) {
-            synchronized (this) {
+            ObjectHelpers.monitorEnter(this);
+            try {
                 value = v;
                 done = true;
-                notifyAll();
+                ObjectHelpers.notifyAll(this);
+            } finally {
+                ObjectHelpers.monitorExit(this);
             }
         }
 
         void failure(Throwable e) {
-            synchronized (this) {
+            ObjectHelpers.monitorEnter(this);
+            try {
                 err = e;
                 done = true;
-                notifyAll();
+                ObjectHelpers.notifyAll(this);
+            } finally {
+                ObjectHelpers.monitorExit(this);
             }
         }
 
@@ -101,24 +106,30 @@ public class DistributedRunner {
         }
 
         public T get() throws InterruptedException, ExecutionException {
-            synchronized (this) {
+            ObjectHelpers.monitorEnter(this);
+            try {
                 if (done) {
                     if (err != null)
                         throw new ExecutionException(err);
                     return value;
                 }
-                wait();
+                ObjectHelpers.wait(this);
                 return get();
+            } finally {
+                ObjectHelpers.monitorExit(this);
             }
         }
 
         public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-            synchronized (this) {
+            ObjectHelpers.monitorEnter(this);
+            try {
                 if(done) {
                     return get();
                 }
-                wait(unit.toMillis(timeout));
+                ObjectHelpers.wait(this, unit.toMillis(timeout));
                 if (!done) throw new TimeoutException();
+            } finally {
+                ObjectHelpers.monitorExit(this);
             }
             return get();
         }

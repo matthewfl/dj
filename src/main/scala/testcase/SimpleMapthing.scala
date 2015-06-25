@@ -1,5 +1,7 @@
 package testcase
 
+import java.util.concurrent.Callable
+
 import edu.berkeley.dj.internal.{DistributedRunner, InternalInterface}
 
 /**
@@ -21,7 +23,7 @@ object SimpleMapthing {
       println(s"see host $h")
       if(InternalInterface.getInternalInterface.getSelfId != h) {
         // going to try and run a command on an external machine
-        val r = new Runnable {
+        /*val r = new Runnable {
 
           var v = 5
 
@@ -37,6 +39,18 @@ object SimpleMapthing {
         }
         DistributedRunner.runOnRemote(h, r)
         Thread.sleep(1500)
+        */
+        val c = new Callable[Int] {
+          override def call = {
+            InternalInterface.debug("remote debug stuff")
+            999
+          }
+        }
+
+        val f = DistributedRunner.runOnRemote(h, c)
+
+        InternalInterface.debug("got back the value: "+f.get())
+
         // TODO: issue with scala using reflection to get the value of r.v, will require something that
         // is remapping the reflection
         //val rr = r.gg

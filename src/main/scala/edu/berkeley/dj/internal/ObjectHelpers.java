@@ -21,7 +21,7 @@ public class ObjectHelpers {
         if(o instanceof ObjectBase) {
             ObjectBase ob = (ObjectBase)o;
             if(ob.__dj_class_manager == null) {
-                // this object is not distribuited so just use the standard methods
+                // this object is not distributed so just use the standard methods
                 o.notify();
             } else {
                 throw new NotImplementedException();
@@ -60,7 +60,8 @@ public class ObjectHelpers {
                 */
                 ob.wait();
             } else {
-                throw new NotImplementedException();
+                ob.__dj_class_manager.dj_wait();
+                //throw new NotImplementedException();
             }
         } else {
             o.wait();

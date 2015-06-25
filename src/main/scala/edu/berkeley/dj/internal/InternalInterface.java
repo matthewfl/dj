@@ -116,6 +116,8 @@ public class InternalInterface {
 
     public void waitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
 
+    public void removeWaitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
+
     public void acquireObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
 
     public void releaseObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
@@ -227,9 +229,14 @@ class InternalInterfaceWrap extends  InternalInterface {
         invoke("registerClient", new Class[]{});
     }
 
+    // cache the self id
+    private int selfId = -2;
+
     @Override
     public int getSelfId() {
-        return (int)invoke("getSelfId", new Class[]{});
+        if(selfId != -2)
+            return selfId;
+        return selfId = (int)invoke("getSelfId", new Class[]{});
     }
 
     @Override
@@ -255,6 +262,11 @@ class InternalInterfaceWrap extends  InternalInterface {
     @Override
     public void waitOnObject(byte[] obj, int machine) {
         invoke("waitOnObject", new Class[]{byte[].class, int.class}, obj, machine);
+    }
+
+    @Override
+    public void removeWaitOnObject(byte[] obj, int machine) {
+        invoke("removeWaitOnObject", new Class[]{byte[].class, int.class}, obj, machine);
     }
 
     @Override
