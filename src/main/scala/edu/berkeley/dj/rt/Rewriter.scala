@@ -533,19 +533,46 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       cls.removeMethod(m)
     })
 
+    val orgClassName = cls.getName.substring(config.coreprefix.length)
+
     rwMembers.foreach(m=>{
       //val args = getArguments(m.getSignature)
       val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
       // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
       val static = if(Modifier.isStatic(m.getModifiers)) "static" else ""
 
+      // ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+
+      // work around javassist bug
+      val (cls_types, arg_vals) = if(args.length == 0) {
+        ("new java.lang.Class[0]", "new java.lang.Object[0]")
+      } else {
+        (s"new ``java``.``lang``.``Class`` [] { ${args.map(v => s"${getUsableName(v)}.class ").mkString(", ")} }",
+          s"new java.lang.Object [] { ${(0 until args.length).map(v => s"a$v").mkString(", ")} }")
+      }
+
       val mth_code = s"""
            ${getAccessControl(m.getModifiers)} ${static} ${getUsableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsableName(v._1) + " a" + v._2).mkString(", ")}) {
              edu.berkeley.dj.internal.InternalInterface.getInternalInterface().simplePrint("\t\tcall native: ${cls.getName} ${m.getName}");
-             ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+               ${if (m.getReturnType != CtClass.voidType) s"return (${getUsableName(m.getReturnType)})" else ""}
+               edu.berkeley.dj.internal.ProxyHelper.invokeProxy(
+                 ${if(Modifier.isStatic(m.getModifiers)) "null" else "this"} ,
+                 ${orgClassName}.class ,
+                 ${getUsableName(cls)}.class ,
+                 $cls_types,
+                 "${m.getName}",
+                 $arg_vals
+                 );
            }
          """
-      cls.addMethod(CtMethod.make(mth_code, cls))
+      try {
+        cls.addMethod(CtMethod.make(mth_code, cls))
+      } catch {
+        case e: Throwable => {
+          println(e)
+          throw e
+        }
+      }
     })
   }
 
