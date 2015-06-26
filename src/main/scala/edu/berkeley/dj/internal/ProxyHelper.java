@@ -17,6 +17,8 @@ public class ProxyHelper {
 
     private static Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
 
+    final static String coreClassPrefix = "edu.berkeley.dj.internal.coreclazz.";
+
     public static Object invokeProxy(Object self,
                                      Class<?> tocls,
                                      Class<?> fromcls,
@@ -27,7 +29,7 @@ public class ProxyHelper {
             Object inst = null;
             Method mth = tocls.getMethod(methodName, argumentsTypes);
             if (self != null) {
-                assert (fromcls.getName().startsWith("edu.berkeley.dj.internal.coreclazz"));
+                assert (fromcls.getName().startsWith(coreClassPrefix));
                 mth.setAccessible(true);
                 inst = unsafe.allocateInstance(tocls);
 
@@ -150,8 +152,9 @@ public class ProxyHelper {
     }
 
     static Object makeNative(Object o) {
-        if (o.getClass().getName().startsWith("edu.berkeley.dj.internal.coreclazz")) {
+        if (o.getClass().getName().startsWith(coreClassPrefix)) {
             // we have to convert this class to the original one
+
             throw new NotImplementedException();
         } else {
             return o;
