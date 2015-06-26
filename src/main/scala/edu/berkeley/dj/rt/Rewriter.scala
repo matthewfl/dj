@@ -573,7 +573,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                ${if (rt_type != CtClass.voidType) s"return $cast_prefix " else ""}
                edu.berkeley.dj.internal.ProxyHelper.invokeProxy(
                  ${if(Modifier.isStatic(m.getModifiers)) "null" else "this"} ,
-                 ${orgClassName}.class ,
+                 "${orgClassName}",
                  ${getUsableName(cls)}.class ,
                  $cls_types,
                  "${m.getName}",
