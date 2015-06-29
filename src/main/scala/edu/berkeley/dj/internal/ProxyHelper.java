@@ -29,7 +29,8 @@ public class ProxyHelper {
         try {
             Object inst = null;
             Class<?> tocls = Class.forName(tocls_);
-            Method mth = tocls.getMethod(methodName, argumentsTypes);
+            Method mth = tocls.getDeclaredMethod(methodName, argumentsTypes);
+            mth.setAccessible(true);
             if (self != null) {
                 assert (fromcls.getName().startsWith(coreClassPrefix));
                 mth.setAccessible(true);
@@ -60,7 +61,31 @@ public class ProxyHelper {
 
     }
 
+    static Class<?> argumentLookup(String n) {
+        if(n.equals("boolean")) {
+            return boolean.class;
+        } else if(n.equals("byte")) {
+            return byte.class;
+        } else if(n.equals("short")) {
+            return short.class;
+        } else if(n.equals("char")) {
+            return char.class;
+        } else if(n.equals("int")) {
+            return int.class;
+        } else if(n.equals("long")) {
+            return long.class;
+        } else if(n.equals("float")) {
+            return float.class;
+        } else if(n.equals("double")) {
+            return double.class;
+        } else {
+            return Class.forName(n);
+        }
+    }
+
     static Object makeDJ(Object o) {
+        if(o == null)
+            return null;
         Class<?> ocls = o.getClass();
         String name = ocls.getName();
         String nname = InternalInterface.getInternalInterface().classRenamed(name);
@@ -83,6 +108,8 @@ public class ProxyHelper {
     }
 
     static Object makeNative(Object o) {
+        if(o == null)
+            return null;
         Class<?> ocls = o.getClass();
         String oname = ocls.getName();
         try {
@@ -174,6 +201,8 @@ public class ProxyHelper {
 
 
                 }
+                fromcurcls = fromcurcls.getSuperclass();
+                tocurcls = tocurcls.getSuperclass();
             }
         } catch (NoSuchMethodException|
                 IllegalAccessException|
