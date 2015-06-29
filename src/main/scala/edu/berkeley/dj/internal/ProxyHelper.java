@@ -23,12 +23,16 @@ public class ProxyHelper {
     public static Object invokeProxy(Object self,
                                      String tocls_,
                                      Class<?> fromcls,
-                                     Class<?>[] argumentsTypes,
+                                     String[] argumentsTypes_,
                                      String methodName,
                                      Object[] arguments) {
         try {
             Object inst = null;
             Class<?> tocls = Class.forName(tocls_);
+            Class<?> argumentsTypes[] = new Class<?>[argumentsTypes_.length];
+            for(int i = 0; i < argumentsTypes_.length; i++) {
+                argumentsTypes[i] = argumentLookup(argumentsTypes_[i]);
+            }
             Method mth = tocls.getDeclaredMethod(methodName, argumentsTypes);
             mth.setAccessible(true);
             if (self != null) {
@@ -61,7 +65,7 @@ public class ProxyHelper {
 
     }
 
-    static Class<?> argumentLookup(String n) {
+    static Class<?> argumentLookup(String n) throws ClassNotFoundException {
         if(n.equals("boolean")) {
             return boolean.class;
         } else if(n.equals("byte")) {

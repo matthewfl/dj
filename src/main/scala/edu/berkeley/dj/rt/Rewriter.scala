@@ -545,9 +545,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
       // work around javassist bug
       val (cls_types, arg_vals) = if(args.length == 0) {
-        ("new java.lang.Class[0]", "new java.lang.Object[0]")
+        ("new java.lang.String[0]", "new java.lang.Object[0]")
       } else {
-        (s"new ``java``.``lang``.``Class`` [] { ${args.map(v => s"${getUsableName(v)}.class ").mkString(", ")} }",
+        (s"new ``java``.``lang``.``String`` [] { ${args.map(v => "\"" + v.getName + "\"").mkString(", ")} }",
           s"new java.lang.Object [] { ${args.zipWithIndex.map(v => {
             if(v._1.isPrimitive) {
               // we need to manually box this
