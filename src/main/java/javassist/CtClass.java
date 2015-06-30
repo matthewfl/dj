@@ -1585,4 +1585,20 @@ public abstract class CtClass {
      * This method is overridden by CtClassType.
      */
     void compress() {}
+
+    @Override
+    public boolean equals(Object o) {
+        if(o == this)
+            return true;
+        if(!(o instanceof CtClass))
+            return false;
+        CtClass cl = (CtClass)o;
+
+        if(cl.getClassPool() == getClassPool() && cl.getName().equals(getName())) {
+            System.err.println("there is somehow a mismatch here: "+getName());
+            return true;
+        }
+
+        return false;
+    }
 }

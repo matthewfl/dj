@@ -52,7 +52,7 @@ public class ProxyHelper {
             Object res = mth.invoke(inst, arguments);
 
             if(self != null) {
-                updateDjObject(tocls, fromcls, self, inst);
+                updateDjObject(tocls, fromcls, self, inst, null, -1);
             }
 
             return makeDJ(res);
@@ -103,7 +103,7 @@ public class ProxyHelper {
             Class<?> cls = Class.forName(nname);
             Object ret = unsafe.allocateInstance(cls);
 
-            updateDjObject(ocls, cls, ret, o);
+            updateDjObject(ocls, cls, ret, o, null, -1);
 
             return ret;
 
@@ -136,7 +136,11 @@ public class ProxyHelper {
         }
     }
 
-    static void updateDjObject(Class<?> from, Class<?> to, Object self, Object inst) {
+    static void updateDjObject(Class<?> from, Class<?> to, Object self, Object inst, Map<Object, Object> convertMap, int depth) {
+        if(depth == 0)
+            return;
+        if(convertMap == null)
+            convertMap = new HashMap<>();
         // to should be the dj class
         // self should be the dj class
         try {
@@ -149,18 +153,70 @@ public class ProxyHelper {
                     f.setAccessible(true);
                     Method rmethod = tocurcls.getDeclaredMethod("__dj_read_field_"+f.getName(), new Class[] {tocurcls});
                     rmethod.setAccessible(true);
+                    Object curval = rmethod.invoke(null, self);
 
                     Class<?> ftype = f.getType();
-                    Class<?> djtype;
+                    String fname = ftype.getName();
+                    Class<?> djtype = ftype;
                     if(!ftype.isPrimitive()) {
                         // need to determine what the equiv dj type will be
+                        Object setval = f.get(inst);
+                        // we do not need to copy this value over since they are identical
+                        // expected to happen when they did not have to have their name changed
+                        if(curval == setval)
+                            continue;
+
+
+
+                        Class<?> setclass = setval.getClass();
+
+                        if(setclass.isArray()) {
+                            Class<?> ctype = ftype.getComponentType();
+                            if(ctype.isPrimitive()) {
+
+                            }
+                            // TODO: make the arrays get copied over and stuff
+                        } else {
+                            // check if we already have converted this type and then just use that
+                            Object mapConvert = convertMap.get(setval);
+                            if(mapConvert != null) {
+                                String nname = InternalInterface.getInternalInterface().classRenamed(fname);
+                                if(fname != null && !nname.equals(fname)) {
+                                    djtype = Class.forName(nname);
+                                }
+                                Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, djtype});
+                                wmethod.invoke(null, self, mapConvert);
+                                continue;
+                            }
+
+                            String nname = InternalInterface.getInternalInterface().classRenamed(fname);
+                            if(fname.equals(nname) || nname == null) {
+                                // we are not changing the name of this class
+                                // but the current value and this value are not equal so we are going to set it
+                                // TODO: may have a different ftype?
+                                Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, ftype});
+                                wmethod.invoke(null, self, setval);
+                                continue;
+                            } else {
+                                if(curval != null && nname.equals(curval.getClass().getName())) {
+                                    // then we can just update the origional object
+                                    convertMap.put(setval, curval);
+                                    updateDjObject(setclass, curval.getClass(), curval, setval, convertMap, depth - 1);
+                                    continue;
+                                }
+                                Class<?> mkcls = Class.forName(nname);
+                                Object mkinst = unsafe.allocateInstance(mkcls);
+                                convertMap.put(setval, mkinst);
+                                updateDjObject(setclass, mkcls, mkinst, setval, convertMap, depth - 1);
+                                continue;
+                            }
+                        }
                         throw new NotImplementedException();
                     } else {
                         djtype = ftype;
                     }
                     Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, djtype});
                     wmethod.setAccessible(true);
-                    Object curval = rmethod.invoke(null, self);
                     if(ftype == boolean.class) {
                         boolean v = f.getBoolean(inst);
                         if(!curval.equals(v)) {
@@ -212,7 +268,9 @@ public class ProxyHelper {
             }
         } catch (NoSuchMethodException|
                 IllegalAccessException|
-                InvocationTargetException e) {
+                InvocationTargetException|
+                ClassNotFoundException|
+                InstantiationException e) {
             throw new RuntimeException(e);
         }
     }
@@ -261,15 +319,20 @@ public class ProxyHelper {
                             f.set(inst, r);
                         } else {
                             Class<?> vcls = v.getClass();
-                            String vname = vcls.getName();
-                            if(vname.startsWith(coreClassPrefix)) {
-                                Class<?> ncls = Class.forName(vname.substring(coreClassPrefix.length()));
-                                r = unsafe.allocateInstance(ncls);
-                                convertedMap.put(v, r);
-                                f.set(inst, r);
-                                updateNativeObject(vcls, ncls, r, v, convertedMap, depth - 1);
+                            if(vcls.isArray()) {
+                                throw new NotImplementedException();
+
                             } else {
-                                f.set(inst, v);
+                                String vname = vcls.getName();
+                                if (vname.startsWith(coreClassPrefix)) {
+                                    Class<?> ncls = Class.forName(vname.substring(coreClassPrefix.length()));
+                                    r = unsafe.allocateInstance(ncls);
+                                    convertedMap.put(v, r);
+                                    f.set(inst, r);
+                                    updateNativeObject(vcls, ncls, r, v, convertedMap, depth - 1);
+                                } else {
+                                    f.set(inst, v);
+                                }
                             }
                         }
                         //throw new NotImplementedException();
