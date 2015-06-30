@@ -268,7 +268,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val name = field.getName
       //println("field name: " + name)
       // TODO: manage arrays
-      if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
+      if (!name.startsWith(config.fieldPrefix)/* && !field.getFieldInfo.getDescriptor.contains("[") */) {
         //val typ = field.getType
 
         val typ_name = getUsableName(field.getType)

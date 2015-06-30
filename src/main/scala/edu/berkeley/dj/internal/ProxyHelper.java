@@ -7,6 +7,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by matthewfl
@@ -40,7 +42,7 @@ public class ProxyHelper {
                 mth.setAccessible(true);
                 inst = unsafe.allocateInstance(tocls);
 
-                updateNativeObject(fromcls, tocls, inst, self);
+                updateNativeObject(fromcls, tocls, inst, self, null, 2);
             }
 
             for(int i = 0; i < arguments.length; i++) {
@@ -122,7 +124,7 @@ public class ProxyHelper {
                 Class<?> ncls = Class.forName(oname.substring(coreClassPrefix.length()));
                 Object ninst = unsafe.allocateInstance(ncls);
 
-                updateNativeObject(ocls, ncls, ninst, o);
+                updateNativeObject(ocls, ncls, ninst, o, null, 2);
 
                 return ninst;
             } else {
@@ -215,8 +217,12 @@ public class ProxyHelper {
         }
     }
 
-    static void updateNativeObject(Class<?> from, Class<?> to, Object inst, Object self) {
+    static void updateNativeObject(Class<?> from, Class<?> to, Object inst, Object self, Map<Object, Object> convertedMap, int depth) {
+        if(depth == 0)
+            return;
         // copy the fields from `self` to `inst`
+        if(convertedMap == null)
+            convertedMap = new HashMap<>();
         try {
             Class<?> tocurcls = to;
             Class<?> fromcurcls = from;
@@ -247,7 +253,26 @@ public class ProxyHelper {
                     } else {
                         // This is some object type
                         // so we may need to rewrite what the object is pointing at as its type might not agree
-                        throw new NotImplementedException();
+                        Object v = rmethod.invoke(null, self);
+                        Object r = convertedMap.get(v);
+                        if(v == null) {
+                            f.set(inst, null);
+                        } else if(r != null) {
+                            f.set(inst, r);
+                        } else {
+                            Class<?> vcls = v.getClass();
+                            String vname = vcls.getName();
+                            if(vname.startsWith(coreClassPrefix)) {
+                                Class<?> ncls = Class.forName(vname.substring(coreClassPrefix.length()));
+                                r = unsafe.allocateInstance(ncls);
+                                convertedMap.put(v, r);
+                                f.set(inst, r);
+                                updateNativeObject(vcls, ncls, r, v, convertedMap, depth - 1);
+                            } else {
+                                f.set(inst, v);
+                            }
+                        }
+                        //throw new NotImplementedException();
                     }
                 }
                 tocurcls = tocurcls.getSuperclass();
@@ -255,7 +280,9 @@ public class ProxyHelper {
             }
         } catch (NoSuchMethodException|
                 IllegalAccessException|
-                InvocationTargetException e) {
+                InvocationTargetException|
+                InstantiationException|
+                ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }

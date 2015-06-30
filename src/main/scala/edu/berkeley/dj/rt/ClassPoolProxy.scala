@@ -1,6 +1,7 @@
 package edu.berkeley.dj.rt
 
 import javassist.CtClass
+import javassist.bytecode.Descriptor
 
 import scala.collection.mutable
 
@@ -39,6 +40,10 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
       // WTF: there is some bug were we can get a request for a class like: [Ljava/lang/Object;
       return Descriptor.toCtClass(classname, this)
     }*/
+    if(classname.contains("/") || classname.startsWith("[")) {
+      // this is a jvm qualified name
+      return Descriptor.toCtClass(classname, this)
+    }
 
     if(!ClassPoolProxy.canRewrite(classname)) {
       return manager.pool.get(classname)
