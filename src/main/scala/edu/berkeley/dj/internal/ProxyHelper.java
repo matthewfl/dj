@@ -166,9 +166,20 @@ public class ProxyHelper {
                         if(curval == setval)
                             continue;
 
-
+                        if(setval == null) {
+                            String nname = InternalInterface.getInternalInterface().classRenamed(fname);
+                            if(fname != null && !nname.equals(fname)) {
+                                djtype = Class.forName(nname);
+                            }
+                            Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, djtype});
+                            wmethod.setAccessible(true);
+                            wmethod.invoke(null, self, null);
+                            continue;
+                        }
 
                         Class<?> setclass = setval.getClass();
+                        String setname = setclass.getName();
+
 
                         if(setclass.isArray()) {
                             Class<?> ctype = ftype.getComponentType();
@@ -185,16 +196,18 @@ public class ProxyHelper {
                                     djtype = Class.forName(nname);
                                 }
                                 Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, djtype});
+                                wmethod.setAccessible(true);
                                 wmethod.invoke(null, self, mapConvert);
                                 continue;
                             }
 
-                            String nname = InternalInterface.getInternalInterface().classRenamed(fname);
+                            String nname = InternalInterface.getInternalInterface().classRenamed(setname);
                             if(fname.equals(nname) || nname == null) {
                                 // we are not changing the name of this class
                                 // but the current value and this value are not equal so we are going to set it
                                 // TODO: may have a different ftype?
                                 Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, ftype});
+                                wmethod.setAccessible(true);
                                 wmethod.invoke(null, self, setval);
                                 continue;
                             } else {
@@ -204,10 +217,17 @@ public class ProxyHelper {
                                     updateDjObject(setclass, curval.getClass(), curval, setval, convertMap, depth - 1);
                                     continue;
                                 }
+                                String nfname = InternalInterface.getInternalInterface().classRenamed(fname);
+                                if(nfname != null && !nfname.equals(fname))
+                                    djtype = Class.forName(nfname);
+
                                 Class<?> mkcls = Class.forName(nname);
                                 Object mkinst = unsafe.allocateInstance(mkcls);
                                 convertMap.put(setval, mkinst);
                                 updateDjObject(setclass, mkcls, mkinst, setval, convertMap, depth - 1);
+                                Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, djtype});
+                                wmethod.setAccessible(true);
+                                wmethod.invoke(null, self, mkinst);
                                 continue;
                             }
                         }
