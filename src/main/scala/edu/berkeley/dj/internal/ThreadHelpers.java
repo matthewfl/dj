@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by matthewfl
  */
-
 @RewriteAllBut(nonModClasses = {"java/lang/Thread", "java/lang/ThreadLocal"})
 public class ThreadHelpers {
 
@@ -26,18 +25,21 @@ public class ThreadHelpers {
         return currentThread.get();
     }
 
-    static public void startThread(Runnable r) {
+    static public void runAsync(Runnable r) {
         InternalInterface.getInternalInterface().startThread(r);
     }
 
-    static public void newThreadCallback(Object r) {
+    static void newThreadCallback(Object r) {
+        // The thread's run method is responsible for setting the current running thread
         ((Runnable)r).run();
     }
 
 
-    static public void init() {
+    static void init() {
         // set the main thread
         try {
+            // this is directly calling the method on class, however that should be ok
+            // since we have already prefixed the class that we are loading
             Class.forName("edu.berkeley.dj.internal.coreclazz.java.lang.Thread");
         } catch (ClassNotFoundException e) {}
         /*Thread00 t = new Thread00("DJ main thread");
@@ -63,6 +65,20 @@ public class ThreadHelpers {
 
     static public void exitThread() {
         Thread00.currentThread().__dj_exit();
+    }
+
+    static public void sleep(long u) throws InterruptedException {
+        Thread.sleep(u);
+    }
+
+    static public void registerWorkerThread() {
+        // this is just some task that is running on this now, so we just want to register some worker task
+        currentThread.set(new Thread00(0L));
+    }
+
+    static public void unregisterWorkerThread() {
+        // TODO: have some pool of these items
+        currentThread.set(null);
     }
 
 

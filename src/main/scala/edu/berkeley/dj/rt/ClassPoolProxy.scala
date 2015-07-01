@@ -9,7 +9,7 @@ import scala.collection.mutable
 /**
  * Created by matthewfl
  */
-class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewriter) extends javassist.ClassPool(false) {
+class ClassPoolProxy (private val manager: MasterManager, private val rewriter : Rewriter) extends javassist.ClassPool(false) {
 
   childFirstLookup = false
 
@@ -40,8 +40,12 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
       // WTF: there is some bug were we can get a request for a class like: [Ljava/lang/Object;
       return Descriptor.toCtClass(classname, this)
     }*/
+    if(classname.contains("/") || classname.startsWith("[")) {
+      // this is a jvm qualified name
+      return Descriptor.toCtClass(classname, this)
+    }
 
-    if(!canRewrite(classname)) {
+    if(!ClassPoolProxy.canRewrite(classname)) {
       return manager.pool.get(classname)
     }
     val res = try {
@@ -68,6 +72,14 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
       */
   }
 
+  override def get(classname: String): CtClass = {
+    if(classname.startsWith(manager.config.internalPrefix) && classname.endsWith("00")) {
+      // this ends up getting called when getDeclaringClass is used before we rewriter all the class name references
+      super.get(classname.substring(0, classname.length - 2))
+    } else
+      super.get(classname)
+  }
+
   /*override def get(classname : String) : CtClass = {
     cache get classname match {
       case Some(c) => return c
@@ -80,6 +92,11 @@ class ClassPoolProxy (private val manager : Manager, private val rewriter : Rewr
     }
     throw new ClassNotFoundException(classname)
   }*/
+
+
+}
+
+object ClassPoolProxy {
 
   def canRewrite(name: String) = {
     !(name.startsWith("java.")

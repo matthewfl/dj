@@ -161,24 +161,44 @@ public class Thread00 implements Runnable {
 
 
     // create the main base thread
-    private Thread00(long i) {
-        name = "DJ main Thread".toCharArray();
-        priority = NORM_PRIORITY;
-        group = new ThreadGroup00();  // root thread group
-        daemon = false;
-        contextClassLoader = Thread00.class.getClassLoader();
-        inheritedAccessControlContext = null;//AccessController00.getContext();
-        target = null;
-        stackSize = 1000; // TODO: manage stack size
-        tid = nextThreadID();
-        currentAlive = true;
-        ThreadHelpers.incNonDaemon();
+    public Thread00(long i) {
+        if(i == 1) {
+            name = "DJ main Thread".toCharArray();
+            priority = NORM_PRIORITY;
+            group = new ThreadGroup00();  // root thread group
+            daemon = false;
+            contextClassLoader = Thread00.class.getClassLoader();
+            inheritedAccessControlContext = null;//AccessController00.getContext();
+            target = null;
+            stackSize = 1000; // TODO: manage stack size
+            tid = nextThreadID();
+            currentAlive = true;
+            ThreadHelpers.incNonDaemon();
+        } else {
+            // we are creating some just running thread
+            name = "DJ worker Thread".toCharArray();
+            priority = NORM_PRIORITY;
+            daemon = false;
+            // TODO: get the thread group for the worker threads
+            group = null;
+
+            contextClassLoader = Thread00.class.getClassLoader();
+            inheritedAccessControlContext = null;
+            target = null;
+            stackSize = 1000;
+            tid = nextThreadID();
+            currentAlive = true;
+        }
     }
 
     static {
-        Thread00 mainThread = new Thread00(1);
-        ThreadHelpers.setCurrentThread(mainThread);
-        ThreadHelpers.allThreads.get().put(mainThread.getId(), mainThread);
+        if(InternalInterface.isMaster()) {
+            // we only want to have one instance of the main thread so we use isMaster
+            // to only run this code once
+            Thread00 mainThread = new Thread00(1L);
+            ThreadHelpers.setCurrentThread(mainThread);
+            ThreadHelpers.allThreads.get().put(mainThread.getId(), mainThread);
+        }
     }
 
     private volatile char  name[];
@@ -345,7 +365,8 @@ public class Thread00 implements Runnable {
      *          cleared when this exception is thrown.
      */
     public static void sleep(long millis) throws InterruptedException {
-        throw new NotImplementedException();
+        ThreadHelpers.sleep(millis);
+        //throw new NotImplementedException();
         // TODO:
     }
 
@@ -782,10 +803,10 @@ public class Thread00 implements Runnable {
 
     private void start0() {
         currentAlive = true;
-        ThreadHelpers.startThread(new Runnable() {
+        ThreadHelpers.runAsync(new Runnable() {
             @Override
             public void run() {
-                if(!Thread00.this.isDaemon())
+                if (!Thread00.this.isDaemon())
                     ThreadHelpers.incNonDaemon();
                 ThreadHelpers.setCurrentThread(Thread00.this);
                 Thread00.this.run();

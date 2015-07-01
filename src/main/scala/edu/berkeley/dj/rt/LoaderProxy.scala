@@ -4,9 +4,10 @@ package edu.berkeley.dj.rt
 //import javassist.{ClassPool,Translator}
 
 import java.io.{File, FileOutputStream}
-import java.lang.reflect.InvocationTargetException
 import java.net.URL
 import javassist._
+
+import scala.collection.mutable
 
 
 /**
@@ -25,7 +26,7 @@ import javassist._
   println("constructed")
 }*/
 
-class LoaderProxy(private val manager : Manager, private val pool : ClassPoolProxy)
+class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
   extends Loader(null, pool) {
 
   //addTranslator(pool, new LoaderTranslator)
@@ -37,35 +38,48 @@ class LoaderProxy(private val manager : Manager, private val pool : ClassPoolPro
 
   //override protected def delegateToParent(classname : String) = throw new ClassNotFoundException(classname)
   override  protected def delegateToParent(classname : String) = {
-    println("loading from parent class: "+classname)
+    //println("loading from parent class: "+classname)
     //assert(classname.startsWith("java.lang."))
     super.delegateToParent(classname)
   }
 
+  private val classBytecodes = new mutable.HashMap[String,Array[Byte]]()
+
+  // what about when we want to force some class to be reloaded with new bytecode...
+  def getClassBytes(classname: String): Array[Byte] = {
+    // TODO: more fine grain sync here
+    // we should be able to load more then one class at a time
+    // but we would like to avoid loading two instances of the same class at the same time since that
+    // can lead to strange behavior
+    classBytecodes.synchronized {
+      classBytecodes.getOrElseUpdate(classname, {
+        val cls = pool get classname
+        if (cls != null) {
+          cls.detach()
+          val clazz = cls.toBytecode()
+          if (manager.config.debug_clazz_bytecode != null) {
+            val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".", "/")}.class")
+            fl.getParentFile.mkdirs()
+            val f = new FileOutputStream(fl)
+            f.write(clazz)
+            f.close()
+          }
+          clazz
+        } else null
+      })
+    }
+  }
 
 
-  override protected def findClass(classname : String) : Class[_] = {
+  override protected def findClass(classname: String) : Class[_] = {
     // the java.* classes can not be rewritten by us, also they contain a special meaning between the
     // jvm and the running program, so modification becomes an issue
     val lbd = loadClassByDelegation(classname)
     if(lbd != null)
       return lbd
 
-
-    println("loading class: "+classname)
-    var clazz : Array[Byte] = null
-    val cls = pool get classname
-    if(cls != null) {
-      cls.detach()
-      clazz = cls.toBytecode()
-      if(manager.config.debug_clazz_bytecode != null) {
-        val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".","/")}.class")
-        fl.getParentFile.mkdirs()
-        val f = new FileOutputStream(fl)
-        f.write(clazz)
-        f.close()
-      }
-    }
+    //println("loading class: "+classname)
+    val clazz : Array[Byte] = getClassBytes(classname)
     try {
       val lindx = classname.lastIndexOf(".")
       if (lindx != -1) {

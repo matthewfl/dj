@@ -9,7 +9,7 @@ import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
  * it will have to override methods such as lock or wait to make them work in a distribuited fashion
  */
 @RewriteClassRef(
-        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object2",
+        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object00",
         newName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object"
 )
 public class ObjectBase implements Object00 {
@@ -76,6 +76,7 @@ public class ObjectBase implements Object00 {
         }
     }
 
+    /*
     // these are final on the java.lang.Object
     // and we can't change the java.lang.Object class
     // so rewrite all uses of these methods to call these instead
@@ -140,6 +141,8 @@ public class ObjectBase implements Object00 {
 
     public final void __dj_wait() throws InterruptedException { __dj_wait(0); }
 
+*/
+
     protected /*final*/ void finalize () throws Throwable {
         // we can delete proxy classes
         // but then we don't want to call the finalize method
@@ -150,7 +153,7 @@ public class ObjectBase implements Object00 {
     protected void __dj_client_finalize() throws Throwable {}
 
     // TODO: going to have to rewrite the monitor enter instructions
-    final public void __dj_monitorenter() {
+    /*final public void __dj_monitorenter() {
         // TODO: better locking management
         while(true) {
             synchronized (this) {
@@ -168,13 +171,51 @@ public class ObjectBase implements Object00 {
             assert((__dj_class_mode & CONSTS.MONITOR_LOCK) != 0);
             __dj_class_mode &= ~CONSTS.MONITOR_LOCK;
         }
-    }
+    }*/
 
-    public void __dj_seralize_obj(SeralizeManager man) {
-
-    }
-
-    public void __dj_deseralize_obj(SeralizeManager man) {
+    public void __dj_serialize_obj(SerializeManager man) {
 
     }
+
+    public void __dj_deserialize_obj(SerializeManager man) {
+
+    }
+
+    // these methods are overwritten so that we can efficently access fields on an object using a switch statement
+    public void __dj_writeFieldID_Z(int id, boolean v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_C(int id, char v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_B(int id, byte v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_S(int id, short v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_I(int id, int v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_J(int id, long v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_F(int id, float v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_D(int id, double v) { throw new DJError(); }
+
+    public void __dj_writeFieldID_A(int id, Object v) { throw new DJError(); }
+
+    public boolean __dj_readFieldID_Z(int id) { throw new DJError(); }
+
+    public char __dj_readFieldID_C(int id) { throw new DJError(); }
+
+    public byte __dj_readFieldID_B(int id) { throw new DJError(); }
+
+    public short __dj_readFieldID_S(int id) { throw new DJError(); }
+
+    public int __dj_readFieldID_I(int id) { throw new DJError(); }
+
+    public long __dj_readFieldID_J(int id) { throw new DJError(); }
+
+    public float __dj_readFieldID_F(int id) { throw new DJError(); }
+
+    public double __dj_readFieldID_D(int id) { throw new DJError(); }
+
+    public Object __dj_readFieldID_A(int id) { throw new DJError(); }
+
 }

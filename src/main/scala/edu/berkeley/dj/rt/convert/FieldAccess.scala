@@ -1,9 +1,9 @@
 package edu.berkeley.dj.rt.convert
 
-import javassist.{NotFoundException, CtClass}
-import javassist.bytecode.{Descriptor, MethodInfo, ConstPool, CodeIterator}
-import javassist.convert.{TransformReadField, Transformer}
+import javassist.CtClass
 import javassist.bytecode.Opcode._
+import javassist.bytecode.{CodeIterator, ConstPool, Descriptor, MethodInfo}
+import javassist.convert.Transformer
 
 import edu.berkeley.dj.rt.Config
 
@@ -64,6 +64,8 @@ class FieldAccess(next : Transformer, val config: Config) extends Transformer(ne
       }
 
       // TODO: figure out what to do with arrays
+
+
 
       if (c == PUTFIELD  && !ftype.startsWith("[")) {
         // there should exist a method like ${config.fieldPrefix}write_field_${name}(${ftype})

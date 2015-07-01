@@ -4,9 +4,11 @@ name := "dj"
 
 version := "0.0.1"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
+
+libraryDependencies += "com.hazelcast" % "hazelcast" % "3.4.2"
 
 javacOptions += "-g"
 
@@ -21,4 +23,5 @@ assemblySettings
 mainClass in (Compile,run) := Some("edu.berkeley.dj.rt.Main")
 
 mainClass in assembly := Some("edu.berkeley.dj.rt.Main")
+
 

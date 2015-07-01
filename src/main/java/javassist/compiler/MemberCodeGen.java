@@ -930,7 +930,7 @@ public class MemberCodeGen extends CodeGen {
         throws CompileError
     {
         if (AccessFlag.isPrivate(finfo.getAccessFlags())
-            && f.getDeclaringClass() != thisClass) {
+            && !f.getDeclaringClass().equals(thisClass)) {
             CtClass declClass = f.getDeclaringClass(); 
             if (isEnclosing(declClass, thisClass)) {
                 AccessorMaker maker = declClass.getAccessorMaker();

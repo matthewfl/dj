@@ -5,6 +5,8 @@ package edu.berkeley.dj.internal;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
+import java.util.UUID;
 
 /**
  * Created by matthewfl
@@ -15,6 +17,14 @@ public class InternalInterface {
 
     static private InternalInterface ii = null;
 
+    static private boolean isMaster = true;
+
+    static void _setIsClient() {
+        isMaster = false;
+    }
+
+    static public boolean isMaster() { return isMaster; }
+
     static void setInternalInterface(Object o) {
         if(!o.getClass().getName().equals("edu.berkeley.dj.rt.RunningInterface"))
             throw new RuntimeException("Invalid class for running interface");
@@ -22,6 +32,7 @@ public class InternalInterface {
             throw new RuntimeException("Running interface already set");
         ii = new InternalInterfaceWrap(o);
 
+        // TODO: this is wrong, we only want to do this on the main one rather then on the clients as well
         // set the main thread
         ThreadHelpers.init();
     }
@@ -70,11 +81,11 @@ public class InternalInterface {
         throw new InterfaceException();
     }
 
-    public void setDistributed(String name, Object value) {
+    public void setDistributed(String name, byte[] value) {
         throw new InterfaceException();
     }
 
-    public Object getDistributed(String name) {
+    public byte[] getDistributed(String name) {
         throw new InterfaceException();
     }
 
@@ -90,6 +101,26 @@ public class InternalInterface {
     public void exit(int i) {
         throw new InterfaceException();
     }
+
+    public void registerClient() { throw new InterfaceException(); }
+
+    public int getSelfId() { throw new InterfaceException(); }
+
+    public int[] getAllHosts() { throw new InterfaceException(); }
+
+    public void runOnRemote(int id, byte[] arr) { throw new InterfaceException(); }
+
+    public ByteBuffer readField(ByteBuffer req, int op, int machine) { throw new InterfaceException(); }
+
+    public void writeField(ByteBuffer req, int op, int machine) { throw new InterfaceException(); }
+
+    public void waitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
+
+    public void removeWaitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
+
+    public void acquireObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
+
+    public void releaseObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
@@ -174,16 +205,13 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public void setDistributed(String name, Object o) {
-        if(!(o instanceof ObjectBase)) {
-            throw new InterfaceException("can not set distributed of non object base");
-        }
-        invoke("setDistributed", new Class[]{String.class, Object.class}, name, o);
+    public void setDistributed(String name, byte[] o) {
+        invoke("setDistributed", new Class[]{String.class, byte[].class}, name, o);
     }
 
     @Override
-    public Object getDistributed(String name) {
-        return invoke("getDistributed", new Class[]{String.class}, name);
+    public byte[] getDistributed(String name) {
+        return (byte[])invoke("getDistributed", new Class[]{String.class}, name);
     }
 
     @Override
@@ -194,6 +222,61 @@ class InternalInterfaceWrap extends  InternalInterface {
     @Override
     public void exit(int i) {
         invoke("exit", new Class[]{int.class}, i);
+    }
+
+    @Override
+    public void registerClient() {
+        invoke("registerClient", new Class[]{});
+    }
+
+    // cache the self id
+    private int selfId = -2;
+
+    @Override
+    public int getSelfId() {
+        if(selfId != -2)
+            return selfId;
+        return selfId = (int)invoke("getSelfId", new Class[]{});
+    }
+
+    @Override
+    public int[] getAllHosts() {
+        return (int[])invoke("getAllHosts", new Class[]{});
+    }
+
+    @Override
+    public void runOnRemote(int id, byte[] arr) {
+        invoke("runOnRemote", new Class[]{int.class, byte[].class}, id, arr);
+    }
+
+    @Override
+    public ByteBuffer readField(ByteBuffer req, int op, int to) {
+        return (ByteBuffer)invoke("readField", new Class[]{ByteBuffer.class, int.class, int.class}, req, op, to);
+    }
+
+    @Override
+    public void writeField(ByteBuffer req, int op, int to) {
+        invoke("writeField", new Class[]{ByteBuffer.class, int.class, int.class}, req, op, to);
+    }
+
+    @Override
+    public void waitOnObject(byte[] obj, int machine) {
+        invoke("waitOnObject", new Class[]{byte[].class, int.class}, obj, machine);
+    }
+
+    @Override
+    public void removeWaitOnObject(byte[] obj, int machine) {
+        invoke("removeWaitOnObject", new Class[]{byte[].class, int.class}, obj, machine);
+    }
+
+    @Override
+    public void acquireObjectMonitor(ByteBuffer obj, int machine) {
+        invoke("acquireObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
+    }
+
+    @Override
+    public void releaseObjectMonitor(ByteBuffer obj, int machine) {
+        invoke("releaseObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
     }
 
     /*public void printStdout(int i) throws InterfaceException {
@@ -210,6 +293,34 @@ class InternalInterfaceWrap extends  InternalInterface {
                 // callback for creating a new thread
                 ThreadHelpers.newThreadCallback(args[0]);
                 return null;
+            case 2:
+                // callback for the existence of a new client
+                return null;
+            case 3:
+                // callin to run a task on this machine as sent by another machine
+                // this should be called in a new thread already so we can just start
+                DistributedRunner.runRunnable((Integer)args[0], (byte[])args[1]);
+                return null;
+            case 4:
+                // update the location for an object
+                DistributedObjectHelper.updateObjectLocation((UUID)args[0], (int)args[1]);
+                return null;
+            case 5:
+                // reading of fields
+                return DistributedObjectHelper.readField((int)args[0], (ByteBuffer)args[1]);
+            case 6:
+                // writing of fields
+                DistributedObjectHelper.writeField((int)args[0], (ByteBuffer)args[1]);
+                return null;
+            case 7:
+                DistributedObjectHelper.waitingFrom((int)args[0], (ByteBuffer)args[1]);
+                return null;
+            case 8:
+                return DistributedObjectHelper.lockMonitor((ByteBuffer)args[0], (boolean)args[1]);
+            case 9:
+                DistributedObjectHelper.unlockMonitor((ByteBuffer)args[0]);
+                return null;
+
         }
         return null;
     }

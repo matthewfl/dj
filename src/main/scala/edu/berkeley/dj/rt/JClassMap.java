@@ -38,7 +38,10 @@ public class JClassMap extends ClassMap {
     };
 
     final static private String[] exemptedClasses = new String[] {
-            "java/lang/String",
+
+            "java/lang/String", // this is also letting through StringBuilder....
+            // TODO: custom string class
+
             /*
             "java/lang/Integer", // TODO: other types
             "java/lang/Long",

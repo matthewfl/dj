@@ -1,10 +1,10 @@
 package edu.berkeley.dj.rt.convert
 
 
-import javassist.{Modifier, CtMethod, CtClass}
-import javassist.bytecode.{MethodInfo, ConstPool, CodeIterator}
-import javassist.convert.Transformer
+import javassist.CtClass
 import javassist.bytecode.Opcode._
+import javassist.bytecode.{CodeIterator, ConstPool}
+import javassist.convert.Transformer
 
 /**
  * Created by matthewfl

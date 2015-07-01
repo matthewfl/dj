@@ -1,7 +1,7 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.ClassManager;
-import edu.berkeley.dj.internal.SeralizeManager;
+import edu.berkeley.dj.internal.SerializeManager;
 
 /**
  * Created by matthewfl
@@ -14,8 +14,6 @@ import edu.berkeley.dj.internal.SeralizeManager;
  * so that we can still reference original java.lang.Object when compiling, but the 2 suffix will
  * be removed when the class is loaded.
  */
-//@RewriteAllBut(nonModClasses = {"java/lang/Object"})
-//@SetSuperclass(superclass = "java.lang.Object")
 public interface Object00 {
 
     int __dj_getClassMode();
@@ -28,6 +26,7 @@ public interface Object00 {
 
     boolean equals(Object00 obj);
 
+    /*
     void __dj_notify();
 
     void __dj_notifyAll();
@@ -41,9 +40,10 @@ public interface Object00 {
     void __dj_monitorenter();
 
     void __dj_monitorexit();
+    */
 
-    void __dj_seralize_obj(SeralizeManager man);
+    void __dj_serialize_obj(SerializeManager man);
 
-    void __dj_deseralize_obj(SeralizeManager man);
+    void __dj_deserialize_obj(SerializeManager man);
 }
 
