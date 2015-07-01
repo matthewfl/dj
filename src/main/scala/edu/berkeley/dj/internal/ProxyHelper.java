@@ -37,25 +37,25 @@ public class ProxyHelper {
             }
             Method mth = tocls.getDeclaredMethod(methodName, argumentsTypes);
             mth.setAccessible(true);
+            Map<Object, Object> convertToMap = new HashMap<>();
             if (self != null) {
                 assert (fromcls.getName().startsWith(coreClassPrefix));
-                mth.setAccessible(true);
                 inst = unsafe.allocateInstance(tocls);
-
-                updateNativeObject(fromcls, tocls, inst, self, null, 2);
+                convertToMap.put(self, inst);
+                updateNativeObject(fromcls, tocls, inst, self, convertToMap, 2);
             }
 
             for(int i = 0; i < arguments.length; i++) {
-                arguments[i] = makeNative(arguments[i]);
+                arguments[i] = makeNative(arguments[i], convertToMap);
             }
 
             Object res = mth.invoke(inst, arguments);
 
             if(self != null) {
-                updateDjObject(tocls, fromcls, self, inst, null, -1);
+                updateDjObject(tocls, fromcls, self, inst, null, -1, convertToMap);
             }
 
-            return makeDJ(res);
+            return makeDJ(res, convertToMap);
 
         } catch (ClassNotFoundException|
                 NoSuchMethodException|
@@ -90,7 +90,7 @@ public class ProxyHelper {
         }
     }
 
-    static Object makeDJ(Object o) {
+    static Object makeDJ(Object o, Map<Object, Object> convertToMap) {
         if(o == null)
             return null;
         Class<?> ocls = o.getClass();
@@ -102,9 +102,17 @@ public class ProxyHelper {
         // we have to convert this to a dj object
         try {
             Class<?> cls = Class.forName(nname);
-            Object ret = unsafe.allocateInstance(cls);
+            Object ret = null;
+            for(Map.Entry<Object, Object> en : convertToMap.entrySet()) {
+                if(en.getValue() == o) {
+                    ret = en.getKey();
+                    break;
+                }
+            }
+            if(ret == null)
+                ret = unsafe.allocateInstance(cls);
 
-            updateDjObject(ocls, cls, ret, o, null, -1);
+            updateDjObject(ocls, cls, ret, o, null, -1, convertToMap);
 
             return ret;
 
@@ -114,7 +122,7 @@ public class ProxyHelper {
         }
     }
 
-    static Object makeNative(Object o) {
+    static Object makeNative(Object o, Map<Object, Object> convertToMap) {
         if(o == null)
             return null;
         Class<?> ocls = o.getClass();
@@ -123,9 +131,14 @@ public class ProxyHelper {
             if (oname.startsWith(coreClassPrefix)) {
                 // we have to convert this class to the original one
                 Class<?> ncls = Class.forName(oname.substring(coreClassPrefix.length()));
-                Object ninst = unsafe.allocateInstance(ncls);
+                // TODO: make this not stack overflow when getting the hash for objects
+                Object ninst = null;//convertToMap.get(o);
+                if(ninst == null) {
+                    ninst = unsafe.allocateInstance(ncls);
+                    //convertToMap.put(o, ninst);
+                }
 
-                updateNativeObject(ocls, ncls, ninst, o, null, 2);
+                updateNativeObject(ocls, ncls, ninst, o, convertToMap, 2);
 
                 return ninst;
             } else {
@@ -137,7 +150,7 @@ public class ProxyHelper {
         }
     }
 
-    static void updateDjObject(Class<?> from, Class<?> to, Object self, Object inst, Map<Object, Object> convertMap, int depth) {
+    static void updateDjObject(Class<?> from, Class<?> to, Object self, Object inst, Map<Object, Object> convertMap, int depth, Map<Object, Object> convertToMap) {
         if(depth == 0)
             return;
         if(convertMap == null)
@@ -212,10 +225,11 @@ public class ProxyHelper {
                                 wmethod.invoke(null, self, setval);
                                 continue;
                             } else {
-                                if(curval != null && nname.equals(curval.getClass().getName())) {
-                                    // then we can just update the origional object
+                                if(curval != null && nname.equals(curval.getClass().getName()) &&
+                                        convertToMap != null && convertToMap.get(curval) == setval) {
+                                    // then we can just update the original object
                                     convertMap.put(setval, curval);
-                                    updateDjObject(setclass, curval.getClass(), curval, setval, convertMap, depth - 1);
+                                    updateDjObject(setclass, curval.getClass(), curval, setval, convertMap, depth - 1, convertToMap);
                                     continue;
                                 }
                                 String nfname = InternalInterface.getInternalInterface().classRenamed(fname);
@@ -225,7 +239,7 @@ public class ProxyHelper {
                                 Class<?> mkcls = Class.forName(nname);
                                 Object mkinst = unsafe.allocateInstance(mkcls);
                                 convertMap.put(setval, mkinst);
-                                updateDjObject(setclass, mkcls, mkinst, setval, convertMap, depth - 1);
+                                updateDjObject(setclass, mkcls, mkinst, setval, convertMap, depth - 1, convertToMap);
                                 Method wmethod = tocurcls.getDeclaredMethod("__dj_write_field_"+f.getName(), new Class[]{tocurcls, djtype});
                                 wmethod.setAccessible(true);
                                 wmethod.invoke(null, self, mkinst);
