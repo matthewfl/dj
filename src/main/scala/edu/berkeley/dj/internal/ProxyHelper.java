@@ -27,7 +27,7 @@ public class ProxyHelper {
                                      Class<?> fromcls,
                                      String[] argumentsTypes_,
                                      String methodName,
-                                     Object[] arguments) {
+                                     Object[] arguments) throws Throwable {
         try {
             Object inst = null;
             Class<?> tocls = Class.forName(tocls_);
@@ -60,9 +60,10 @@ public class ProxyHelper {
         } catch (ClassNotFoundException|
                 NoSuchMethodException|
                 InstantiationException|
-                IllegalAccessException|
-                InvocationTargetException e) {
+                IllegalAccessException e) {
             throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw e.getTargetException();
         }
 
     }
