@@ -73,6 +73,19 @@ class JavassistModifications extends FunSuite {
     assert(base.getName == c1.getSuperclass.getName)
   }
 
+  test("method with array building") {
+    val b = BasicClass
+    val mth_code =
+      """
+         static void test_123() {
+           new java.lang.Class[] { int.class, java.lang.Class.class };
+           new int [0] ;
+         }
+      """
+    b.addMethod(CtMethod.make(mth_code, b))
+    b.toBytecode
+  }
+
 
 }
 

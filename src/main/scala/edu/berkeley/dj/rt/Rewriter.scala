@@ -268,7 +268,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val name = field.getName
       //println("field name: " + name)
       // TODO: manage arrays
-      if (!name.startsWith(config.fieldPrefix) && !field.getFieldInfo.getDescriptor.contains("[")) {
+      if (!name.startsWith(config.fieldPrefix)/* && !field.getFieldInfo.getDescriptor.contains("[") */) {
         //val typ = field.getType
 
         val typ_name = getUsableName(field.getType)
@@ -533,19 +533,70 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       cls.removeMethod(m)
     })
 
+    val orgClassName = cls.getName.substring(config.coreprefix.length)
+
     rwMembers.foreach(m=>{
       //val args = getArguments(m.getSignature)
       val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
       // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
       val static = if(Modifier.isStatic(m.getModifiers)) "static" else ""
 
+      // ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+
+      // work around javassist bug
+      val (cls_types, arg_vals) = if(args.length == 0) {
+        ("new java.lang.String[0]", "new java.lang.Object[0]")
+      } else {
+        (s"new ``java``.``lang``.``String`` [] { ${
+          args.map(v => {
+            if(v.isArray) {
+              "\"" + Descriptor.toJvmName(v).replace('/', '.') + "\""
+            } else {
+              "\"" + v.getName + "\""
+            }
+          }).mkString(", ")
+        } }",
+          s"new java.lang.Object [] { ${args.zipWithIndex.map(v => {
+            if(v._1.isPrimitive) {
+              // we need to manually box this
+              s"${v._1.asInstanceOf[CtPrimitiveType].getWrapperName}.valueOf( a${v._2} )"
+            } else {
+              s"a${v._2}"
+            }
+          }).mkString(", ")} }")
+      }
+
+      var rt_type = m.getReturnType
+
+      // work around for javassist not automatically undoing boxing
+      val (cast_prefix, cast_suffix) = if(rt_type.isPrimitive) {
+        (s"((${rt_type.asInstanceOf[CtPrimitiveType].getWrapperName})", s").${rt_type.getName}Value()")
+      } else {
+        (s"(${getUsableName(rt_type)})", "")
+      }
+
       val mth_code = s"""
            ${getAccessControl(m.getModifiers)} ${static} ${getUsableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsableName(v._1) + " a" + v._2).mkString(", ")}) {
              edu.berkeley.dj.internal.InternalInterface.getInternalInterface().simplePrint("\t\tcall native: ${cls.getName} ${m.getName}");
-             ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+               ${if (rt_type != CtClass.voidType) s"return $cast_prefix " else ""}
+               edu.berkeley.dj.internal.ProxyHelper.invokeProxy(
+                 ${if(Modifier.isStatic(m.getModifiers)) "null" else "this"} ,
+                 "${orgClassName}",
+                 ${getUsableName(cls)}.class ,
+                 $cls_types,
+                 "${m.getName}",
+                 $arg_vals
+                 ) ${if(rt_type != CtClass.voidType) cast_suffix else "" } ;
            }
          """
-      cls.addMethod(CtMethod.make(mth_code, cls))
+      try {
+        cls.addMethod(CtMethod.make(mth_code, cls))
+      } catch {
+        case e: Throwable => {
+          println(e)
+          throw e
+        }
+      }
     })
   }
 

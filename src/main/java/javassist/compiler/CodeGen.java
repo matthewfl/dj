@@ -16,10 +16,12 @@
 
 package javassist.compiler;
 
+import javassist.bytecode.Bytecode;
+import javassist.bytecode.Opcode;
+import javassist.compiler.ast.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
-import javassist.compiler.ast.*;
-import javassist.bytecode.*;
 
 /* The code generator is implemeted by three files:
  * CodeGen.java, MemberCodeGen.java, and JvstCodeGen.
@@ -1425,7 +1427,7 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
             throw new CompileError(msg);
 
         if (type == CLASS) {
-            if (!isRefType(srcType))
+            if (!isRefType(srcType) && !name.equals("java/lang/Object"))
                 throw new CompileError(msg);
 
             return toJvmArrayName(name, dim);
