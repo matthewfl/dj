@@ -165,4 +165,18 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(to, 106, obj)
   }
 
+  def typeDistributed(name: String): Unit = {
+    if(manager.isMaster) {
+      val m = manager.asInstanceOf[MasterManager]
+      val mod = m.classMode.getMode(name)
+      if(!mod.distributedCopies) {
+        mod.distributedCopies = true
+        m.reloadClass(name)
+      }
+    } else {
+      block(manager.networkInterface.sendWrpl(0, 8, name.getBytes()))
+      //??? // TODO: send message to manager to force the class to be reloaded
+    }
+  }
+
 }

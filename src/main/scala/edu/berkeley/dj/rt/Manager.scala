@@ -45,6 +45,8 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
 
   override def isMaster = true
 
+  val classMode = new ClassModeManager
+
   val pool = new ClassPool(true)
 
   // TODO: comment to allow items that are not built into this jar
@@ -69,6 +71,10 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
   val protectionDomain = new ProtectionDomain(null, null, loader, null)
   loader.setDomain(protectionDomain)
 
+  def reloadClass(name: String): Unit = {
+    loader.reloadClass(name)
+  }
+
   def startMain (mainClass : String, args : Array[String]) = {
     if(config.debug_clazz_bytecode != null) {
       //CtClass.debugDump = config.debug_clazz_bytecode
@@ -90,6 +96,7 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
         if(en == "java.lang.IncompatibleClassChangeError") {
           println("gaaaa")
         }
+        e.getTargetException.printStackTrace()
         throw e
       }
     }

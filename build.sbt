@@ -24,4 +24,12 @@ mainClass in (Compile,run) := Some("edu.berkeley.dj.rt.Main")
 
 mainClass in assembly := Some("edu.berkeley.dj.rt.Main")
 
+// adding the tools.jar to the unmanaged-jars seq
+unmanagedJars in Compile ~= {uj =>
+    Seq(Attributed.blank(file(System.getProperty("java.home").dropRight(3)+"lib/tools.jar"))) ++ uj
+}
 
+// exluding the tools.jar file from the build
+excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+    cp filter {_.data.getName == "tools.jar"}
+}

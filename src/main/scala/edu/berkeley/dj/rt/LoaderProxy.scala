@@ -103,6 +103,14 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
     }
   }
 
+  def reloadClass(name: String): Unit = {
+    classBytecodes.synchronized {
+      classBytecodes.remove(name)
+      pool.asInstanceOf[ClassPoolProxy].setClass(name, null)
+    }
+    findClass(name)
+  }
+
   // make this load all of the classes
   // and not pass to the parent the class in the java. namespace
   // some classes can only be loaded by the parent loader

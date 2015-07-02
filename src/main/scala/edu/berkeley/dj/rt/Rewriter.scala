@@ -23,6 +23,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   def runningPool = manager.runningPool
 
+  def classMode = manager.classMode
+
   private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
   private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
@@ -174,7 +176,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
 
-    codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
+    codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config, this))
     codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
 
     val isInterface = Modifier.isInterface(cls.getModifiers)
@@ -457,7 +459,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val codeConverter = new CodeConverter
 
     if(rewriteUseAccessor)
-      codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config))
+      codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config, this))
 
     cls.instrument(codeConverter)
 

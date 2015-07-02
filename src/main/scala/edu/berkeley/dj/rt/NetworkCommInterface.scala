@@ -107,6 +107,11 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         Array[Byte]()
       }
     }
+    case 8 => {
+      // make the mode on a class distributed
+      man.runningInterface.typeDistributed(new String(msg))
+      Array[Byte]()
+    }
     case 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 => {
       // reading something that is local on this machine
       man.runningInterface.callIn(5, action, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()

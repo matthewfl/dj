@@ -76,6 +76,7 @@ public class DistributedObjectHelper {
 
     // give the Object some uuid so that it will be distribuited
     static public void makeDistributed(ObjectBase o) {
+        InternalInterface.getInternalInterface().typeDistributed(o.getClass().getName());
         if(o.__dj_class_manager == null) {
             boolean ownsLock = Thread.currentThread().holdsLock(o);
             synchronized (o) {

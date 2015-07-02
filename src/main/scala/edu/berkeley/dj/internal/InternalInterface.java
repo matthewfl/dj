@@ -122,6 +122,8 @@ public class InternalInterface {
 
     public void releaseObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
 
+    public void typeDistributed(String name) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -158,15 +160,10 @@ class InternalInterfaceWrap extends  InternalInterface {
     private Object invoke(String name, Class[] sig, Object... obj) throws InterfaceException {
         try {
             return cls.getMethod(name, sig).invoke(base, obj);
-        }
-        catch(NoSuchMethodException e) {
-            throw new InterfaceException(name);
-        }
-        catch(IllegalAccessException e) {
-            throw new InterfaceException(name);
-        }
-        catch(InvocationTargetException e) {
-            throw new InterfaceException(name);
+        } catch(NoSuchMethodException|
+                IllegalAccessException|
+                InvocationTargetException e) {
+            throw new InterfaceException(name, e);
         }
     }
 
@@ -277,6 +274,11 @@ class InternalInterfaceWrap extends  InternalInterface {
     @Override
     public void releaseObjectMonitor(ByteBuffer obj, int machine) {
         invoke("releaseObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
+    }
+
+    @Override
+    public void typeDistributed(String name) {
+        invoke("typeDistributed", new Class[]{String.class}, name);
     }
 
     /*public void printStdout(int i) throws InterfaceException {
