@@ -188,7 +188,7 @@ final public class ClassManager {
 
     void removeMachineFromWaiting(int id) {
         synchronized (this) {
-            int r = -1;
+            int r = -2;
             // find the last instances of this machine in the waiting queue
             for(int i = waitingMachines.length - 1; i >= 0; i--) {
                 if(waitingMachines[i] == id) {
@@ -196,7 +196,7 @@ final public class ClassManager {
                     break;
                 }
             }
-            if(r == -1) return;
+            if(r == -2) return;
             int[] n = new int[waitingMachines.length - 1];
             System.arraycopy(waitingMachines, 0, n, 0, r);
             System.arraycopy(waitingMachines, r + 1, n, r, waitingMachines.length - 1);
@@ -225,24 +225,37 @@ final public class ClassManager {
 
 
     public void dj_notify() {
-        int n = getNextWaitingMachine();
-        if(n == -1) {
-            managedObject.notify();
+        if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
+            // is the master
+            int n = getNextWaitingMachine();
+            if (n == -1) {
+                managedObject.notify();
+            } else {
+                // send the notification to another machine
+                InternalInterface.getInternalInterface().sendNotifyOnObject(objectId().array(), n);
+            }
         } else {
-            // send the notification to another machine
+            // send a message to the master to create a notification
+            InternalInterface.getInternalInterface().sendNotify(objectId().array(), owning_machine);
         }
     }
 
     public void dj_notifyAll() {
-        synchronized (this) {
-            if(waitingMachines == null) return;
-            for(int i = 0; i < waitingMachines.length; i++) {
-                if(waitingMachines[i] == -1) {
-                    managedObject.notify();
-                } else {
-                    // send notification to another machine
+        if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
+            // is master send notification to all instances
+            synchronized (this) {
+                if (waitingMachines == null) return;
+                for (int i = 0; i < waitingMachines.length; i++) {
+                    if (waitingMachines[i] == -1) {
+                        managedObject.notify();
+                    } else {
+                        // send notification to another machine
+                        InternalInterface.getInternalInterface().sendNotifyOnObject(objectId().array(), waitingMachines[i]);
+                    }
                 }
             }
+        } else {
+            InternalInterface.getInternalInterface().sendNotify(objectId().array(), owning_machine);
         }
     }
 
@@ -250,12 +263,22 @@ final public class ClassManager {
         checkHasLock();
         if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
             // we are master
-            addMachineToWaiting(-1);
+            assert(monitor_lock_count != 0 && monitor_thread == Thread00.currentThread());
+            synchronized (managedObject) {
+                addMachineToWaiting(-1);
+                int cnt = monitor_lock_count;
+                monitor_thread = null;
+                monitor_lock_count = 0;
+                managedObject.wait();
+                monitor_lock_count = cnt;
+                monitor_thread = Thread00.currentThread();
+            }
         } else {
             InternalInterface.getInternalInterface().waitOnObject(objectId().array(),
                     InternalInterface.getInternalInterface().getSelfId());
+            managedObject.wait();
         }
-        managedObject.wait();
+        //managedObject.wait();
     }
 
     public void dj_wait(long timeout) throws InterruptedException {

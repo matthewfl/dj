@@ -11,13 +11,12 @@ import scala.collection.mutable
  */
 class ClassMode(val className: String) {
  
-  def rewriteFieldAccess = distributedCopies
+  def rewriteFieldAccess = distributedCopies || !ClassReloader.enabled
   
   var distributedCopies = false
 
   var loaded = false
-  
-  
+
 }
 
 

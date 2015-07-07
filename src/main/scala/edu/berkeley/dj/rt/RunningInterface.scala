@@ -166,6 +166,8 @@ class RunningInterface (private val config: Config, private val manager: Manager
   }
 
   def typeDistributed(name: String): Unit = {
+    if(name.startsWith(config.internalPrefix) && !name.startsWith(config.coreprefix))
+      return
     if(manager.isMaster) {
       val m = manager.asInstanceOf[MasterManager]
       val mod = m.classMode.getMode(name)
@@ -177,6 +179,14 @@ class RunningInterface (private val config: Config, private val manager: Manager
       block(manager.networkInterface.sendWrpl(0, 8, name.getBytes()))
       //??? // TODO: send message to manager to force the class to be reloaded
     }
+  }
+
+  def sendNotify(obj: Array[Byte], machine: Int): Unit = {
+
+  }
+
+  def sendNotifyAll(obj: Array[Byte], machine: Int): Unit = {
+
   }
 
 }

@@ -110,6 +110,8 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
   }
 
   def reloadClass(name: String): Unit = {
+    if(!ClassReloader.enabled)
+      return
     val defined = definedClasses.synchronized { definedClasses.contains(name) }
     if(defined) {
       // if the class is not loaded, then we must not currently need it

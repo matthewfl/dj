@@ -124,6 +124,14 @@ public class InternalInterface {
 
     public void typeDistributed(String name) { throw new InterfaceException(); }
 
+    // send the notification to the master of the object
+    public void sendNotify(byte[] obj, int machine) { throw new InterfaceException(); }
+
+    public void sendNotifyAll(byte[] obj, int machine) { throw new InterfaceException(); }
+
+    // send the notification to another machine with a copy of the object
+    public void sendNotifyOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -281,6 +289,13 @@ class InternalInterfaceWrap extends  InternalInterface {
         invoke("typeDistributed", new Class[]{String.class}, name);
     }
 
+    @Override
+    public void sendNotify(byte[] obj, int machine) { invoke("sendNotify", new Class[]{byte[].class, int.class}, obj, machine); }
+
+    @Override
+    public void sendNotifyAll(byte[] obj, int machine) { invoke("sendNotifyAll", new Class[]{byte[].class, int.class}, obj, machine); }
+
+
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
         invoke("printStdout", new Class[]{int.class}, i);
@@ -321,6 +336,15 @@ class InternalInterfaceWrap extends  InternalInterface {
                 return DistributedObjectHelper.lockMonitor((ByteBuffer)args[0], (boolean)args[1]);
             case 9:
                 DistributedObjectHelper.unlockMonitor((ByteBuffer)args[0]);
+                return null;
+            case 10:
+                DistributedObjectHelper.sendNotify((ByteBuffer)args[0]);
+                return null;
+            case 11:
+                DistributedObjectHelper.sendNotifyAll((ByteBuffer)args[0]);
+                return null;
+            case 12:
+                DistributedObjectHelper.recvNotify((ByteBuffer)args[0]);
                 return null;
 
         }

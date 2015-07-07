@@ -24,7 +24,7 @@ public class ObjectHelpers {
                 // this object is not distributed so just use the standard methods
                 o.notify();
             } else {
-                throw new NotImplementedException();
+                ob.__dj_class_manager.dj_notify();
             }
         } else {
             o.notify();
@@ -37,7 +37,7 @@ public class ObjectHelpers {
             if(ob.__dj_class_manager == null) {
                 ob.notifyAll();
             } else {
-                throw new NotImplementedException();
+                ob.__dj_class_manager.dj_notifyAll();
             }
         } else {
             o.notifyAll();
