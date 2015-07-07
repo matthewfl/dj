@@ -14,6 +14,8 @@ class ClassMode(val className: String) {
   def rewriteFieldAccess = distributedCopies
   
   var distributedCopies = false
+
+  var loaded = false
   
   
 }

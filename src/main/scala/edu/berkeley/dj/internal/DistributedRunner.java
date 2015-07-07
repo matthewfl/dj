@@ -28,19 +28,32 @@ public class DistributedRunner {
         }
     }
 
+    @RewriteAddAccessorMethods
+    @RewriteUseAccessorMethods
+    static private class dFutureRunner<T> extends ObjectBase implements Runnable {
+
+        private DistributedFuture<T> f;
+        private Callable<T> c;
+
+        dFutureRunner(DistributedFuture<T> f, Callable<T> c) {
+            this.f = f;
+            this.c = c;
+        }
+
+        @Override
+        public void run() {
+            try {
+                f.success(c.call());
+            } catch (Throwable e) {
+                f.failure(e);
+            }
+        }
+    }
+
     static public <T> Future<T> runOnRemote(int id, Callable<T> c) {
         DistributedFuture<T> ff = new DistributedFuture<>();
 
-        Runnable ru = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ff.success(c.call());
-                } catch (Throwable e) {
-                    ff.failure(e);
-                }
-            }
-        };
+        Runnable ru = new dFutureRunner<T>(ff, c);
 
         if(id == -1 || id == InternalInterface.getInternalInterface().getSelfId()) {
             // have to run it asnyc
