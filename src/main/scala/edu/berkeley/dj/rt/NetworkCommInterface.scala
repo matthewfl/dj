@@ -43,6 +43,9 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
     case 106 => {
       man.runningInterface.callIn(9, ByteBuffer.wrap(msg))
     }
+    case 107 => {
+      man.runningInterface.callIn(10, ByteBuffer.wrap(msg))
+    }
   }
 
   override def recvWrpl(from: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = action match {
@@ -126,11 +129,6 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       Array[Byte]()
     }
     case 31 => {
-      // notifyAll
-      man.runningInterface.callIn(11, ByteBuffer.wrap(msg))
-      Array[Byte]()
-    }
-    case 32 => {
       // recvNotify
       man.runningInterface.callIn(12, ByteBuffer.wrap(msg))
       Array[Byte]()

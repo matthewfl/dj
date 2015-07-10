@@ -1,6 +1,7 @@
 package edu.berkeley.dj.rt
 
 import java.nio._
+import java.util.concurrent.TimeoutException
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -157,8 +158,13 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(to, 105, obj)
   }
 
-  def acquireObjectMonitor(obj: ByteBuffer, to: Int): Unit = {
-    block(manager.networkInterface.sendWrpl(to, 7, obj))
+  def acquireObjectMonitor(obj: ByteBuffer, to: Int): Boolean = {
+    try {
+      block(manager.networkInterface.sendWrpl(to, 7, obj))
+      true
+    } catch {
+      case e: TimeoutException => ???
+    }
   }
 
   def releaseObjectMonitor(obj: ByteBuffer, to: Int): Unit = {
@@ -181,12 +187,12 @@ class RunningInterface (private val config: Config, private val manager: Manager
     }
   }
 
-  def sendNotify(obj: Array[Byte], machine: Int): Unit = {
-
+  def sendNotify(obj: Array[Byte], machine: Int, count: Int): Unit = {
+    val buf = ByteBuffer.allocate(obj.length + 4)
+    buf.put(obj)
+    buf.putInt(count)
+    manager.networkInterface.send(machine, 107, buf)
   }
 
-  def sendNotifyAll(obj: Array[Byte], machine: Int): Unit = {
-
-  }
 
 }

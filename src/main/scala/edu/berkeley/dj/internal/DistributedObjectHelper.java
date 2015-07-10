@@ -328,6 +328,7 @@ public class DistributedObjectHelper {
     static public void sendNotify(ByteBuffer obj) {
         // this should be the master machine and we are sending a notification
         UUID id = new UUID(obj.getLong(), obj.getLong());
+        int count = obj.getInt();
         ObjectBase h;
         synchronized (localDistributedObjects) {
             h = (ObjectBase)localDistributedObjects.get(id);
@@ -337,21 +338,7 @@ public class DistributedObjectHelper {
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             // redirect to the correct machine
             throw new NotImplementedException();
-        h.__dj_class_manager.dj_notify();
-    }
-
-    static public void sendNotifyAll(ByteBuffer obj) {
-        UUID id = new UUID(obj.getLong(), obj.getLong());
-        ObjectBase h;
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
-        if(h == null)
-            throw new InterfaceException();
-        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
-            // redirect to the correct machine
-            throw new NotImplementedException();
-        h.__dj_class_manager.dj_notifyAll();
+        h.__dj_class_manager.sendNNotifications(count);
     }
 
     static public void recvNotify(ByteBuffer obj) {
