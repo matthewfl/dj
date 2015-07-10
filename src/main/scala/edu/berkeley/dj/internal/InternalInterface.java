@@ -120,12 +120,12 @@ public class InternalInterface {
 
     public boolean acquireObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
 
-    public void releaseObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
+    public void releaseObjectMonitor(ByteBuffer obj, int machine, int notify_cnt) { throw new InterfaceException(); }
 
     public void typeDistributed(String name) { throw new InterfaceException(); }
 
     // send the notification to the master of the object
-    public void sendNotify(byte[] obj, int machine, int count) { throw new InterfaceException(); }
+    //public void sendNotify(byte[] obj, int machine, int count) { throw new InterfaceException(); }
 
     // for the master to send a notification to a copy of an object
     public void sendNotifyOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
@@ -278,8 +278,8 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public void releaseObjectMonitor(ByteBuffer obj, int machine) {
-        invoke("releaseObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
+    public void releaseObjectMonitor(ByteBuffer obj, int machine, int notify_cnt) {
+        invoke("releaseObjectMonitor", new Class[]{ByteBuffer.class, int.class, int.class}, obj, machine, notify_cnt);
     }
 
     @Override
@@ -287,10 +287,10 @@ class InternalInterfaceWrap extends  InternalInterface {
         invoke("typeDistributed", new Class[]{String.class}, name);
     }
 
-    @Override
+    /*@Override
     public void sendNotify(byte[] obj, int machine, int count) {
         invoke("sendNotify", new Class[]{byte[].class, int.class, int.class}, obj, machine, count);
-    }
+    }*/
 
     @Override
     public void sendNotifyOnObject(byte[] obj, int machine) {

@@ -272,7 +272,7 @@ public class DistributedObjectHelper {
         h.__dj_class_manager.addMachineToWaiting(machine);
     }
 
-    static public void notifyObject(ByteBuffer obj) {
+    /*static public void notifyObject(ByteBuffer obj) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
         ObjectBase h;
         synchronized (localDistributedObjects) {
@@ -281,7 +281,7 @@ public class DistributedObjectHelper {
         if(h == null)
             throw new InterfaceException();
         // TODO:
-    }
+    }*/
 
     static public boolean lockMonitor(ByteBuffer obj, boolean spin) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
@@ -311,6 +311,7 @@ public class DistributedObjectHelper {
     static public void unlockMonitor(ByteBuffer obj) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
         ObjectBase h;
+        int notify_cnt = obj.getInt();
         synchronized (localDistributedObjects) {
             h = (ObjectBase)localDistributedObjects.get(id);
         }
@@ -319,13 +320,21 @@ public class DistributedObjectHelper {
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             // redirect to the correct machine
             throw new NotImplementedException();
-        synchronized (h.__dj_class_manager) {
+        synchronized (h) {
             assert(h.__dj_class_manager.monitor_lock_count == 1);
+            if(h.__dj_class_manager.notifications_to_send != -1) {
+                if(notify_cnt == -1) {
+                    h.__dj_class_manager.notifications_to_send = -1;
+                } else {
+                    h.__dj_class_manager.notifications_to_send += notify_cnt;
+                }
+            }
             h.__dj_class_manager.monitor_lock_count = 0;
+            h.__dj_class_manager.processNotifications();
         }
     }
 
-    static public void sendNotify(ByteBuffer obj) {
+    /*static public void sendNotify(ByteBuffer obj) {
         // this should be the master machine and we are sending a notification
         UUID id = new UUID(obj.getLong(), obj.getLong());
         int count = obj.getInt();
@@ -338,8 +347,8 @@ public class DistributedObjectHelper {
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             // redirect to the correct machine
             throw new NotImplementedException();
-        h.__dj_class_manager.sendNNotifications(count);
-    }
+        h.__dj_class_manager.(count);
+    }*/
 
     static public void recvNotify(ByteBuffer obj) {
         // the master is sending us a notification for some object

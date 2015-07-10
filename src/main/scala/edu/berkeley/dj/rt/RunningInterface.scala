@@ -167,8 +167,11 @@ class RunningInterface (private val config: Config, private val manager: Manager
     }
   }
 
-  def releaseObjectMonitor(obj: ByteBuffer, to: Int): Unit = {
-    manager.networkInterface.send(to, 106, obj)
+  def releaseObjectMonitor(obj: ByteBuffer, to: Int, notify_cnt: Int): Unit = {
+    val s = ByteBuffer.allocate(obj.limit() + 4)
+    s.put(obj)
+    s.putInt(notify_cnt)
+    manager.networkInterface.send(to, 106, s)
   }
 
   def typeDistributed(name: String): Unit = {
