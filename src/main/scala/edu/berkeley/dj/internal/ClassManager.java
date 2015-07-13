@@ -24,6 +24,8 @@ final public class ClassManager {
 
     int owning_machine = -1; // signify self
 
+    int notifications_to_send = 0;
+
     Thread00 monitor_thread = null;
 
     // TODO: if we move this thread elsewhere then we still need to have the count
@@ -188,7 +190,7 @@ final public class ClassManager {
 
     void removeMachineFromWaiting(int id) {
         synchronized (this) {
-            int r = -1;
+            int r = -2;
             // find the last instances of this machine in the waiting queue
             for(int i = waitingMachines.length - 1; i >= 0; i--) {
                 if(waitingMachines[i] == id) {
@@ -196,7 +198,7 @@ final public class ClassManager {
                     break;
                 }
             }
-            if(r == -1) return;
+            if(r == -2) return;
             int[] n = new int[waitingMachines.length - 1];
             System.arraycopy(waitingMachines, 0, n, 0, r);
             System.arraycopy(waitingMachines, r + 1, n, r, waitingMachines.length - 1);
@@ -204,7 +206,7 @@ final public class ClassManager {
         }
     }
 
-    private int getNextWaitingMachine() {
+    /*private int getNextWaitingMachine() {
         synchronized (this) {
             if (waitingMachines == null) {
                 return -1;
@@ -220,28 +222,116 @@ final public class ClassManager {
             waitingMachines = n;
             return r;
         }
-    }
-
-
+    }*/
 
     public void dj_notify() {
-        int n = getNextWaitingMachine();
-        if(n == -1) {
-            managedObject.notify();
-        } else {
-            // send the notification to another machine
+        if(notifications_to_send != -1) {
+            notifications_to_send++;
         }
+        /*
+        if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
+            // is the master
+            int n = getNextWaitingMachine();
+            if (n == -1) {
+                managedObject.notify();
+            } else {
+                // send the notification to another machine
+                InternalInterface.getInternalInterface().sendNotifyOnObject(objectId().array(), n);
+            }
+        } else {
+            // send a message to the master to create a notification
+            InternalInterface.getInternalInterface().sendNotify(objectId().array(), owning_machine);
+        }
+        */
     }
 
     public void dj_notifyAll() {
-        synchronized (this) {
-            if(waitingMachines == null) return;
-            for(int i = 0; i < waitingMachines.length; i++) {
-                if(waitingMachines[i] == -1) {
-                    managedObject.notify();
-                } else {
-                    // send notification to another machine
+        notifications_to_send = -1;
+        /*
+        if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
+            // is master send notification to all instances
+            synchronized (this) {
+                if (waitingMachines == null) return;
+                for (int i = 0; i < waitingMachines.length; i++) {
+                    if (waitingMachines[i] == -1) {
+                        managedObject.notify();
+                    } else {
+                        // send notification to another machine
+                        InternalInterface.getInternalInterface().sendNotifyOnObject(objectId().array(), waitingMachines[i]);
+                    }
                 }
+            }
+        } else {
+            InternalInterface.getInternalInterface().sendNotifyAll(objectId().array(), owning_machine);
+        }*/
+
+    }
+
+    /*void sendNNotifications(int n) {
+        synchronized (managedObject) {
+            synchronized (this) {
+                int i = 0;
+                byte[] obj = objectId().array();
+                while (i < waitingMachines.length && (i < n || n == -1)) {
+                    // TODO:
+                    if (waitingMachines[i] == -1) {
+                        // send a notification to the local machine
+                        managedObject.notify();
+                    } else {
+                        InternalInterface.getInternalInterface().sendNotifyOnObject(obj, waitingMachines[i]);
+                    }
+                    i++;
+                }
+                if (i == waitingMachines.length) {
+                    waitingMachines = null;
+                } else {
+                    int na[] = new int[waitingMachines.length - i];
+                    System.arraycopy(waitingMachines, i, na, 0, na.length);
+                    waitingMachines = na;
+                }
+            }
+        }
+    }*/
+
+    void sendANotification() {
+        // send 1 notification
+        synchronized (managedObject) {
+            synchronized (this) {
+                if(waitingMachines != null && waitingMachines.length > 0) {
+                    int i = waitingMachines[0];
+                    if(i == -1) {
+                        managedObject.notify();
+                    } else {
+                        InternalInterface.getInternalInterface().sendNotifyOnObject(objectId().array(), i);
+                    }
+                    if(waitingMachines.length > 1) {
+                        int na[] = new int[waitingMachines.length - 1];
+                        System.arraycopy(waitingMachines, 1, na, 0, na.length);
+                        waitingMachines = na;
+                    } else {
+                        waitingMachines = null;
+                    }
+                }
+            }
+        }
+    }
+
+    void processNotifications() {
+        // there is nothing to do
+        if(notifications_to_send == 0)
+            return;
+        synchronized (managedObject) {
+            if(notifications_to_send == -1) {
+                if(waitingMachines != null)
+                    notifications_to_send = waitingMachines.length;
+                else
+                    notifications_to_send = 0;
+            }
+            // make sure that we are the master
+            assert((getMode() & CONSTS.IS_NOT_MASTER) == 0);
+            if(notifications_to_send > 0) {
+                sendANotification();
+                notifications_to_send--;
             }
         }
     }
@@ -250,12 +340,31 @@ final public class ClassManager {
         checkHasLock();
         if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
             // we are master
-            addMachineToWaiting(-1);
+            //assert(monitor_lock_count != 0 && monitor_thread == Thread00.currentThread());
+            synchronized (managedObject) {
+                processNotifications();
+                addMachineToWaiting(-1);
+                int cnt = monitor_lock_count;
+                monitor_thread = null;
+                monitor_lock_count = 0;
+                //assert(notifications_to_send == 0);
+                managedObject.wait();
+                monitor_lock_count = cnt;
+                monitor_thread = Thread00.currentThread();
+            }
         } else {
-            InternalInterface.getInternalInterface().waitOnObject(objectId().array(),
-                    InternalInterface.getInternalInterface().getSelfId());
+            synchronized (managedObject) {
+                // it does not make since for us to wait on an object after sending a notification
+                // so for now just make sure that we don't have any to send
+                //assert(notifications_to_send == 0);
+                InternalInterface.getInternalInterface().waitOnObject(objectId().array(),
+                    InternalInterface.getInternalInterface().getSelfId(), notifications_to_send);
+                notifications_to_send = 0;
+                //processNotifications();
+                managedObject.wait();
+            }
         }
-        managedObject.wait();
+        //managedObject.wait();
     }
 
     public void dj_wait(long timeout) throws InterruptedException {
@@ -282,7 +391,7 @@ final public class ClassManager {
                 // we have to communicate with the master
                 // first get the lock on the local object
                 while (true) {
-                    synchronized (this) {
+                    synchronized (managedObject) {
                         if(monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
                             continue;
                         }
@@ -295,12 +404,13 @@ final public class ClassManager {
             } else {
                 // we are the master
                 while(true) {
-                    synchronized (this) {
+                    synchronized (managedObject) {
                         if (monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
                             continue;
                         }
                         monitor_lock_count++;
                         monitor_thread = Thread00.currentThread();
+                        break;
                     }
                 }
             }
@@ -311,28 +421,30 @@ final public class ClassManager {
         //synchronized (this) {
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // communicate with the master
-                synchronized (this) {
+                synchronized (managedObject) {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
-                    if(monitor_lock_count == 1) {
-                        monitor_thread = null;
-                        InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine);
-                    }
                     monitor_lock_count--;
+                    if(monitor_lock_count == 0) {
+                        monitor_thread = null;
+                        InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine, notifications_to_send);
+                        notifications_to_send = 0;
+                    }
                 }
             } else {
-                synchronized (this) {
+                synchronized (managedObject) {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
-                    if(monitor_lock_count == 1) {
-                        monitor_thread = null;
-                    }
                     monitor_lock_count--;
+                    if(monitor_lock_count == 0) {
+                        monitor_thread = null;
+                        processNotifications();
+                    }
                 }
             }
         //}
     }
 
     private void checkHasLock() {
-        synchronized (this) {
+        synchronized (managedObject) {
             if(monitor_lock_count == 0 || monitor_thread != Thread00.currentThread())
                 throw new IllegalMonitorStateException();
         }

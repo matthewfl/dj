@@ -1,5 +1,7 @@
 package edu.berkeley.dj.rt
 
+import java.io.File
+import java.net.URLClassLoader
 import java.util.jar.JarFile
 
 import edu.berkeley.dj.rt.network.NetworkManager
@@ -32,7 +34,38 @@ object RealMain {
     println("arguments: -fjar [fat jar] -maincls [[main class]] [class arguments...]")
   }
 
-  def main(args : Array[String]) : Unit = {
+  // this hack allows us to access the java tools without having to have some wrapper script
+  // for setting the class path
+  def addJavaToolsToPath: Boolean = {
+    try {
+      // TODO: maybe use another class from this package so that we don't cause there to be not found errors later?
+      Class.forName("com.sun.jdi.VirtualMachine")
+      return true
+    } catch {
+      case e: ClassNotFoundException => {}
+    }
+    // Find the java tools.jar file
+    val f = new File(System.getProperty("java.home").dropRight(3)+"lib/tools.jar")
+    if(!f.exists()) {
+      System.err.println("tools.jar not found, please make sure that the jdk (not just the jre) is installed")
+      return false
+    }
+    try {
+      val cl = ClassLoader.getSystemClassLoader.asInstanceOf[URLClassLoader]
+      val mth = classOf[URLClassLoader].getDeclaredMethods().filter(_.getName == "addURL")(0)
+      mth.setAccessible(true)
+      mth.invoke(cl, f.toURI.toURL)
+      return true
+    } catch {
+      case e: Throwable => {
+        System.err.println("Unable to automatically add java tools.jar to classpath\nplease manually add tools.jar to the classpath\n"+e)
+        //throw e
+        return false
+      }
+    }
+  }
+
+  def main(args: Array[String]) : Unit = {
     if (args.size < 2) {
       help
       return
@@ -56,6 +89,8 @@ object RealMain {
     }
 
     System.setSecurityManager(new SecurityManager)
+
+    val canAccessJDI = addJavaToolsToPath
 
     arguments("mode") match {
       case "master" => {

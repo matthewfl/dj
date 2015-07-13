@@ -5,6 +5,7 @@ package edu.berkeley.dj.rt
 
 import java.io.{File, FileOutputStream}
 import java.net.URL
+import java.util.UUID
 import javassist._
 
 import scala.collection.mutable
@@ -28,6 +29,9 @@ import scala.collection.mutable
 
 class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
   extends Loader(null, pool) {
+
+  // called by the class reloader to check that we have the correct class
+  val loaderUUID = "LD"+UUID.randomUUID().toString.replace("-","")
 
   //addTranslator(pool, new LoaderTranslator)
 
@@ -70,6 +74,7 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
     }
   }
 
+  private val definedClasses = new mutable.HashSet[String]()
 
   override protected def findClass(classname: String) : Class[_] = {
     // the java.* classes can not be rewritten by us, also they contain a special meaning between the
@@ -89,6 +94,7 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
       }
       val dcls = defineClass(classname, clazz, 0, clazz.length, manager.protectionDomain)
       resolveClass(dcls)
+      definedClasses.synchronized { definedClasses += classname }
       dcls
     } catch {
       case e : IncompatibleClassChangeError => {
@@ -100,6 +106,22 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
         throw e
         null
       }
+    }
+  }
+
+  def reloadClass(name: String): Unit = {
+    if(!ClassReloader.enabled)
+      return
+    val defined = definedClasses.synchronized { definedClasses.contains(name) }
+    if(defined) {
+      // if the class is not loaded, then we must not currently need it
+      // so there is no need to attempt to redefine it
+      classBytecodes.synchronized {
+        classBytecodes.remove(name)
+        pool.asInstanceOf[ClassPoolProxy].setClass(name, null)
+      }
+      val nbytes = getClassBytes(name)
+      ClassReloader.reloadClass(this, name, nbytes)
     }
   }
 

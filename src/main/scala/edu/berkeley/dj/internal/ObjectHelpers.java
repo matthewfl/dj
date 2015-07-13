@@ -24,7 +24,7 @@ public class ObjectHelpers {
                 // this object is not distributed so just use the standard methods
                 o.notify();
             } else {
-                throw new NotImplementedException();
+                ob.__dj_class_manager.dj_notify();
             }
         } else {
             o.notify();
@@ -37,7 +37,7 @@ public class ObjectHelpers {
             if(ob.__dj_class_manager == null) {
                 ob.notifyAll();
             } else {
-                throw new NotImplementedException();
+                ob.__dj_class_manager.dj_notifyAll();
             }
         } else {
             o.notifyAll();
@@ -59,6 +59,9 @@ public class ObjectHelpers {
                 monitorEnter(ob);
                 */
                 ob.wait();
+                // there will be a notify all when we switch from a non distribuited mode to a distribuited mode
+                if(ob.__dj_class_manager != null)
+                    ob.__dj_class_manager.dj_wait();
             } else {
                 ob.__dj_class_manager.dj_wait();
                 //throw new NotImplementedException();
@@ -83,6 +86,8 @@ public class ObjectHelpers {
                 monitorEnter(ob);
                 */
                 ob.wait(timeout);
+                if(ob.__dj_class_manager != null)
+                    throw new NotImplementedException(); // we need to rewait on the distributed object
             } else {
                 throw new NotImplementedException();
             }
@@ -106,6 +111,8 @@ public class ObjectHelpers {
                 monitorEnter(ob);
                 */
                 ob.wait(timeout, nanos);
+                if(ob.__dj_class_manager != null)
+                    throw new NotImplementedException();
             } else {
                 throw new NotImplementedException();
             }

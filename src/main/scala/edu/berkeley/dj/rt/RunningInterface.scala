@@ -1,6 +1,7 @@
 package edu.berkeley.dj.rt
 
 import java.nio._
+import java.util.concurrent.TimeoutException
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -127,7 +128,7 @@ class RunningInterface (private val config: Config, private val manager: Manager
       */
     for(n <- manager.networkInterface.getAllHosts) {
       if(n != manager.networkInterface.getSelfId)
-        manager.networkInterface.send(n, 1, Array[Byte](code.asInstanceOf[Byte]))
+        manager.networkInterface.send(n, 101, Array[Byte](code.asInstanceOf[Byte]))
     }
     System.exit(code)
   }
@@ -153,16 +154,52 @@ class RunningInterface (private val config: Config, private val manager: Manager
     block(manager.networkInterface.sendWrpl(to, op, req))
   }
 
-  def waitOnObject(obj: Array[Byte], to: Int) = {
-    manager.networkInterface.send(to, 105, obj)
+  def waitOnObject(obj: Array[Byte], to: Int, notify_cnt: Int) = {
+    val s = ByteBuffer.allocate(obj.length + 4)
+    s.put(obj)
+    s.putInt(notify_cnt)
+    manager.networkInterface.send(to, 105, s)
   }
 
-  def acquireObjectMonitor(obj: ByteBuffer, to: Int): Unit = {
-    block(manager.networkInterface.sendWrpl(to, 7, obj))
+  def acquireObjectMonitor(obj: ByteBuffer, to: Int): Boolean = {
+    try {
+      block(manager.networkInterface.sendWrpl(to, 7, obj))
+      true
+    } catch {
+      case e: TimeoutException => ???
+    }
   }
 
-  def releaseObjectMonitor(obj: ByteBuffer, to: Int): Unit = {
-    manager.networkInterface.send(to, 106, obj)
+  def releaseObjectMonitor(obj: ByteBuffer, to: Int, notify_cnt: Int): Unit = {
+    val s = ByteBuffer.allocate(obj.limit() + 4)
+    obj.flip()
+    s.put(obj)
+    s.putInt(notify_cnt)
+    manager.networkInterface.send(to, 106, s)
   }
+
+  def typeDistributed(name: String): Unit = {
+    if(name.startsWith(config.internalPrefix) && !name.startsWith(config.coreprefix))
+      return
+    if(manager.isMaster) {
+      val m = manager.asInstanceOf[MasterManager]
+      val mod = m.classMode.getMode(name)
+      if(!mod.distributedCopies) {
+        mod.distributedCopies = true
+        m.reloadClass(name)
+      }
+    } else {
+      block(manager.networkInterface.sendWrpl(0, 8, name.getBytes()))
+      //??? // TODO: send message to manager to force the class to be reloaded
+    }
+  }
+
+  def sendNotify(obj: Array[Byte], machine: Int, count: Int): Unit = {
+    val buf = ByteBuffer.allocate(obj.length + 4)
+    buf.put(obj)
+    buf.putInt(count)
+    manager.networkInterface.send(machine, 107, buf)
+  }
+
 
 }

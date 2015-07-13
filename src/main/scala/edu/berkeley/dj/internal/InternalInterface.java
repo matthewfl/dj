@@ -114,13 +114,21 @@ public class InternalInterface {
 
     public void writeField(ByteBuffer req, int op, int machine) { throw new InterfaceException(); }
 
-    public void waitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
+    public void waitOnObject(byte[] obj, int machine, int notify_cnt) { throw new InterfaceException(); }
 
     public void removeWaitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
 
-    public void acquireObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
+    public boolean acquireObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
 
-    public void releaseObjectMonitor(ByteBuffer obj, int machine) { throw new InterfaceException(); }
+    public void releaseObjectMonitor(ByteBuffer obj, int machine, int notify_cnt) { throw new InterfaceException(); }
+
+    public void typeDistributed(String name) { throw new InterfaceException(); }
+
+    // send the notification to the master of the object
+    //public void sendNotify(byte[] obj, int machine, int count) { throw new InterfaceException(); }
+
+    // for the master to send a notification to a copy of an object
+    public void sendNotifyOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
@@ -158,15 +166,10 @@ class InternalInterfaceWrap extends  InternalInterface {
     private Object invoke(String name, Class[] sig, Object... obj) throws InterfaceException {
         try {
             return cls.getMethod(name, sig).invoke(base, obj);
-        }
-        catch(NoSuchMethodException e) {
-            throw new InterfaceException(name);
-        }
-        catch(IllegalAccessException e) {
-            throw new InterfaceException(name);
-        }
-        catch(InvocationTargetException e) {
-            throw new InterfaceException(name);
+        } catch(NoSuchMethodException|
+                IllegalAccessException|
+                InvocationTargetException e) {
+            throw new InterfaceException(name, e);
         }
     }
 
@@ -260,8 +263,8 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public void waitOnObject(byte[] obj, int machine) {
-        invoke("waitOnObject", new Class[]{byte[].class, int.class}, obj, machine);
+    public void waitOnObject(byte[] obj, int machine, int notify_cnt) {
+        invoke("waitOnObject", new Class[]{byte[].class, int.class, int.class}, obj, machine, notify_cnt);
     }
 
     @Override
@@ -270,14 +273,30 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public void acquireObjectMonitor(ByteBuffer obj, int machine) {
-        invoke("acquireObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
+    public boolean acquireObjectMonitor(ByteBuffer obj, int machine) {
+        return (boolean)invoke("acquireObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
     }
 
     @Override
-    public void releaseObjectMonitor(ByteBuffer obj, int machine) {
-        invoke("releaseObjectMonitor", new Class[]{ByteBuffer.class, int.class}, obj, machine);
+    public void releaseObjectMonitor(ByteBuffer obj, int machine, int notify_cnt) {
+        invoke("releaseObjectMonitor", new Class[]{ByteBuffer.class, int.class, int.class}, obj, machine, notify_cnt);
     }
+
+    @Override
+    public void typeDistributed(String name) {
+        invoke("typeDistributed", new Class[]{String.class}, name);
+    }
+
+    /*@Override
+    public void sendNotify(byte[] obj, int machine, int count) {
+        invoke("sendNotify", new Class[]{byte[].class, int.class, int.class}, obj, machine, count);
+    }*/
+
+    @Override
+    public void sendNotifyOnObject(byte[] obj, int machine) {
+        invoke("sentNotifyOnObject", new Class[]{byte[].class, int.class}, obj, machine);
+    }
+
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
@@ -299,7 +318,7 @@ class InternalInterfaceWrap extends  InternalInterface {
             case 3:
                 // callin to run a task on this machine as sent by another machine
                 // this should be called in a new thread already so we can just start
-                DistributedRunner.runRunnable((Integer)args[0], (byte[])args[1]);
+                DistributedRunner.runRunnable((Integer) args[0], (byte[]) args[1]);
                 return null;
             case 4:
                 // update the location for an object
@@ -310,7 +329,7 @@ class InternalInterfaceWrap extends  InternalInterface {
                 return DistributedObjectHelper.readField((int)args[0], (ByteBuffer)args[1]);
             case 6:
                 // writing of fields
-                DistributedObjectHelper.writeField((int)args[0], (ByteBuffer)args[1]);
+                DistributedObjectHelper.writeField((int) args[0], (ByteBuffer) args[1]);
                 return null;
             case 7:
                 DistributedObjectHelper.waitingFrom((int)args[0], (ByteBuffer)args[1]);
@@ -318,7 +337,15 @@ class InternalInterfaceWrap extends  InternalInterface {
             case 8:
                 return DistributedObjectHelper.lockMonitor((ByteBuffer)args[0], (boolean)args[1]);
             case 9:
-                DistributedObjectHelper.unlockMonitor((ByteBuffer)args[0]);
+                DistributedObjectHelper.unlockMonitor((ByteBuffer) args[0]);
+                return null;
+            /*case 10:
+                DistributedObjectHelper.sendNotify((ByteBuffer) args[0]);
+                return null;
+            */
+            case 11:
+                // TODO: call this method?
+                DistributedObjectHelper.recvNotify((ByteBuffer)args[0]);
                 return null;
 
         }
