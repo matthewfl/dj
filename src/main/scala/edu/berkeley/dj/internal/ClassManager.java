@@ -297,7 +297,7 @@ final public class ClassManager {
         // send 1 notification
         synchronized (managedObject) {
             synchronized (this) {
-                if(waitingMachines != null && waitingMachines.length > 1) {
+                if(waitingMachines != null && waitingMachines.length > 0) {
                     int i = waitingMachines[0];
                     if(i == -1) {
                         managedObject.notify();
@@ -322,7 +322,10 @@ final public class ClassManager {
             return;
         synchronized (managedObject) {
             if(notifications_to_send == -1) {
-                notifications_to_send = waitingMachines.length;
+                if(waitingMachines != null)
+                    notifications_to_send = waitingMachines.length;
+                else
+                    notifications_to_send = 0;
             }
             // make sure that we are the master
             assert((getMode() & CONSTS.IS_NOT_MASTER) == 0);
@@ -339,11 +342,11 @@ final public class ClassManager {
             // we are master
             //assert(monitor_lock_count != 0 && monitor_thread == Thread00.currentThread());
             synchronized (managedObject) {
+                processNotifications();
                 addMachineToWaiting(-1);
                 int cnt = monitor_lock_count;
                 monitor_thread = null;
                 monitor_lock_count = 0;
-                processNotifications();
                 //assert(notifications_to_send == 0);
                 managedObject.wait();
                 monitor_lock_count = cnt;
@@ -353,9 +356,10 @@ final public class ClassManager {
             synchronized (managedObject) {
                 // it does not make since for us to wait on an object after sending a notification
                 // so for now just make sure that we don't have any to send
-                assert(notifications_to_send == 0);
+                //assert(notifications_to_send == 0);
                 InternalInterface.getInternalInterface().waitOnObject(objectId().array(),
-                    InternalInterface.getInternalInterface().getSelfId());
+                    InternalInterface.getInternalInterface().getSelfId(), notifications_to_send);
+                notifications_to_send = 0;
                 //processNotifications();
                 managedObject.wait();
             }

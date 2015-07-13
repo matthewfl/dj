@@ -128,7 +128,7 @@ class RunningInterface (private val config: Config, private val manager: Manager
       */
     for(n <- manager.networkInterface.getAllHosts) {
       if(n != manager.networkInterface.getSelfId)
-        manager.networkInterface.send(n, 1, Array[Byte](code.asInstanceOf[Byte]))
+        manager.networkInterface.send(n, 101, Array[Byte](code.asInstanceOf[Byte]))
     }
     System.exit(code)
   }
@@ -154,8 +154,11 @@ class RunningInterface (private val config: Config, private val manager: Manager
     block(manager.networkInterface.sendWrpl(to, op, req))
   }
 
-  def waitOnObject(obj: Array[Byte], to: Int) = {
-    manager.networkInterface.send(to, 105, obj)
+  def waitOnObject(obj: Array[Byte], to: Int, notify_cnt: Int) = {
+    val s = ByteBuffer.allocate(obj.length + 4)
+    s.put(obj)
+    s.putInt(notify_cnt)
+    manager.networkInterface.send(to, 105, s)
   }
 
   def acquireObjectMonitor(obj: ByteBuffer, to: Int): Boolean = {
@@ -169,6 +172,7 @@ class RunningInterface (private val config: Config, private val manager: Manager
 
   def releaseObjectMonitor(obj: ByteBuffer, to: Int, notify_cnt: Int): Unit = {
     val s = ByteBuffer.allocate(obj.limit() + 4)
+    obj.flip()
     s.put(obj)
     s.putInt(notify_cnt)
     manager.networkInterface.send(to, 106, s)

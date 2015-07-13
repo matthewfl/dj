@@ -114,7 +114,7 @@ public class InternalInterface {
 
     public void writeField(ByteBuffer req, int op, int machine) { throw new InterfaceException(); }
 
-    public void waitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
+    public void waitOnObject(byte[] obj, int machine, int notify_cnt) { throw new InterfaceException(); }
 
     public void removeWaitOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
 
@@ -263,8 +263,8 @@ class InternalInterfaceWrap extends  InternalInterface {
     }
 
     @Override
-    public void waitOnObject(byte[] obj, int machine) {
-        invoke("waitOnObject", new Class[]{byte[].class, int.class}, obj, machine);
+    public void waitOnObject(byte[] obj, int machine, int notify_cnt) {
+        invoke("waitOnObject", new Class[]{byte[].class, int.class, int.class}, obj, machine, notify_cnt);
     }
 
     @Override
@@ -294,7 +294,7 @@ class InternalInterfaceWrap extends  InternalInterface {
 
     @Override
     public void sendNotifyOnObject(byte[] obj, int machine) {
-        invoke("sentNotifyOnObject", )
+        invoke("sentNotifyOnObject", new Class[]{byte[].class, int.class}, obj, machine);
     }
 
 
@@ -339,10 +339,12 @@ class InternalInterfaceWrap extends  InternalInterface {
             case 9:
                 DistributedObjectHelper.unlockMonitor((ByteBuffer) args[0]);
                 return null;
-            case 10:
+            /*case 10:
                 DistributedObjectHelper.sendNotify((ByteBuffer) args[0]);
                 return null;
+            */
             case 11:
+                // TODO: call this method?
                 DistributedObjectHelper.recvNotify((ByteBuffer)args[0]);
                 return null;
 

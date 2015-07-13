@@ -90,6 +90,9 @@ public class DistributedObjectHelper {
                     // different way since we may reference this object from another machine
                     throw new NotImplementedException();
                 }
+                // send a notification to any objects that may be waiting on this
+                // they will start waiting on
+                o.notifyAll();
             }
         }
     }
@@ -260,6 +263,7 @@ public class DistributedObjectHelper {
     static public void waitingFrom(int machine, ByteBuffer obj) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
         ObjectBase h;
+        int notify_cnt = obj.getInt();
         synchronized (localDistributedObjects) {
             h = (ObjectBase)localDistributedObjects.get(id);
         }
@@ -269,6 +273,14 @@ public class DistributedObjectHelper {
             // we are not the master machine here, we should forward this request
             throw new NotImplementedException();
         }
+        if(h.__dj_class_manager.notifications_to_send != -1) {
+            if(notify_cnt == -1) {
+                h.__dj_class_manager.notifications_to_send = -1;
+            } else {
+                h.__dj_class_manager.notifications_to_send += notify_cnt;
+            }
+        }
+
         h.__dj_class_manager.addMachineToWaiting(machine);
     }
 
