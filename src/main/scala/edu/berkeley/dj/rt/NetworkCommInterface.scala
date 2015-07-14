@@ -47,7 +47,7 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         man.runningInterface.callIn(9, ByteBuffer.wrap(msg))
       }
       case 107 => {
-        ???
+        // recv a notification on an object
         man.runningInterface.callIn(10, ByteBuffer.wrap(msg))
       }
     }
@@ -134,16 +134,16 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
           man.runningInterface.callIn(6, action, ByteBuffer.wrap(msg))
           Array[Byte]()
         }
-        case 30 => {
-          // notify
+        /*case 30 => {
+          // recvnotify
           man.runningInterface.callIn(10, ByteBuffer.wrap(msg))
           Array[Byte]()
-        }
-        case 31 => {
+        }*/
+        /*case 31 => {
           // recvNotify
           man.runningInterface.callIn(12, ByteBuffer.wrap(msg))
           Array[Byte]()
-        }
+        }*/
 
       }
     } catch {

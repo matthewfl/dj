@@ -124,10 +124,7 @@ public class InternalInterface {
 
     public void typeDistributed(String name) { throw new InterfaceException(); }
 
-    // send the notification to the master of the object
-    //public void sendNotify(byte[] obj, int machine, int count) { throw new InterfaceException(); }
-
-    // for the master to send a notification to a copy of an object
+     // for the master to send a notification to a copy of an object
     public void sendNotifyOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
@@ -287,14 +284,13 @@ class InternalInterfaceWrap extends  InternalInterface {
         invoke("typeDistributed", new Class[]{String.class}, name);
     }
 
-    /*@Override
-    public void sendNotify(byte[] obj, int machine, int count) {
-        invoke("sendNotify", new Class[]{byte[].class, int.class, int.class}, obj, machine, count);
-    }*/
-
     @Override
     public void sendNotifyOnObject(byte[] obj, int machine) {
-        invoke("sentNotifyOnObject", new Class[]{byte[].class, int.class}, obj, machine);
+        // TODO: ?? have a count on the number of notifications that a client is going to get??
+        // that would only be used in the case not notifyAll and then there would have to be more logic on the client
+        // for the system to track which item owns the object and then return that to the master once all the threads are
+        // done with the notifications.......so lot of extra code and maybe not that much win
+        invoke("sendNotifyOnObject", new Class[]{byte[].class, int.class, int.class}, obj, machine, 1);
     }
 
 
@@ -339,12 +335,7 @@ class InternalInterfaceWrap extends  InternalInterface {
             case 9:
                 DistributedObjectHelper.unlockMonitor((ByteBuffer) args[0]);
                 return null;
-            /*case 10:
-                DistributedObjectHelper.sendNotify((ByteBuffer) args[0]);
-                return null;
-            */
-            case 11:
-                // TODO: call this method?
+            case 10:
                 DistributedObjectHelper.recvNotify((ByteBuffer)args[0]);
                 return null;
 

@@ -282,6 +282,8 @@ public class DistributedObjectHelper {
         }
 
         h.__dj_class_manager.addMachineToWaiting(machine);
+        h.__dj_class_manager.monitor_lock_count = 0;
+        h.__dj_class_manager.processNotifications();
     }
 
     /*static public void notifyObject(ByteBuffer obj) {
@@ -371,10 +373,15 @@ public class DistributedObjectHelper {
         }
         if(h == null)
             throw new InterfaceException();
-        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
-            // redirect to the correct machine
-            throw new NotImplementedException();
-        h.notify();
+        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
+            // these commands should not be sent to the master
+            throw new RuntimeException(); // somehow someone else is sending us a notification
+        // TODO: check that there are actually threads still waiting on this object
+        // otherwise we should raise some exception/redirect this notification request
+        // as if we don't end up waking an object then that means a notification was loss by the system
+        synchronized (h) {
+            h.notify();
+        }
     }
 
 

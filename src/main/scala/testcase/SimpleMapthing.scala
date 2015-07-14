@@ -2,7 +2,7 @@ package testcase
 
 import java.util.concurrent.Callable
 
-import edu.berkeley.dj.internal.{DistributedRunner, InternalInterface}
+import edu.berkeley.dj.internal.{ObjectBase, DistributedRunner, InternalInterface}
 
 /**
  * Created by matthewfl
@@ -40,14 +40,23 @@ object SimpleMapthing {
         DistributedRunner.runOnRemote(h, r)
         Thread.sleep(1500)
         */
+        val synclock = new ObjectBase // TODO: automatically cast `new Object` to objectbase
+
         val c = new Callable[Int] {
           override def call = {
+            synclock.synchronized { synclock.wait() }
             InternalInterface.debug("remote debug stuff")
             999
           }
         }
 
         val f = DistributedRunner.runOnRemote(h, c)
+
+        Thread.sleep(1000)
+
+        synclock.synchronized {
+          synclock.notify()
+        }
 
         InternalInterface.debug("got back the value: "+f.get())
 

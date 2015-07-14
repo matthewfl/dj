@@ -194,7 +194,7 @@ class RunningInterface (private val config: Config, private val manager: Manager
     }
   }
 
-  def sendNotify(obj: Array[Byte], machine: Int, count: Int): Unit = {
+  def sendNotifyOnObject(obj: Array[Byte], machine: Int, count: Int): Unit = {
     val buf = ByteBuffer.allocate(obj.length + 4)
     buf.put(obj)
     buf.putInt(count)

@@ -48,20 +48,14 @@ public class ObjectHelpers {
         if(o instanceof ObjectBase) {
             ObjectBase ob = (ObjectBase)o;
             if(ob.__dj_class_manager == null) {
-                /*synchronized (ob) {
-                    if((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
-                        throw new IllegalMonitorStateException();
-                    ob.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
-                    ob.wait();
-                    //assert((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0);
-                    //ob.__dj_class_mode |= CONSTS.MONITOR_LOCK;
-                }
-                monitorEnter(ob);
-                */
                 ob.wait();
                 // there will be a notify all when we switch from a non distribuited mode to a distribuited mode
-                if(ob.__dj_class_manager != null)
+                if(ob.__dj_class_manager != null) {
+                    // TODO: may have to unlock the current monitor
+                    // since we will end up spinning trying to get the lock
+                    ob.__dj_class_manager.acquireMonitor();
                     ob.__dj_class_manager.dj_wait();
+                }
             } else {
                 ob.__dj_class_manager.dj_wait();
                 //throw new NotImplementedException();
@@ -75,16 +69,6 @@ public class ObjectHelpers {
         if(o instanceof ObjectBase) {
             ObjectBase ob = (ObjectBase)o;
             if(ob.__dj_class_manager == null) {
-                /*synchronized (ob) {
-                    if((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
-                        throw new IllegalMonitorStateException();
-                    ob.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
-                    ob.wait(timeout);
-                    //assert((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0);
-                    //ob.__dj_class_mode |= CONSTS.MONITOR_LOCK;
-                }
-                monitorEnter(ob);
-                */
                 ob.wait(timeout);
                 if(ob.__dj_class_manager != null)
                     throw new NotImplementedException(); // we need to rewait on the distributed object
@@ -100,16 +84,6 @@ public class ObjectHelpers {
         if(o instanceof ObjectBase) {
             ObjectBase ob = (ObjectBase)o;
             if(ob.__dj_class_manager == null) {
-                /*synchronized (ob) {
-                    if((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0)
-                        throw new IllegalMonitorStateException();
-                    ob.__dj_class_mode &= ~CONSTS.MONITOR_LOCK;
-                    ob.wait(timeout, nanos);
-                    //assert((ob.__dj_class_mode & CONSTS.MONITOR_LOCK) == 0);
-                    //ob.__dj_class_mode |= CONSTS.MONITOR_LOCK;
-                }
-                monitorEnter(ob);
-                */
                 ob.wait(timeout, nanos);
                 if(ob.__dj_class_manager != null)
                     throw new NotImplementedException();

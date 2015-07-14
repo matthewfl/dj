@@ -302,7 +302,10 @@ final public class ClassManager {
                     if(i == -1) {
                         managedObject.notify();
                     } else {
-                        InternalInterface.getInternalInterface().sendNotifyOnObject(objectId().array(), i);
+                        InternalInterface.getInternalInterface().sendNotifyOnObject(
+                                objectId().array(), i);
+                        assert(monitor_lock_count == 0);
+                        monitor_lock_count = 1;
                     }
                     if(waitingMachines.length > 1) {
                         int na[] = new int[waitingMachines.length - 1];
@@ -358,7 +361,7 @@ final public class ClassManager {
                 // so for now just make sure that we don't have any to send
                 //assert(notifications_to_send == 0);
                 InternalInterface.getInternalInterface().waitOnObject(objectId().array(),
-                    InternalInterface.getInternalInterface().getSelfId(), notifications_to_send);
+                    owning_machine, notifications_to_send);
                 notifications_to_send = 0;
                 //processNotifications();
                 managedObject.wait();
