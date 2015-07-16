@@ -201,5 +201,17 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(machine, 107, buf)
   }
 
+  def staticFieldUpdate(update: Array[Byte]): Unit = {
+    manager.networkInterface.sendAll(108, update)
+  }
+
+  def loadStaticFields(clsname: String) = {
+    block(manager.networkInterface.sendWrpl(0, 30, clsname.getBytes))
+  }
+
+  def checkClassIsLoaded(clsname: String) = {
+    manager.loader.classLoaded(clsname)
+  }
+
 
 }

@@ -16,6 +16,13 @@ abstract class NetworkCommunication(private val recever: NetworkRecever) {
 
   def sendWrpl(to: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]]
 
+  def sendAll(action: Int, msg: Array[Byte]): Unit = {
+    for(h <- getAllHosts) {
+      if(getSelfId != h)
+        send(h, action, msg)
+    }
+  }
+
   // TODO: change the internal apis to use ByteBuffers so that it can avoid copying often
   // can override the seralization method of the comm system to only write a subset of the bytes from a given
   // bytebuffer which would avoid copying items another time
@@ -47,6 +54,17 @@ abstract class NetworkCommunication(private val recever: NetworkRecever) {
       case e => ret.failure(e)
     }
     ret.future
+  }
+
+  def sendAll(action: Int, msg: ByteBuffer): Unit = {
+    val arrmsg: Array[Byte] = if(msg.limit() == msg.position()) {
+      msg.array()
+    } else {
+      val g = new Array[Byte](msg.position())
+      Array.copy(msg.array, 0, g, 0, msg.position())
+      g
+    }
+    sendAll(action, arrmsg)
   }
 
   protected def recv(from: Int, action: Int, msg: Array[Byte]): Unit = recever.recv(from, action, msg)

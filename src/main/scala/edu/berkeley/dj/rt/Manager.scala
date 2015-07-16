@@ -34,6 +34,8 @@ sealed private[rt] trait Manager {
 
   def isMaster = false
 
+  def loader: LoaderProxy
+
 
 }
 

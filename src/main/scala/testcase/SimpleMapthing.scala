@@ -12,7 +12,11 @@ case class Struct(val a: Int, val b: Int)
 
 object SimpleMapthing {
 
+  var someTest = new Struct(1,2)
+
   def main(args: Array[String]) = {
+
+    someTest = new Struct(3,4)
 
     // wait until there is a second machine running
     while(InternalInterface.getInternalInterface.getAllHosts.length == 1) {
@@ -46,6 +50,7 @@ object SimpleMapthing {
           override def call = {
             synclock.synchronized { synclock.wait() }
             InternalInterface.debug("remote debug stuff")
+            InternalInterface.debug("the some stuff is "+someTest.a)
             999
           }
         }

@@ -13,7 +13,7 @@ public class StaticFieldHelper {
 
     private StaticFieldHelper() {}
 
-    public void writeField_Z(String identifier, boolean val) {
+    static public void writeField_Z(String identifier, boolean val) {
         ByteBuffer b = writeReq(identifier, 1);
         if(val)
             b.put((byte)1);
@@ -22,56 +22,56 @@ public class StaticFieldHelper {
         sendReq(b);
     }
 
-    public void writeField_C(String identifier, char val) {
+    static public void writeField_C(String identifier, char val) {
         ByteBuffer b = writeReq(identifier, 4);
         b.putChar(val);
         sendReq(b);
     }
 
-    public void writeField_B(String identifier, byte val) {
+    static public void writeField_B(String identifier, byte val) {
         ByteBuffer b = writeReq(identifier, 1);
         b.put(val);
         sendReq(b);
     }
 
-    public void writeField_S(String identifier, short val) {
+    static public void writeField_S(String identifier, short val) {
         ByteBuffer b = writeReq(identifier, 2);
         b.putShort(val);
         sendReq(b);
     }
 
-    public void writeField_I(String identifier, int val) {
+    static public void writeField_I(String identifier, int val) {
         ByteBuffer b = writeReq(identifier, 4);
         b.putInt(val);
         sendReq(b);
     }
 
-    public void writeField_J(String identifier, long val) {
+    static public void writeField_J(String identifier, long val) {
         ByteBuffer b = writeReq(identifier, 8);
         b.putLong(val);
         sendReq(b);
     }
 
-    public void writeField_F(String identifier, float val) {
+    static public void writeField_F(String identifier, float val) {
         ByteBuffer b = writeReq(identifier, 4);
         b.putFloat(val);
         sendReq(b);
     }
 
-    public void writeField_D(String identifier, double val) {
+    static public void writeField_D(String identifier, double val) {
         ByteBuffer b = writeReq(identifier, 8);
         b.putDouble(val);
         sendReq(b);
     }
 
-    public void writeField_A(String identifier, Object obj) {
+    static public void writeField_A(String identifier, Object obj) {
         byte[] darr = DistributedObjectHelper.getDistributedId(obj).toArr();
         ByteBuffer b = writeReq(identifier, darr.length);
         b.put(darr);
         sendReq(b);
     }
 
-    private ByteBuffer writeReq(String id, int l) {
+    static private ByteBuffer writeReq(String id, int l) {
         byte[] ida = id.getBytes();
         ByteBuffer b = ByteBuffer.allocate(ida.length + 4 + l);
         b.putInt(ida.length);
@@ -79,11 +79,11 @@ public class StaticFieldHelper {
         return b;
     }
 
-    private void sendReq(ByteBuffer b) {
-
+    static private void sendReq(ByteBuffer b) {
+        InternalInterface.getInternalInterface().staticFieldUpdate(b.array());
     }
 
-    public void recvWriteField(ByteBuffer buf) {
+    static public void recvWriteField(ByteBuffer buf) {
         try {
             int idlength = buf.getInt();
             String id = new String(buf.array(), 4, idlength);
@@ -123,7 +123,7 @@ public class StaticFieldHelper {
         }
     }
 
-    public ByteBuffer getAllStaticFields(String clsname) {
+    static public byte[] getAllStaticFields(String clsname) {
         try {
             Field[] fs = getClassFields(clsname);
             int bufSize = 0;
@@ -194,14 +194,14 @@ public class StaticFieldHelper {
                     ret.put(dids[at++]);
                 }
             }
-            return ret;
+            return ret.array();
         } catch(ClassNotFoundException|
                 IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void loadAllStaticFields(String classname, ByteBuffer buf) {
+    static public void loadAllStaticFields(String classname, ByteBuffer buf) {
         try {
             Field[] fs = getClassFields(classname);
             for (Field f : fs) {
@@ -243,7 +243,7 @@ public class StaticFieldHelper {
         }
     }
 
-    private Field[] getClassFields(String classname) throws ClassNotFoundException {
+    static private Field[] getClassFields(String classname) throws ClassNotFoundException {
         Class<?> cls = AugmentedClassLoader.forName(classname);
         Field[] fs = cls.getDeclaredFields();
         // sort the fields so that the static ones are first

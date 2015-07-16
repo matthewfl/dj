@@ -127,6 +127,13 @@ public class InternalInterface {
      // for the master to send a notification to a copy of an object
     public void sendNotifyOnObject(byte[] obj, int machine) { throw new InterfaceException(); }
 
+    // send to all machines that there is some update for a static field of an object
+    public void staticFieldUpdate(byte[] obj) { throw new InterfaceException(); }
+
+    public byte[] loadStaticFields(String clsname) { throw new InterfaceException(); }
+
+    public boolean checkClassIsLoaded(String clsname) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -293,6 +300,23 @@ class InternalInterfaceWrap extends  InternalInterface {
         invoke("sendNotifyOnObject", new Class[]{byte[].class, int.class, int.class}, obj, machine, 1);
     }
 
+    @Override
+    public void staticFieldUpdate(byte[] update) {
+        invoke("staticFieldUpdate", new Class[]{byte[].class}, update);
+    }
+
+    @Override
+    public byte[] loadStaticFields(String clsname) {
+        return (byte[])invoke("loadStaticFields", new Class[]{String.class}, clsname);
+    }
+
+    @Override
+    public boolean checkClassIsLoaded(String clsname) {
+        return (boolean)invoke("checkClassIsLoaded", new Class[]{String.class}, clsname);
+    }
+
+
+
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
@@ -338,7 +362,11 @@ class InternalInterfaceWrap extends  InternalInterface {
             case 10:
                 DistributedObjectHelper.recvNotify((ByteBuffer)args[0]);
                 return null;
-
+            case 11:
+                return StaticFieldHelper.getAllStaticFields((String)args[0]);
+            case 12:
+                StaticFieldHelper.recvWriteField((ByteBuffer)args[0]);
+                return null;
         }
         return null;
     }

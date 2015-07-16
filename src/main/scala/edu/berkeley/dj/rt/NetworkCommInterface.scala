@@ -50,6 +50,9 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         // recv a notification on an object
         man.runningInterface.callIn(10, ByteBuffer.wrap(msg))
       }
+      case 108 => {
+        man.runningInterface.callIn(12, ByteBuffer.wrap(msg))
+      }
     }
   } catch {
     case e: Throwable => {
@@ -134,17 +137,11 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
           man.runningInterface.callIn(6, action, ByteBuffer.wrap(msg))
           Array[Byte]()
         }
-        /*case 30 => {
-          // recvnotify
-          man.runningInterface.callIn(10, ByteBuffer.wrap(msg))
-          Array[Byte]()
-        }*/
-        /*case 31 => {
-          // recvNotify
-          man.runningInterface.callIn(12, ByteBuffer.wrap(msg))
-          Array[Byte]()
-        }*/
-
+        case 30 => {
+          // get the values of all static fields on a class
+          val cname = new String(msg)
+          man.runningInterface.callIn(11, cname).asInstanceOf[Array[Byte]]
+        }
       }
     } catch {
       case e: Throwable => {

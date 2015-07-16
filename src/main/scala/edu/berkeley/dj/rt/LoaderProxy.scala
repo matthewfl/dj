@@ -125,6 +125,8 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
     }
   }
 
+  def classLoaded(name: String) = definedClasses.synchronized { definedClasses.contains(name) }
+
   // make this load all of the classes
   // and not pass to the parent the class in the java. namespace
   // some classes can only be loaded by the parent loader
