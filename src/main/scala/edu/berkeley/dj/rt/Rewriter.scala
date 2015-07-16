@@ -348,6 +348,14 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           accessWrites(redirect_method_type).append(s"case ${field_id}: this.``${name}`` = (${typ_name})val; return;\n")
         } else {
           // TODO: static field
+          val static_write_method =
+            s"""
+               static ${accessMod} void ``${config.fieldPrefix}write_static_field_${name}`` (${typ_name} val) {
+                 ${cls_name}.``${name}`` = val;
+                 edu.berkeley.dj.internal.StaticFieldHelper.writeField_${redirect_method_type}("${cls.getName}::${name}", val);
+               }
+             """
+          cls.addMethod(CtMethod.make(static_write_method, cls))
         }
       }
     }

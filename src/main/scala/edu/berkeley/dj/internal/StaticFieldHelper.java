@@ -92,6 +92,12 @@ public class StaticFieldHelper {
             Class<?> cls = AugmentedClassLoader.forName(ids[0]);
             Field f = cls.getDeclaredField(ids[1]);
             f.setAccessible(true);
+            if(Modifier.isFinal(f.getModifiers())) {
+                // the fact this works is a little bit crazy
+                Field fm = Field.class.getDeclaredField("modifiers");
+                fm.setAccessible(true);
+                fm.set(f, f.getModifiers() & ~Modifier.FINAL);
+            }
             Class<?> ftype = f.getType();
             if (ftype == boolean.class) {
                 f.setBoolean(null, buf.get() == 1);
