@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread"})
+@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread", "java/nio/Buffer"})
 public class DistributedObjectHelper {
 
     private DistributedObjectHelper() {}
@@ -20,13 +20,19 @@ public class DistributedObjectHelper {
     static public final class DistributedObjectId implements Serializable {
         int lastKnownHost;
         UUID identifier;
-        String classname;
+        //String classname;
+        byte[] extradata;
 
         @Override
         public int hashCode() { return identifier.hashCode(); }
 
         @Override
-        public String toString() { return "DJ_OBJ("+identifier+")"; }
+        public String toString() {
+            if(lastKnownHost != -2)
+                return "DJ_OBJ("+identifier+")";
+            else
+                return "DJ_OBJ(final)";
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -40,17 +46,22 @@ public class DistributedObjectHelper {
         DistributedObjectId(UUID u, int h, String cn) {
             this.identifier = u;
             this.lastKnownHost = h;
-            this.classname = cn;
+            this.extradata = cn.getBytes();
+            //this.classname = cn;
         }
 
         ByteBuffer toBB() {
-            byte[] cn = classname.getBytes();
-            ByteBuffer ret = ByteBuffer.allocate(cn.length + 20);
-            ret.putInt(lastKnownHost);
-            ret.putLong(identifier.getMostSignificantBits());
-            ret.putLong(identifier.getLeastSignificantBits());
-            ret.put(cn);
-            return ret;
+            if(lastKnownHost != -2) {
+                byte[] cn = extradata;
+                ByteBuffer ret = ByteBuffer.allocate(cn.length + 20);
+                ret.putInt(lastKnownHost);
+                ret.putLong(identifier.getMostSignificantBits());
+                ret.putLong(identifier.getLeastSignificantBits());
+                ret.put(cn);
+                return ret;
+            } else {
+                return ByteBuffer.wrap(extradata);
+            }
         }
 
         public byte[] toArr() {
@@ -60,14 +71,24 @@ public class DistributedObjectHelper {
         public DistributedObjectId(byte[] arr) {
             ByteBuffer b = ByteBuffer.wrap(arr);
             lastKnownHost = b.getInt();
-            identifier = new UUID(b.getLong(), b.getLong());
-            classname = new String(arr, 20, arr.length - 20);
+            if(lastKnownHost == -2) {
+                extradata = arr;
+            } else {
+                identifier = new UUID(b.getLong(), b.getLong());
+                extradata = new byte[arr.length - 20];
+                System.arraycopy(arr, 20, extradata, 0, extradata.length);
+            }
         }
 
         DistributedObjectId(ByteBuffer b) {
             lastKnownHost = b.getInt();
-            identifier = new UUID(b.getLong(), b.getLong());
-            classname = new String(b.array(), b.position(), b.limit() - b.position());
+            if(lastKnownHost == -2) {
+                extradata = b.array();
+            } else {
+                identifier = new UUID(b.getLong(), b.getLong());
+                extradata = new byte[b.limit() - b.position()];
+                b.get(extradata);
+            }
         }
 
     }
@@ -107,7 +128,8 @@ public class DistributedObjectHelper {
 
     static public DistributedObjectId getDistributedId(Object o) {
         if(!(o instanceof ObjectBase)) {
-            throw new RuntimeException("something that is not an object base: "+o);
+            //throw new RuntimeException("something that is not an object base: "+o);
+            return makeFinalObjectId(o);
         }
         return getDistributedId((ObjectBase) o);
     }
@@ -119,23 +141,124 @@ public class DistributedObjectHelper {
                 return h;
             // we do not have some proxy of this object locally so we need to construct some proxy for it
             try {
-                // shouldn't need the AugmentedClassLoader since the classname will already be augmented
-                // this will save a round trip communication with the master machine
-                Class<?> cls = Class.forName(id.classname);
-                ObjectBase obj = (ObjectBase) Unsafe00.getUnsafe().allocateInstance(cls);
-                obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
-                obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
-                        CONSTS.REMOTE_READS |
-                        CONSTS.REMOTE_WRITES |
-                        CONSTS.IS_NOT_MASTER;
-                localDistributedObjects.put(id.identifier, obj);
-                return obj;
-            } catch(ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            } catch(InstantiationException e) {
+                if(id.lastKnownHost == -2) {
+                    // this is some final object, and we just need to reconstruct it
+                    return constructFinalObject(ByteBuffer.wrap(id.extradata));
+                } else {
+                    // shouldn't need the AugmentedClassLoader since the classname will already be augmented
+                    // this will save a round trip communication with the master machine
+                    Class<?> cls = Class.forName(new String(id.extradata));
+                    ObjectBase obj = (ObjectBase) Unsafe00.getUnsafe().allocateInstance(cls);
+                    obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
+                    obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
+                            CONSTS.REMOTE_READS |
+                            CONSTS.REMOTE_WRITES |
+                            CONSTS.IS_NOT_MASTER;
+                    localDistributedObjects.put(id.identifier, obj);
+                    return obj;
+                }
+            } catch(ClassNotFoundException|InstantiationException e) {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    static Object constructFinalObject(ByteBuffer buf) {
+        try {
+            buf.rewind();
+            int objectIdent = buf.getInt();
+            assert (objectIdent == -2); // check that this is of the correct type
+            int cnamelen = buf.getInt();
+            String cname = new String(buf.array(), 8, cnamelen);
+            buf.position(cnamelen + 8);
+            Class<?> cls = Class.forName(cname);
+            finalObjectConverter<?> conv = finalObjectConverters.get(cls);
+            if (conv == null)
+                throw new RuntimeException();
+            return conv.makeObject(buf);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static DistributedObjectId makeFinalObjectId(Object o) {
+        Class<?> cls = o.getClass();
+        finalObjectConverter<?> conv = finalObjectConverters.get(cls);
+        if(conv == null)
+            throw new RuntimeException("could not find a converter for class: "+cls.getName());
+        int size = conv.getSizeO(o);
+        byte[] cname = cls.getName().getBytes();
+        ByteBuffer a = ByteBuffer.allocate(4 + 4 + cname.length + size);
+        a.putInt(-2);
+        a.putInt(cname.length);
+        a.put(cname);
+        conv.makeIdO(o, a);
+        a.flip();
+        return new DistributedObjectId(a);
+    }
+
+    static abstract class finalObjectConverter<T> {
+        abstract public int getSize(T o);
+        abstract public T makeObject(ByteBuffer buf);
+        abstract public void makeId(T o, ByteBuffer id);
+
+        public int getSizeO(Object o) { return getSize((T) o); }
+        public void makeIdO(Object o, ByteBuffer b) { makeId((T)o, b); }
+
+    }
+
+    static private final HashMap<Class<?>, finalObjectConverter<?>> finalObjectConverters = new HashMap<>();
+
+    static {
+        finalObjectConverters.put(String.class, new finalObjectConverter<String>() {
+            @Override
+            public int getSize(String o) {
+                return o.length() * 4 + 4;
+            }
+
+            @Override
+            public String makeObject(ByteBuffer buf) {
+                int length = buf.getInt();
+                return new String(buf.array(), buf.position(), length);
+            }
+
+            @Override
+            public void makeId(String o, ByteBuffer id) {
+                byte[] b = o.getBytes();
+                id.putInt(b.length);
+                id.put(b);
+            }
+        });
+        finalObjectConverters.put(Class.class, new finalObjectConverter<Class<?>>() {
+            @Override
+            public int getSize(Class<?> o) {
+                return o.getName().length() * 4 + 4;
+            }
+
+            @Override
+            public Class<?> makeObject(ByteBuffer buf) {
+                int length = buf.getInt();
+                String name = new String(buf.array(), buf.position(), length);
+                try {
+                    return Class.forName(name);
+                } catch(ClassNotFoundException e) {
+                    try {
+                        // try and load the primitive type classes such as "long"
+                        if (!name.contains(".")) {
+                            return AugmentedClassLoader.getPrimitiveClass(name);
+                        }
+                    } catch (Throwable t) { }
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public void makeId(Class<?> o, ByteBuffer id) {
+                byte[] name = o.getName().getBytes();
+                id.putInt(name.length);
+                id.put(name);
+            }
+        });
     }
 
     static public boolean isLocal(ObjectBase o) {

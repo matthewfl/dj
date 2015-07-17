@@ -36,7 +36,7 @@ public class AugmentedClassLoader {
         return ret;
     }
 
-    public static Class<?> getPrimitiveClass(String name) {
+    public static Class<?> getPrimitiveClass(String name) throws Throwable {
         // this method is package private, but we are rewriting some classes that need to use it
         try {
             Method mth = Class.class.getDeclaredMethod("getPrimitiveClass", new Class[]{String.class});
@@ -45,7 +45,7 @@ public class AugmentedClassLoader {
         }
         catch(NoSuchMethodException e) {}
         catch(IllegalAccessException e) {}
-        catch(InvocationTargetException e) {}
+        catch(InvocationTargetException e) { throw e.getTargetException(); }
         return null;
     }
 
