@@ -57,6 +57,7 @@ class FieldAccess(next : Transformer, val config: Config, val rewriter: Rewriter
 
 
       val isInit = minfo.getName() == "<init>"
+      val isStaticInit = minfo.getName == "<clinit>"
 
       // we only optionally enable/disable the reads and writes of fields on an instance
       // of a class
@@ -94,13 +95,12 @@ class FieldAccess(next : Transformer, val config: Config, val rewriter: Rewriter
         it.write16bit(methodRef, pos + 1)
 
         // for the static field, we allways rewrite them
-      } else if(c == PUTSTATIC && !ftype.startsWith("[")) {
+      } else if(c == PUTSTATIC && !ftype.startsWith("[") && !isStaticInit) {
         val methodType = s"(${ftype})V"
         val methodName = s"${config.fieldPrefix}write_static_field_${fname}"
         val methodRef = cp.addMethodrefInfo(methodCls, methodName, methodType)
         it.writeByte(INVOKESTATIC, pos)
         it.write16bit(methodRef, pos + 1)
-
       }
       // TODO: deal with static fields
 

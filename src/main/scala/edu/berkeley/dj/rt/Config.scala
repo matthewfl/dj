@@ -20,4 +20,6 @@ case class Config (val uuid: String="DJ"+java.util.UUID.randomUUID.toString.repl
 
   final val proxysubclasses = internalPrefix + "proxysubclazz."
 
+  final val staticInitMethodName = fieldPrefix + "static_clinit"
+
 }

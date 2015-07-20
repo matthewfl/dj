@@ -268,4 +268,8 @@ public class StaticFieldHelper {
         });
         return fs;
     }
+
+    static public boolean initStaticFields(String classname) {
+        return true;
+    }
 }
