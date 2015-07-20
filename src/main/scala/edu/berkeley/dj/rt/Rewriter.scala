@@ -397,22 +397,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   }
 
   def modifyStaticInit(cls: CtClass): Unit = {
-    //val constr = cls.getConstructors
-    val clsinit = cls.makeClassInitializer()//cls.getClassInitializer
-    //val mths = cls.getDeclaredMethods("<clinit>")
+    val clsinit = cls.makeClassInitializer()
     var addInitMethod = false
     var exists_init = false
-    if(clsinit != null) {
-      clsinit.insertBeforeBody(s"""if(!edu.berkeley.dj.internal.StaticFieldHelper.initStaticFields("${cls.getName}")) return;""")
-    }
 
-    /*if(mths != null && mths.length != 0) {
-      val mth = mths(0)
-      mth.setName(config.staticInitMethodName)
-      addInitMethod = true
-      exists_init = true
-    }*/
-    /*cls.getDeclaredFields.foreach(f => {
+    cls.getDeclaredFields.foreach(f => {
       if(Modifier.isStatic(f.getModifiers)) {
         addInitMethod = true
         // the jvm checks that final fields are set only in the static constructor
@@ -424,25 +413,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           f.setModifiers(f.getModifiers & ~Modifier.FINAL)
         }
       }
-    })*/
-    /*if(addInitMethod && clsinit == null) {
-      val initMethod =
-        s"""
-           static void ``<clinit>`` () {
-             if(edu.berkeley.dj.internal.StaticFieldHelper.initStaticFields("${cls.getName}")) {
-               ${if(exists_init) config.staticInitMethodName + "();" else ""}
-             }
-           }
-         """
-      try {
-        cls.addMethod(CtMethod.make(initMethod, cls))
-      } catch {
-        case e: Throwable => {
-          println(e)
-          throw e
-        }
-      }
-    }*/
+    })
+
+    if(clsinit != null) {
+      clsinit.insertBefore(s"""if(!edu.berkeley.dj.internal.StaticFieldHelper.initStaticFields("${cls.getName}")) return;""")
+    }
+
   }
 
 
