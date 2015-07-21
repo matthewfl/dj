@@ -36,13 +36,14 @@ package edu.berkeley.dj.internal.coreclazz.sun.misc;
  */
 
 
-import java.security.*;
-import java.lang.reflect.*;
-
 import edu.berkeley.dj.internal.BridgeGetNative;
 import edu.berkeley.dj.internal.InternalInterface;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import sun.reflect.CallerSensitive;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.security.ProtectionDomain;
 
 
 /**
@@ -67,7 +68,7 @@ public final class Unsafe00 implements BridgeGetNative {
 
     public static Object __dj_fromNative(Object o) { return theUnsafe; }
 
-    private final sun.misc.Unsafe trueUnsafe;// = InternalInterface.getInternalInterface().getUnsafe();
+    private static final sun.misc.Unsafe trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
 /*
     static {
         // TODO: fix trueUnsafe, and other TODO about it being commented out
@@ -87,7 +88,7 @@ public final class Unsafe00 implements BridgeGetNative {
 */
 
     private Unsafe00() {
-        trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
+        //trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
     }
 
     private static final Unsafe00 theUnsafe = new Unsafe00();

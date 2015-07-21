@@ -1,19 +1,15 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
-import java.lang.reflect.*;
-
 /**
  * Created by matthewfl
  */
+/*
 @RewriteAllBut(nonModClasses = {"java/lang/Object"})
 public class ConvertBridge {
 
     /*Object makeNative(Proxied p) {
         return p.__dj_getRawProxyPointer();
-    }*/
+    }*
 
     private static final ConvertBridge converter = new ConvertBridge();
 
@@ -32,7 +28,7 @@ public class ConvertBridge {
     public Object makeNative(Object o) {
         /*if(o instanceof Proxied) {
             return makeNative((Proxied)o);
-        }*/
+        }*
 
         //throw new NotImplementedException();
 
@@ -197,3 +193,4 @@ public class ConvertBridge {
 
 
 }
+*/

@@ -348,6 +348,14 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           accessWrites(redirect_method_type).append(s"case ${field_id}: this.``${name}`` = (${typ_name})val; return;\n")
         } else {
           // TODO: static field
+          val static_write_method =
+            s"""
+               static ${accessMod} void ``${config.fieldPrefix}write_static_field_${name}`` (${typ_name} val) {
+                 ${cls_name}.``${name}`` = val;
+                 edu.berkeley.dj.internal.StaticFieldHelper.writeField_${redirect_method_type}("${cls.getName}::${name}", val);
+               }
+             """
+          cls.addMethod(CtMethod.make(static_write_method, cls))
         }
       }
     }
@@ -388,6 +396,32 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       """
   }
 
+  def modifyStaticInit(cls: CtClass): Unit = {
+    if(cls.isInterface)
+      return
+    val clsinit = cls.makeClassInitializer()
+    var addInitMethod = false
+    var exists_init = false
+
+    cls.getDeclaredFields.foreach(f => {
+      if(Modifier.isStatic(f.getModifiers)) {
+        addInitMethod = true
+        // the jvm checks that final fields are set only in the static constructor
+        // and we are renaming that method and optionally not calling it
+        // so remove all the final field references
+        // the compiler should have already check that we aren't modifying the final fields
+        // so this shouldn't change the behavior of the program and only remove some possibly optimizations
+        if(Modifier.isFinal(f.getModifiers)) {
+          f.setModifiers(f.getModifiers & ~Modifier.FINAL)
+        }
+      }
+    })
+
+    if(clsinit != null) {
+      clsinit.insertBefore(s"""if(!edu.berkeley.dj.internal.StaticFieldHelper.initStaticFields("${cls.getName}")) return;""")
+    }
+
+  }
 
 
   private def modifyClass(cls: CtClass): Unit = {
@@ -396,16 +430,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     //println("modifiers: " + Modifier.toString(mods))
     reassociateClass(cls)
 
-    /*val sc = cls.getSuperclass
-    if(sc.getName != "java.lang.Object") {
-      // we want to make sure that we have loaded any classes that this depends on
-      // so that we have already overwritten their methods
-      //runningPool.get(sc.getName)
-    } else if(!Modifier.isInterface(mods)) {
-      // this comes directly off the object class
-      //cls.setSuperclass(objectBase)
-    }*/
-    //if(cls.getName.contains("testcase"))
+    modifyStaticInit(cls)
     rewriteUsedClasses(cls)
     transformClass(cls)
   }
