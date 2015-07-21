@@ -397,6 +397,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   }
 
   def modifyStaticInit(cls: CtClass): Unit = {
+    if(cls.isInterface)
+      return
     val clsinit = cls.makeClassInitializer()
     var addInitMethod = false
     var exists_init = false

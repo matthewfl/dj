@@ -51,6 +51,7 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         man.runningInterface.callIn(10, ByteBuffer.wrap(msg))
       }
       case 108 => {
+        // recv a write on the static fields
         man.runningInterface.callIn(12, ByteBuffer.wrap(msg))
       }
     }

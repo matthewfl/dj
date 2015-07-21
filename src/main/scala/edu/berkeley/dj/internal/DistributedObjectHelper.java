@@ -182,6 +182,9 @@ public class DistributedObjectHelper {
     }
 
     static DistributedObjectId makeFinalObjectId(Object o) {
+        if(o == null) {
+            o = nullcls;
+        }
         Class<?> cls = o.getClass();
         finalObjectConverter<?> conv = finalObjectConverters.get(cls);
         if(conv == null)
@@ -209,7 +212,28 @@ public class DistributedObjectHelper {
 
     static private final HashMap<Class<?>, finalObjectConverter<?>> finalObjectConverters = new HashMap<>();
 
+    // such a hack
+    static private class NULLCLS {}
+
+    static final private NULLCLS nullcls = new NULLCLS();
+
     static {
+        finalObjectConverters.put(NULLCLS.class, new finalObjectConverter<NULLCLS>() {
+            @Override
+            public int getSize(NULLCLS o) {
+                return 0;
+            }
+
+            @Override
+            public NULLCLS makeObject(ByteBuffer buf) {
+                return null;
+            }
+
+            @Override
+            public void makeId(NULLCLS o, ByteBuffer id) {
+
+            }
+        });
         finalObjectConverters.put(String.class, new finalObjectConverter<String>() {
             @Override
             public int getSize(String o) {

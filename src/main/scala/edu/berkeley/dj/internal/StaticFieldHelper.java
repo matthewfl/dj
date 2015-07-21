@@ -270,6 +270,12 @@ public class StaticFieldHelper {
     }
 
     static public boolean initStaticFields(String classname) {
-        return true;
+        if(InternalInterface.getInternalInterface().isMaster()) {
+            return true;
+        } else {
+            byte[] sf = InternalInterface.getInternalInterface().loadStaticFields(classname);
+            loadAllStaticFields(classname, ByteBuffer.wrap(sf));
+            return false;
+        }
     }
 }
