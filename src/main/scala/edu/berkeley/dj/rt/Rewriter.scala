@@ -420,7 +420,48 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(clsinit != null) {
       clsinit.insertBefore(s"""if(!edu.berkeley.dj.internal.StaticFieldHelper.initStaticFields("${cls.getName}")) return;""")
     }
+  }
 
+  def addRPCRedirects(cls: CtClass): Unit = {
+    val (cls_mode, cls_manager) = if (Modifier.isInterface(cls.getModifiers)) {
+      ("__dj_getClassMode()", "__dj_getManager()")
+    } else {
+      ("__dj_class_mode", "__dj_class_manager")
+    }
+
+
+    val mode = manager.classMode.getMode(cls.getName)
+
+    for(mth <- cls.getDeclaredMethods) {
+      val modifiers = mth.getModifiers
+      if (!Modifier.isStatic(modifiers) && !Modifier.isAbstract(modifiers) && !mth.getName.startsWith(config.fieldPrefix)) {
+        val id = mth.getName + mth.getSignature
+        if (mode.addMethodRedirect(id)) {
+          val (return_cast, return_type) = if (mth.getReturnType.isPrimitive) {
+            ("", mth.getReturnType.asInstanceOf[CtPrimitiveType].getDescriptor.toString)
+          } else {
+            (s"(${getUsableName(mth.getReturnType)})", "A")
+          }
+          val check = mode.addMethodRedirectCheck(id)
+          val ctparams = mth.getParameterTypes
+          val params = if (ctparams.length == 0) {
+            "null"
+          } else {
+            s"""new String[] { ${ctparams.map(c => "\"" + c.getName + "\"").mkString(", ")} }"""
+          }
+
+          val code =
+            s"""
+             if((${cls_mode} & 0x20) != 0 ${if (check) s""" && edu.berkeley.dj.internal.RPCHelpers.checkPerformRPC("${id}") """ else ""}) {
+              ${if(mth.getReturnType == CtClass.voidType) "" else s"return ${return_cast}"} edu.berkeley.dj.internal.RPCHelpers.call_${return_type} (this, "${mth.getName}", ${params}, $$args);
+              ${if(mth.getReturnType == CtClass.voidType) "return ;" else  "" }
+             }
+           """
+
+          mth.insertBefore(code)
+        }
+      }
+    }
   }
 
 
@@ -432,6 +473,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     modifyStaticInit(cls)
     rewriteUsedClasses(cls)
+    addRPCRedirects(cls)
     transformClass(cls)
   }
 
