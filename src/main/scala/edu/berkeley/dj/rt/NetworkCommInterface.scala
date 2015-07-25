@@ -143,6 +143,10 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
           val cname = new String(msg)
           man.runningInterface.callIn(11, cname).asInstanceOf[Array[Byte]]
         }
+        case 31 => {
+          // perform an rpc call to this machine
+          man.runningInterface.callIn(13, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
+        }
       }
     } catch {
       case e: Throwable => {

@@ -452,8 +452,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
           val code =
             s"""
-             if((${cls_mode} & 0x20) != 0 ${if (check) s""" && edu.berkeley.dj.internal.RPCHelpers.checkPerformRPC("${id}") """ else ""}) {
-              ${if(mth.getReturnType == CtClass.voidType) "" else s"return ${return_cast}"} edu.berkeley.dj.internal.RPCHelpers.call_${return_type} (this, "${mth.getName}", ${params}, $$args);
+             if((${cls_mode} & 0x20) != 0 ${if (check) s""" && edu.berkeley.dj.internal.RPCHelpers.checkPerformRPC("${cls.getName}","${id}") """ else ""}) {
+              ${if(mth.getReturnType == CtClass.voidType) "" else s"return ${return_cast}"} edu.berkeley.dj.internal.RPCHelpers.call_${return_type} (this, "${cls.getName}", "${mth.getName}", ${params}, $$args);
               ${if(mth.getReturnType == CtClass.voidType) "return ;" else  "" }
              }
            """
@@ -595,7 +595,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   }
 
   private def overwriteNativeMethods(cls: CtClass) = {
-    // For now if something is going to need a native method, we can just manually overwrite the native method
+    // For now if
+    // something is going to need a native method, we can just manually overwrite the native method
     // calls, otherwise this is going to end up becoming a really complicated system
 
     val rwMembers = cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers))

@@ -10,6 +10,18 @@ import edu.berkeley.dj.internal.{ObjectBase, DistributedRunner, InternalInterfac
 
 case class Struct(val a: Int, val b: Int)
 
+class makeThisRpc {
+
+  var someVal: Int = 6
+
+  def something = {
+    for(a <- 0 until someVal) {
+      someVal += a
+    }
+  }
+
+}
+
 object SimpleMapthing {
 
   var someTest = new Struct(1,2)
