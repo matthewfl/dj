@@ -5,7 +5,9 @@ package testcase;
  */
 public class SimpleScratch {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Throwable {
+
+        Thread.sleep(1000);
 
         System.out.println("hello");
 

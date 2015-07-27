@@ -53,7 +53,7 @@ public class DistributedObjectHelper {
         ByteBuffer toBB() {
             if(lastKnownHost != -2) {
                 byte[] cn = extradata;
-                ByteBuffer ret = ByteBuffer.allocate(cn.length + 20);
+                ByteBuffer ret = ByteBuffer.allocate(cn.length + 24);
                 ret.putInt(lastKnownHost);
                 ret.putLong(identifier.getMostSignificantBits());
                 ret.putLong(identifier.getLeastSignificantBits());
@@ -92,7 +92,7 @@ public class DistributedObjectHelper {
                 identifier = new UUID(b.getLong(), b.getLong());
                 int length = b.getInt();
                 extradata = new byte[length]; //arr.length - 20];
-                System.arraycopy(arr, 20, extradata, 0, extradata.length);
+                System.arraycopy(arr, 24, extradata, 0, extradata.length);
             }
         }
 
@@ -210,8 +210,14 @@ public class DistributedObjectHelper {
         }
         Class<?> cls = o.getClass();
         finalObjectConverter<?> conv = finalObjectConverters.get(cls);
-        if(conv == null)
-            throw new RuntimeException("could not find a converter for class: "+cls.getName());
+        if(conv == null) {
+            if(Throwable.class.isAssignableFrom(cls)) {
+                cls = Throwable.class;
+                conv = finalObjectConverters.get(cls);
+            } else {
+                throw new RuntimeException("could not find a converter for class: " + cls.getName());
+            }
+        }
         int size = conv.getSizeO(o);
         byte[] cname = cls.getName().getBytes();
         ByteBuffer a = ByteBuffer.allocate(4 + 4 + cname.length + size);
@@ -244,11 +250,12 @@ public class DistributedObjectHelper {
         finalObjectConverters.put(NULLCLS.class, new finalObjectConverter<NULLCLS>() {
             @Override
             public int getSize(NULLCLS o) {
-                return 0;
+                return 4;
             }
 
             @Override
             public NULLCLS makeObject(ByteBuffer buf) {
+                buf.getInt();
                 return null;
             }
 
@@ -288,6 +295,7 @@ public class DistributedObjectHelper {
             public Class<?> makeObject(ByteBuffer buf) {
                 int length = buf.getInt();
                 String name = new String(buf.array(), buf.position(), length);
+                buf.position(buf.position() + length);
                 try {
                     return Class.forName(name);
                 } catch(ClassNotFoundException e) {
@@ -306,6 +314,25 @@ public class DistributedObjectHelper {
                 byte[] name = o.getName().getBytes();
                 id.putInt(name.length);
                 id.put(name);
+            }
+        });
+        finalObjectConverters.put(Throwable.class, new finalObjectConverter<Throwable>() {
+            // should try and seralize the object
+            // and then reconstruct the object on the other end....
+
+            @Override
+            public int getSize(Throwable o) {
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public Throwable makeObject(ByteBuffer buf) {
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public void makeId(Throwable o, ByteBuffer id) {
+                throw new NotImplementedException();
             }
         });
         finalObjectConverters.put(Byte.class, new finalObjectConverter<Byte>() {

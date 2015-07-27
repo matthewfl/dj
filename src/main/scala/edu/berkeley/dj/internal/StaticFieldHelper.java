@@ -162,7 +162,7 @@ public class StaticFieldHelper {
                 } else {
                     // this is an object type
                     byte[] did = DistributedObjectHelper.getDistributedId(f.get(null)).toArr();
-                    bufSize += 4 + did.length;
+                    bufSize += /*4 +*/ did.length;
                     dids[at++] = did;
                 }
             }
@@ -196,7 +196,7 @@ public class StaticFieldHelper {
                     ret.putDouble(f.getDouble(null));
                 } else {
                     // this is an object type
-                    ret.putInt(dids[at].length);
+                    //ret.putInt(dids[at].length);
                     ret.put(dids[at++]);
                 }
             }
@@ -237,9 +237,9 @@ public class StaticFieldHelper {
                 } else {
                     // this is an object type
                     int length = buf.getInt();
-                    byte[] did = new byte[length];
-                    buf.get(did, 0, length);
-                    Object o = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(did));
+                    //byte[] did = new byte[length];
+                    //buf.get(did, 0, length);
+                    Object o = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(buf));
                     f.set(null, o);
                 }
             }

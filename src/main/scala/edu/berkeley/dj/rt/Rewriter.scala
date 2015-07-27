@@ -672,6 +672,17 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     })
   }
 
+  private def checkIsAThrowable(cls: CtClass): Boolean = {
+    var at = cls
+    while(at != null) {
+      if(cls.getName == "java.lang.Throwable") {
+        return true
+      }
+      at = cls.getSuperclass
+    }
+    false
+  }
+
   private def findBaseClass(classname: String): CtClass = {
     try {
       basePool get classname
@@ -761,7 +772,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       // don't think tha this is ever used
 
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
-      modifyClass(cls)
+      //if(!checkIsAThrowable(cls))
+        modifyClass(cls)
+      //else {
+      //  println("??")
+      //}
     } else if (classname.startsWith(config.internalPrefix)) {
       modifyInternalClass(cls)
     }

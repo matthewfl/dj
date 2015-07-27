@@ -35,6 +35,8 @@ object SimpleMapthing {
       Thread.sleep(1000)
     }
 
+    val thing = new makeThisRpc
+
     for(h <- InternalInterface.getInternalInterface.getAllHosts) {
       println(s"see host $h")
       if(InternalInterface.getInternalInterface.getSelfId != h) {
@@ -63,6 +65,7 @@ object SimpleMapthing {
             synclock.synchronized { synclock.wait() }
             InternalInterface.debug("remote debug stuff")
             InternalInterface.debug("the some stuff is "+someTest.a)
+            thing.something
             999
           }
         }

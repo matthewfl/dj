@@ -140,6 +140,7 @@ private [rt] class ClientManager (val config: Config) extends Manager {
     } catch {
       case e: InvocationTargetException => {
         println("some internal error on client " + e.getTargetException)
+        e.printStackTrace()
         throw e
       }
     }
