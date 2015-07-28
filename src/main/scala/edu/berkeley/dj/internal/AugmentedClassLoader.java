@@ -1,5 +1,7 @@
 package edu.berkeley.dj.internal;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -38,13 +40,16 @@ public class AugmentedClassLoader {
 
     public static Class<?> getPrimitiveClass(String name) throws Throwable {
         // this method is package private, but we are rewriting some classes that need to use it
+        if(!(name.equals("void") || name.equals("boolean") || name.equals("char") ||
+             name.equals("byte") || name.equals("short") || name.equals("int") ||
+             name.equals("long") || name.equals("float") || name.equals("double")))
+            return null;
         try {
             Method mth = Class.class.getDeclaredMethod("getPrimitiveClass", new Class[]{String.class});
             mth.setAccessible(true);
             return (Class<?>)mth.invoke(null, name);
         }
-        catch(NoSuchMethodException e) {}
-        catch(IllegalAccessException e) {}
+        catch(NoSuchMethodException|IllegalAccessException e) {}
         catch(InvocationTargetException e) { throw e.getTargetException(); }
         return null;
     }
@@ -67,6 +72,7 @@ public class AugmentedClassLoader {
     public static void checkClassLoaderPermission(ClassLoader cl, Class<?> caller) {
         // this is package private, but we want to access it
         // TODO:
+        throw new NotImplementedException();
     }
 
 }

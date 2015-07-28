@@ -304,14 +304,14 @@ public class DistributedObjectHelper {
                 String name = new String(buf.array(), buf.position(), length);
                 buf.position(buf.position() + length);
                 try {
+                    // returns null if name is not a primitive class type
+                    Class<?> ret = AugmentedClassLoader.getPrimitiveClass(name);
+                    if(ret != null)
+                        return ret;
+                } catch(Throwable e) {}
+                try {
                     return Class.forName(name);
                 } catch(ClassNotFoundException e) {
-                    try {
-                        // try and load the primitive type classes such as "long"
-                        if (!name.contains(".")) {
-                            return AugmentedClassLoader.getPrimitiveClass(name);
-                        }
-                    } catch (Throwable t) { }
                     throw new RuntimeException(e);
                 }
             }
