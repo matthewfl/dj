@@ -101,8 +101,10 @@ public class DistributedObjectHelper {
             lastKnownHost = b.getInt();
             if(lastKnownHost == -2) {
                 int length = b.getInt();
-                if(length == b.limit() - 8) {
-                    extradata = b.array();
+                byte[] barr = b.array();
+                if(length == barr.length - 8) {
+                    assert(b.position() == 8);
+                    extradata = barr;
                 } else {
                     extradata = new byte[length + 8];
                     b.position(b.position() - 8);

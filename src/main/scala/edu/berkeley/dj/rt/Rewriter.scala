@@ -675,10 +675,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   private def checkIsAThrowable(cls: CtClass): Boolean = {
     var at = cls
     while(at != null) {
-      if(cls.getName == "java.lang.Throwable") {
+      if(at.getName == "java.lang.Throwable") {
         return true
       }
-      at = cls.getSuperclass
+      at = at.getSuperclass
     }
     false
   }
@@ -772,11 +772,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       // don't think tha this is ever used
 
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
-      //if(!checkIsAThrowable(cls))
+      if(!checkIsAThrowable(cls))
         modifyClass(cls)
-      //else {
-      //  println("??")
-      //}
+      else {
+        println("??")
+      }
     } else if (classname.startsWith(config.internalPrefix)) {
       modifyInternalClass(cls)
     }
