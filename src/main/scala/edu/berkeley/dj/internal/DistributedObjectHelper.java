@@ -12,11 +12,12 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread", "java/nio/Buffer"})
+@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread", "java/nio/Buffer", "java/lang/System"})
 public class DistributedObjectHelper {
 
     private DistributedObjectHelper() {}
 
+    // TODO: make this _not_ extend ObjectBase
     static public final class DistributedObjectId implements Serializable {
         int lastKnownHost;
         UUID identifier;
@@ -103,7 +104,8 @@ public class DistributedObjectHelper {
                 if(length == b.limit() - 8) {
                     extradata = b.array();
                 } else {
-                    extradata = new byte[length];
+                    extradata = new byte[length + 8];
+                    b.position(b.position() - 8);
                     b.get(extradata);
                 }
             } else {
@@ -188,12 +190,14 @@ public class DistributedObjectHelper {
 
     static Object constructFinalObject(ByteBuffer buf) {
         try {
-            buf.rewind();
+            //buf.rewind();
+            //buf.position(buf.position() - 4); // go back to the start of the message
             int objectIdent = buf.getInt();
             assert (objectIdent == -2); // check that this is of the correct type
+            int msglen = buf.getInt();
             int cnamelen = buf.getInt();
-            String cname = new String(buf.array(), 8, cnamelen);
-            buf.position(cnamelen + 8);
+            String cname = new String(buf.array(), buf.position(), cnamelen);
+            buf.position(cnamelen + buf.position());
             Class<?> cls = Class.forName(cname);
             finalObjectConverter<?> conv = finalObjectConverters.get(cls);
             if (conv == null)
@@ -220,8 +224,9 @@ public class DistributedObjectHelper {
         }
         int size = conv.getSizeO(o);
         byte[] cname = cls.getName().getBytes();
-        ByteBuffer a = ByteBuffer.allocate(4 + 4 + cname.length + size);
+        ByteBuffer a = ByteBuffer.allocate(4 + 4 + 4 + cname.length + size);
         a.putInt(-2);
+        a.putInt(cname.length + size + 4);
         a.putInt(cname.length);
         a.put(cname);
         conv.makeIdO(o, a);

@@ -11,6 +11,8 @@ public class SimpleScratch {
 
         System.out.println("hello");
 
+        Thread.sleep(60000);
+
     }
 
 }
