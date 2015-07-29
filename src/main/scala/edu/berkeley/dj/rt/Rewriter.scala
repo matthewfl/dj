@@ -473,7 +473,15 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           typ = typ.asInstanceOf[CtArray].getComponentType
           cnt += 1
         }
-        val cname = config.arrayprefix + typ.getName + "_" + cnt
+        val name = if(typ.isPrimitive) {
+          typ.getName match {
+            case "int" => "Integer"
+            case s: String => {
+              s(0).toUpper + s.substring(1)
+            }
+          }
+        } else typ.getName
+        val cname = config.arrayprefix + name + "_" + cnt
         f.setType(runningPool.get(cname))
       }
     }
@@ -688,17 +696,32 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     })
   }
 
+  private lazy val baseArrayCls = runningPool.get(config.arrayprefix + "Base")
+
   private def makeArrayClass(clsname: String, baseType: String, cnt: Int): CtClass = {
-    val cls = runningPool.makeClass(clsname, runningPool.get(config.arrayprefix + "Base"))
-    val wrapType = baseType match {
-      case "Byte" => "byte"
-      case s => s
+    val (wrapType, supcls) = baseType match {
+      case "Byte" => ("byte", null)
+      case "Char" => ("char", null)
+      case "Short" => ("short", null)
+      case "Integer" => ("int", null)
+      case "Long" => ("long", null)
+      case "Float" => ("float", null)
+      case "Double" => ("double", null)
+      case s => {
+        val scls = runningPool.get(baseType)
+        if(scls.getName == config.internalPrefix + "ObjectBase")
+          (s, null)
+        else
+          (s, scls.getSuperclass)
+      }
     }
+
+    val cls = runningPool.makeClass(clsname, if(supcls != null) supcls else baseArrayCls)
 
     if(cnt > 1) {
       cls.addField(CtField.make(s"private ${config.arrayprefix + baseType + "_" + (cnt - 1)} ir[];", cls))
     } else {
-      cls.addField(CtField.make(s"private ${wrapType} ir[];", cls))
+      cls.addField(CtField.make(s"private ${wrapType}[] ir;", cls))
     }
     val length_mth =
       s"""
@@ -725,7 +748,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     } else {
       val get_mth =
         s"""
-           public ${baseType} get(int i) {
+           public ${wrapType} get(int i) {
              return ir[i];
            }
          """
@@ -733,12 +756,13 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
       val set_mth =
         s"""
-           public void set(int i, ${baseType} v) {
+           public void set(int i, ${wrapType} v) {
              ir[i] = v;
            }
          """
       cls.addMethod(CtMethod.make(set_mth, cls))
     }
+    cls.addConstructor(CtNewConstructor.defaultConstructor(cls))
     val static_constructor =
       s"""
          public static ${clsname} makeInstance_1(int i) {

@@ -7,6 +7,8 @@ import edu.berkeley.dj.internal.InternalInterface;
  */
 public class SimpleScratch {
 
+    static byte[] test;
+
     public static void main(String[] args) throws Throwable {
 
         //Thread.sleep(1000);
@@ -19,6 +21,8 @@ public class SimpleScratch {
 
         InternalInterface.debug("hello ii");
 
+
+        test = new byte[5];
     }
 
 }
