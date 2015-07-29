@@ -4,9 +4,9 @@ package edu.berkeley.dj.internal;
 /**
  * Created by matthewfl
  */
-public class ArrayManager {
+public class ArrayHelpers {
 
-    private ArrayManager() {}
+    private ArrayHelpers() {}
 
     static public int length_A(Object arr[]) {
         return arr.length;
@@ -43,6 +43,12 @@ public class ArrayManager {
     static public int length_D(double arr[]) {
         return arr.length;
     }
+
+    static public int length(Object arr) {
+        // have to determine the type of the array and then cast it to make the array length work...
+        return 0;
+    }
+
 
     static public void store_A(int ind, Object v, Object arr[]) {
         arr[ind] = v;

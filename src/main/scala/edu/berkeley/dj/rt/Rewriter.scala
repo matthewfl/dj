@@ -464,6 +464,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
+  def modifyArrays(cls: CtClass): Unit = {
+    for(f <- cls.getDeclaredFields) {
+      if(f.getType.isArray) {
+        var typ = f.getType
+        var cnt = 0
+        while(typ.isArray) {
+          typ = typ.asInstanceOf[CtArray].getComponentType
+          cnt += 1
+        }
+        val cname = config.arrayprefix + typ.getName + "_" + cnt
+        f.setType(runningPool.get(cname))
+      }
+    }
+  }
+
 
   private def modifyClass(cls: CtClass): Unit = {
     //println("rewriting class: " + cls.getName)
@@ -474,6 +489,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     modifyStaticInit(cls)
     rewriteUsedClasses(cls)
     addRPCRedirects(cls)
+    modifyArrays(cls)
     transformClass(cls)
   }
 
@@ -672,6 +688,70 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     })
   }
 
+  private def makeArrayClass(clsname: String, baseType: String, cnt: Int): CtClass = {
+    val cls = runningPool.makeClass(clsname, runningPool.get(config.arrayprefix + "Base"))
+    val wrapType = baseType match {
+      case "Byte" => "byte"
+      case s => s
+    }
+
+    if(cnt > 1) {
+      cls.addField(CtField.make(s"private ${config.arrayprefix + baseType + "_" + (cnt - 1)} ir[];", cls))
+    } else {
+      cls.addField(CtField.make(s"private ${wrapType} ir[];", cls))
+    }
+    val length_mth =
+      s"""
+         public int length() { return ir.length; }
+       """
+    cls.addMethod(CtMethod.make(length_mth, cls))
+
+    if(cnt > 1) {
+      val get_mth =
+        s"""
+           public ${config.arrayprefix + baseType + "_" + (cnt - 1)} get(int i) {
+             return ir[i];
+           }
+         """
+      cls.addMethod(CtMethod.make(get_mth, cls))
+
+      val set_mth =
+        s"""
+           public void (int i, ${config.arrayprefix + baseType + "_" (cnt - 1)} v) {
+             ir[i] = v;
+           }
+          """
+      cls.addMethod(CtMethod.make(set_mth, cls))
+    } else {
+      val get_mth =
+        s"""
+           public ${baseType} get(int i) {
+             return ir[i];
+           }
+         """
+      cls.addMethod(CtMethod.make(get_mth, cls))
+
+      val set_mth =
+        s"""
+           public void set(int i, ${baseType} v) {
+             ir[i] = v;
+           }
+         """
+      cls.addMethod(CtMethod.make(set_mth, cls))
+    }
+    val static_constructor =
+      s"""
+         public static ${clsname} makeInstance_1(int i) {
+           ${clsname} ret = new ${clsname}();
+           ret.ir = new ${wrapType}[i];
+           return ret;
+         }
+       """
+    cls.addMethod(CtMethod.make(static_constructor, cls))
+
+    cls
+  }
+
   private def checkIsAThrowable(cls: CtClass): Boolean = {
     var at = cls
     while(at != null) {
@@ -732,8 +812,23 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       return new CtArray(classname, runningPool)
     }
 
+
     val cls = findBaseClass(classname)
     //println("create class name:" + classname)
+
+
+    if(classname.startsWith(config.arrayprefix)) {
+      if(cls != null) {
+        reassociateClass(cls)
+        modifyInternalClass(cls)
+        return cls
+      }
+      val uindx = classname.lastIndexOf("_")
+      val sp = classname.substring(0, uindx).drop(config.arrayprefix.size)
+      val cnt = classname.substring(uindx + 1).toInt
+      return makeArrayClass(classname, sp, cnt)
+
+    }
 
     // for edu.berkeley.dj.internal.coreclazz.
     if (classname.startsWith(config.coreprefix)) {

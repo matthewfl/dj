@@ -221,7 +221,8 @@ public class DistributedObjectHelper {
                 cls = Throwable.class;
                 conv = finalObjectConverters.get(cls);
             } else {
-                throw new RuntimeException("could not find a converter for class: " + cls.getName());
+                InternalInterface.debug("failed class convert " + cls.getName());
+                  throw new RuntimeException("could not find a converter for class: " + cls.getName());
             }
         }
         int size = conv.getSizeO(o);
