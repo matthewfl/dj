@@ -45,9 +45,13 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
 
 
     if(c == ARRAYLENGTH) {
-      //it.writeByte(NOP, pos)
-      //it.insertGapAt(pos, 2, false)
-      //it.writeByte
+      val clsref = cp.addClassInfo(config.arrayprefix + "Base")
+      val mthref = cp.addMethodrefInfo(clsref, "length", s"(L${(config.arrayprefix + "Base").replace(".","/")};)I")
+      it.writeByte(NOP, pos)
+      it.insertGapAt(pos, 2, false)
+
+      it.writeByte(INVOKESTATIC, pos)
+      it.write16bit(mthref, pos + 1)
     } else if(c == NEWARRAY) {
       // this is for a primitive type
       val typ = it.byteAt(pos + 1)
@@ -64,7 +68,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
         case _ => throw new NotImplementedError()
       }
       val clsref = cp.addClassInfo(config.arrayprefix + tname + "_1")
-      val mthref = cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)${(config.arrayprefix + tname + "_1").replace(".","/")};")
+      val mthref = cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${(config.arrayprefix + tname + "_1").replace(".","/")};")
 
       it.writeByte(NOP, pos)
       it.writeByte(NOP, pos + 1)

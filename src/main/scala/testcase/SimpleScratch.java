@@ -22,7 +22,9 @@ public class SimpleScratch {
         InternalInterface.debug("hello ii");
 
 
-        test = new byte[5];
+        test = new byte[6];
+
+        byte[] qq = new byte[5];
     }
 
 }

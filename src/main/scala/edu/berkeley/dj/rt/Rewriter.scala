@@ -174,7 +174,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
     codeConverter.addTransform(new SpecialConverter(codeConverter.prevTransforms))
 
-    //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+    //if(cls.getName.contains("Scratch")) // TODO: remove
+    //  codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
 
     codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config, this))
     codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
@@ -465,6 +466,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   }
 
   def modifyArrays(cls: CtClass): Unit = {
+
+    if(!cls.getName.contains("SimpleScratch"))
+      return
+
     for(f <- cls.getDeclaredFields) {
       if(f.getType.isArray) {
         var typ = f.getType
@@ -485,6 +490,44 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         f.setType(runningPool.get(cname))
       }
     }
+
+    val codeConverter = new CodeConverter
+    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+    cls.instrument(codeConverter)
+
+    val mregx = """(\[+)([ZCBSIJFD]|L.*?;)""".r
+
+    val cp = cls.getClassFile.getConstPool
+    for(i <- 0 until cp.getSize) {
+      try {
+        val typ_idx = cp.getNameAndTypeDescriptor(i)
+        val str = cp.getUtf8Info(typ_idx)
+        if(str.contains("[")) {
+          val rstr = mregx.replaceAllIn(str, mt => {
+            val arr_depth = mt.group(1).length
+            val typ = if(mt.group(2).length == 1) {
+              mt.group(2) match {
+                case "Z" => "Boolean"
+                case "C" => "Char"
+                case "B" => "Byte"
+                case "I" => "Integer"
+                case "J" => "Long"
+                case "F" => "Float"
+                case "D" => "Double"
+                case _ => throw new NotImplementedError()
+              }
+            } else {
+              val s = mt.group(2)
+              s.substring(1, s.length - 1)//.replace("/", ".")
+            }
+            "L"+(config.arrayprefix + typ + "_" + arr_depth).replace(".", "/")
+          })
+        }
+      } catch {
+        case e: ClassCastException => {}
+      }
+    }
+
   }
 
 
@@ -765,7 +808,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     cls.addConstructor(CtNewConstructor.defaultConstructor(cls))
     val static_constructor =
       s"""
-         public static ${clsname} makeInstance_1(int i) {
+         public static ${clsname} newInstance_1(int i) {
            ${clsname} ret = new ${clsname}();
            ret.ir = new ${wrapType}[i];
            return ret;
