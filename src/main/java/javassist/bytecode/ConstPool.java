@@ -629,6 +629,11 @@ public final class ConstPool {
         return utf.string;
     }
 
+    public void setUtf8Info(int index, String val) {
+        Utf8Info utf = (Utf8Info)getItem(index);
+        utf.string = val;
+    }
+
     /**
      * Reads the <code>reference_kind</code> field of the
      * <code>CONSTANT_MethodHandle_info</code> structure

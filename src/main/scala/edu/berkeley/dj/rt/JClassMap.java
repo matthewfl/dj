@@ -133,6 +133,7 @@ public class JClassMap extends ClassMap {
             }
         } catch(ClassCastException e) {
             System.err.println("Some how the get method on the class rewriter failed to cast to string");
+            throw new RuntimeException(e);
         }
         return super.get(jvn);
     }

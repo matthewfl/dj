@@ -470,15 +470,15 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(!cls.getName.contains("SimpleScratch"))
       return
 
-    for(f <- cls.getDeclaredFields) {
-      if(f.getType.isArray) {
+    /*for(f <- cls.getDeclaredFields) {
+      if (f.getType.isArray) {
         var typ = f.getType
         var cnt = 0
-        while(typ.isArray) {
+        while (typ.isArray) {
           typ = typ.asInstanceOf[CtArray].getComponentType
           cnt += 1
         }
-        val name = if(typ.isPrimitive) {
+        val name = if (typ.isPrimitive) {
           typ.getName match {
             case "int" => "Integer"
             case s: String => {
@@ -491,13 +491,22 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
     }
 
+    for(m <- cls.getDeclaredMethods) {
+      m.set
+    }*/
+
     val codeConverter = new CodeConverter
     codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+    //codeConverter.addTransform(new ArraysTypeRefs(codeConverter.prevTransforms, config))
+
+
+    cls.replaceClassName(new ArrayClassMap(this))
+
     cls.instrument(codeConverter)
 
     val mregx = """(\[+)([ZCBSIJFD]|L.*?;)""".r
 
-    val cp = cls.getClassFile.getConstPool
+    /*val cp = cls.getClassFile.getConstPool
     for(i <- 0 until cp.getSize) {
       try {
         val typ_idx = cp.getNameAndTypeDescriptor(i)
@@ -520,15 +529,42 @@ private[rt] class Rewriter (private val manager : MasterManager) {
               val s = mt.group(2)
               s.substring(1, s.length - 1)//.replace("/", ".")
             }
-            "L"+(config.arrayprefix + typ + "_" + arr_depth).replace(".", "/")
+            "L"+(config.arrayprefix + typ + "_" + arr_depth).replace(".", "/") + ";"
           })
+          cp.setUtf8Info(i, rstr)
         }
       } catch {
         case e: ClassCastException => {}
+        case e: NullPointerException => {}
       }
-    }
+    }*/
+
+    //cls.instrument(new CodeConverter)
+
 
   }
+
+  private val arrayTypeRegex = """(\[+)([ZCBSIJFD]|L.*?;)""".r
+
+  private[rt] def rewriteArrayType(typ: String) = arrayTypeRegex.replaceAllIn(typ, mt => {
+    val arr_depth = mt.group(1).length
+    val typ = if(mt.group(2).length == 1) {
+      mt.group(2) match {
+        case "Z" => "Boolean"
+        case "C" => "Char"
+        case "B" => "Byte"
+        case "I" => "Integer"
+        case "J" => "Long"
+        case "F" => "Float"
+        case "D" => "Double"
+        case _ => throw new NotImplementedError()
+      }
+    } else {
+      val s = mt.group(2)
+      s.substring(1, s.length - 1)//.replace("/", ".")
+    }
+    "L"+(config.arrayprefix + typ + "_" + arr_depth).replace(".", "/") + ";"
+  })
 
 
   private def modifyClass(cls: CtClass): Unit = {
@@ -539,8 +575,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     modifyStaticInit(cls)
     rewriteUsedClasses(cls)
-    addRPCRedirects(cls)
     modifyArrays(cls)
+    addRPCRedirects(cls)
     transformClass(cls)
   }
 

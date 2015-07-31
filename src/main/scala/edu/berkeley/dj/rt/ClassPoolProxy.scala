@@ -53,6 +53,8 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
     } catch {
       case e: Throwable => {
         println("rewriter failed to create class: " + e)
+        if(classname.contains("testcase"))
+          e.printStackTrace()
         null
       }
     }
