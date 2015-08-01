@@ -16,6 +16,7 @@
 
 package javassist.bytecode;
 
+import edu.berkeley.dj.rt.ArrayClassMap;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtPrimitiveType;
@@ -203,6 +204,14 @@ public class Descriptor {
     public static String rename(String desc, Map map) {
         if (map == null)
             return desc;
+
+        // TODO: remove fcking hack
+        if(map instanceof ArrayClassMap) {
+            String res = (String)map.get(desc);
+            if(res != null)
+                return res;
+            return desc;
+        }
 
         StringBuffer newdesc = new StringBuffer();
         int head = 0;

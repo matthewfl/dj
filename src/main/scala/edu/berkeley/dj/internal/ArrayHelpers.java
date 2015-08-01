@@ -1,6 +1,10 @@
 package edu.berkeley.dj.internal;
 
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
+import java.lang.reflect.Field;
+
 /**
  * Created by matthewfl
  */
@@ -120,5 +124,81 @@ public class ArrayHelpers {
 
     static public double get_D(int ind, double arr[]) {
         return arr[ind];
+    }
+
+
+    static public Object makeDJArray(Object[] obj) {
+        try {
+            Class<?> acls = obj.getClass();
+            if (!acls.isArray()) {
+                throw new RuntimeException("Is not an array type" + acls.getName());
+            }
+            Class<?> cls = acls.getComponentType();
+            if (cls.isArray()) {
+                // We don not support multiple dimention arrays yet
+                throw new NotImplementedException();
+            }
+            String newname = "edu.berkeley.dj.internal.arrayclazz." + cls.getName() + "_1";
+            Class<?> ncls = Class.forName(newname);
+            Object ret = ncls.newInstance();
+            Field irf = ncls.getField("ir");
+            irf.setAccessible(true);
+            irf.set(ret, obj);
+            return ret;
+        } catch (ClassNotFoundException|
+                IllegalAccessException|
+                NoSuchFieldException|
+                InstantiationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static public Object makeDJArray(boolean[] arr) {
+        return makeDJArrayPrimitive("Boolean", arr);
+    }
+
+    static public Object makeDJArray(byte[] arr) {
+        return makeDJArrayPrimitive("Byte", arr);
+    }
+
+    static public Object makeDJArray(char[] arr) {
+        return makeDJArrayPrimitive("Char", arr);
+    }
+
+    static public Object makeDJArray(short[] arr) {
+        return makeDJArrayPrimitive("Short", arr);
+    }
+
+    static public Object makeDJArray(int[] arr) {
+        return makeDJArrayPrimitive("Integer", arr);
+    }
+
+    static public Object makeDJArray(long[] arr) {
+        return makeDJArrayPrimitive("Long", arr);
+    }
+
+    static public Object makeDJArray(float[] arr) {
+        return makeDJArrayPrimitive("Float", arr);
+    }
+
+    static public Object makeDJArray(double[] arr) {
+        return makeDJArrayPrimitive("Double", arr);
+    }
+
+    static private Object makeDJArrayPrimitive(String type, Object arr) {
+        try {
+            String newname = "edu.berkeley.dj.internal.arrayclazz." + type + "_1";
+            Class<?> ncls = Class.forName(newname);
+            Object ret = ncls.newInstance();
+            Field irf = ncls.getField("ir");
+            irf.setAccessible(true);
+            irf.set(ret, arr);
+            return ret;
+        } catch (ClassNotFoundException|
+                IllegalAccessException|
+                NoSuchFieldException|
+                InstantiationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
