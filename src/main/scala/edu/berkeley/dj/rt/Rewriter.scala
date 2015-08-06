@@ -197,11 +197,15 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private def monitorMethodsRewrite(cls: CtClass): Unit = {
     for(m <- cls.getDeclaredMethods) {
-      //m.setWrappedBody()
+      if(Modifier.isSynchronized(m.getModifiers)) {
+      }
+
     }
     // TODO:
     ???
   }
+
+  private def baseFieldCount = 10
 
   private val fieldCount = new mutable.HashMap[String,Int]()
 
@@ -210,10 +214,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       10
     else {
       if(fieldCount.contains(classname)) {
-        fieldCount.getOrElse(classname, 10)
+        fieldCount.getOrElse(classname, baseFieldCount)
       } else {
         runningPool.get(classname)
-        fieldCount.getOrElse(classname, 10)
+        fieldCount.getOrElse(classname, baseFieldCount)
       }
     }
   }
@@ -778,20 +782,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   private lazy val baseArrayCls = runningPool.get(config.arrayprefix + "Base")
 
   private def makeArrayClass(clsname: String, baseType: String, cnt: Int): CtClass = {
-    val (wrapType, supcls) = baseType match {
-      case "Byte" => ("byte", null)
-      case "Char" => ("char", null)
-      case "Short" => ("short", null)
-      case "Integer" => ("int", null)
-      case "Long" => ("long", null)
-      case "Float" => ("float", null)
-      case "Double" => ("double", null)
+    val (wrapType, supcls, jvmtyp, isPrimitive) = baseType match {
+      case "Byte" => ("byte", null, "B", true)
+      case "Char" => ("char", null, "C", true)
+      case "Short" => ("short", null, "S", true)
+      case "Integer" => ("int", null, "I", true)
+      case "Long" => ("long", null, "J", true)
+      case "Float" => ("float", null, "F", true)
+      case "Double" => ("double", null, "D", true)
+      case "Boolean" => ("boolean", null, "Z", true)
       case s => {
         val scls = runningPool.get(baseType)
-        if(scls.getName == config.internalPrefix + "ObjectBase")
-          (s, null)
+        if(scls.getName == config.internalPrefix + "ObjectBase" || scls.getName == "java.lang.Object")
+          (s, null, "A", false)
         else
-          (s, scls.getSuperclass)
+          (s, runningPool.get(config.arrayprefix + scls.getSuperclass.getName), "A", false)
       }
     }
 
@@ -804,31 +809,78 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
     val length_mth =
       s"""
-         public int length() { return ir.length; }
+         public int length() {
+           if((__dj_class_mode & 0x01) != 0) {
+             return __dj_class_manager.readField_I(9);
+           } else {
+             return ir.length;
+           }
+         }
        """
     cls.addMethod(CtMethod.make(length_mth, cls))
 
     if(cnt > 1) {
+      val typname = config.arrayprefix + baseType + "_" + (cnt - 1)
       val get_mth =
         s"""
-           public ${config.arrayprefix + baseType + "_" + (cnt - 1)} get(int i) {
-             return ir[i];
+           public ${typname} get(int i) {
+             if((__dj_class_mode & 0x01) != 0) {
+               return (${typname}) __dj_class_manager.readField_A(i + ${baseFieldCount});
+             } else {
+               return ir[i];
+             }
            }
          """
       cls.addMethod(CtMethod.make(get_mth, cls))
 
       val set_mth =
         s"""
-           public void (int i, ${config.arrayprefix + baseType + "_" (cnt - 1)} v) {
-             ir[i] = v;
+           public void (int i, ${typname} v) {
+             if((__dj_class_mode & 0x02) != 0) {
+               __dj_class_manager.writeField_A(i + ${baseFieldCount}, v);
+             } else {
+               ir[i] = v;
+             }
            }
           """
       cls.addMethod(CtMethod.make(set_mth, cls))
+
+      val dj_write_mth =
+        s"""
+           public void __dj_writeFieldID_A(int id, Object v) {
+             if(id < ${baseFieldCount}) {
+               super.__dj_writeFieldID_A(id, v);
+             } else {
+               ir[id - ${baseFieldCount}] = (${typname})v;
+             }
+           }
+         """
+      cls.addMethod(CtMethod.make(dj_write_mth, cls))
+
+      val dj_read_mth =
+        s"""
+           public Object __dj_readFieldID_A(int id) {
+             if(id < ${baseFieldCount}) {
+               return super.__dj_readFieldID_A(id);
+             } else {
+               return ir[id - ${baseFieldCount}];
+             }
+           }
+         """
+      cls.addMethod(CtMethod.make(dj_read_mth, cls))
+
     } else {
+
+      val refname = if(isPrimitive) wrapType else "Object"
+
       val get_mth =
         s"""
            public ${wrapType} get(int i) {
-             return ir[i];
+             if((__dj_class_mode & 0x1) != 0) {
+               return (${wrapType}) __dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount});
+             } else {
+               return ir[i];
+             }
            }
          """
       cls.addMethod(CtMethod.make(get_mth, cls))
@@ -836,10 +888,39 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val set_mth =
         s"""
            public void set(int i, ${wrapType} v) {
-             ir[i] = v;
+             if((__dj_class_mode & 0x2) != 0) {
+               __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, v);
+             } else {
+               ir[i] = v;
+             }
            }
          """
       cls.addMethod(CtMethod.make(set_mth, cls))
+
+      val dj_read_mth =
+        s"""
+           public ${refname} __dj_readFieldID_${jvmtyp} (int id) {
+             if(id < ${baseFieldCount}) {
+               return super.__dj_readFieldID_${jvmtyp}(id);
+             } else {
+               return ir[id - ${baseFieldCount}];
+             }
+           }
+         """
+      cls.addMethod(CtMethod.make(dj_read_mth, cls))
+
+      val dj_write_mth =
+        s"""
+           public void __dj_writeFieldID_${jvmtyp} (int id, ${refname} val) {
+             if(id < ${baseFieldCount}) {
+               super.__dj_writeFieldID_${jvmtyp}(id, val);
+             } else {
+               ir[id - ${baseFieldCount}] = val;
+             }
+           }
+         """
+      cls.addMethod(CtMethod.make(dj_write_mth, cls))
+
     }
     cls.addConstructor(CtNewConstructor.defaultConstructor(cls))
     val static_constructor =

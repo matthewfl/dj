@@ -1,6 +1,7 @@
 package edu.berkeley.dj.internal;
 
 
+import edu.berkeley.dj.internal.arrayclazz.Base;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.lang.reflect.Field;
@@ -12,7 +13,7 @@ public class ArrayHelpers {
 
     private ArrayHelpers() {}
 
-    static public int length_A(Object arr[]) {
+    /*static public int length_A(Object arr[]) {
         return arr.length;
     }
 
@@ -126,6 +127,11 @@ public class ArrayHelpers {
         return arr[ind];
     }
 
+*/
+
+    /*static public int getLength(ObjectBase arr) {
+
+    }*/
 
     static public Object makeDJArray(Object[] obj) {
         try {
@@ -141,7 +147,7 @@ public class ArrayHelpers {
             String newname = "edu.berkeley.dj.internal.arrayclazz." + cls.getName() + "_1";
             Class<?> ncls = Class.forName(newname);
             Object ret = ncls.newInstance();
-            Field irf = ncls.getField("ir");
+            Field irf = ncls.getDeclaredField("ir");
             irf.setAccessible(true);
             irf.set(ret, obj);
             return ret;
@@ -200,5 +206,11 @@ public class ArrayHelpers {
                 InstantiationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    static public Object makeNativeArray(Base arr) {
+        if((arr.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
+            throw new NotImplementedException();
+        throw new NotImplementedException();
     }
 }

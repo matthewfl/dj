@@ -1,9 +1,11 @@
 package edu.berkeley.dj.internal.arrayclazz;
 
+import edu.berkeley.dj.internal.ObjectBase;
+
 /**
  * Created by matthewfl
  */
-public abstract class Base {
+public abstract class Base extends ObjectBase {
 
     abstract int length();
 
@@ -15,4 +17,12 @@ public abstract class Base {
     //static public Base ANewArray(int )
 
     static int length(Base b) { return b.length(); }
+
+    public int __dj_readFieldID_I(int id) {
+        if(id == 9) {
+            return length();
+        } else {
+            return super.__dj_readFieldID_I(id);
+        }
+    }
 }
