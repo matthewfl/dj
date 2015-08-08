@@ -1,7 +1,7 @@
 package edu.berkeley.dj.internal;
 
 
-import edu.berkeley.dj.internal.arrayclazz.Base;
+import edu.berkeley.dj.internal.arrayclazz.Base_impl;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.lang.reflect.Field;
@@ -144,7 +144,7 @@ public class ArrayHelpers {
                 // We don not support multiple dimention arrays yet
                 throw new NotImplementedException();
             }
-            String newname = "edu.berkeley.dj.internal.arrayclazz." + cls.getName() + "_1";
+            String newname = "edu.berkeley.dj.internal.arrayclazz." + cls.getName() + "_impl_1";
             Class<?> ncls = Class.forName(newname);
             Object ret = ncls.newInstance();
             Field irf = ncls.getDeclaredField("ir");
@@ -208,7 +208,7 @@ public class ArrayHelpers {
         }
     }
 
-    static public Object makeNativeArray(Base arr) {
+    static public Object makeNativeArray(Base_impl arr) {
         if((arr.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             throw new NotImplementedException();
         throw new NotImplementedException();

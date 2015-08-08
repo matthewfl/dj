@@ -779,34 +779,45 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     })
   }
 
-  private lazy val baseArrayCls = runningPool.get(config.arrayprefix + "Base")
+  private lazy val baseArrayClsImpl = runningPool.get(config.arrayprefix + "Base_impl")
+  private lazy val baseArrayClsInter = runningPool.get(config.arrayprefix + "Base")
 
-  private def makeArrayClass(clsname: String, baseType: String, cnt: Int): CtClass = {
-    val (wrapType, supcls, jvmtyp, isPrimitive) = baseType match {
-      case "Byte" => ("byte", null, "B", true)
-      case "Char" => ("char", null, "C", true)
-      case "Short" => ("short", null, "S", true)
-      case "Integer" => ("int", null, "I", true)
-      case "Long" => ("long", null, "J", true)
-      case "Float" => ("float", null, "F", true)
-      case "Double" => ("double", null, "D", true)
-      case "Boolean" => ("boolean", null, "Z", true)
+  private def makeArrayClass(clsname: String): CtClass = {
+    val uindx = clsname.lastIndexOf("_")
+    val cnt = clsname.substring(uindx + 1).toInt
+    val makeInterface = !clsname.endsWith(s"_impl_$cnt")
+    val baseType = if(makeInterface) {
+      clsname.substring(config.arrayprefix.size, uindx)
+    } else {
+      clsname.substring(config.arrayprefix.size, uindx - 5)
+    }
+
+    val (wrapType, jvmtyp, isPrimitive) = baseType match {
+      case "Byte" => ("byte", "B", true)
+      case "Char" => ("char", "C", true)
+      case "Short" => ("short", "S", true)
+      case "Integer" => ("int", "I", true)
+      case "Long" => ("long", "J", true)
+      case "Float" => ("float", "F", true)
+      case "Double" => ("double", "D", true)
+      case "Boolean" => ("boolean", "Z", true)
       case s => {
-        val scls = runningPool.get(baseType)
-        if(scls.getName == config.internalPrefix + "ObjectBase" || scls.getName == "java.lang.Object")
-          (s, null, "A", false)
-        else
-          (s, runningPool.get(config.arrayprefix + scls.getSuperclass.getName), "A", false)
+        (s, "A", false)
       }
     }
 
-    val cls = runningPool.makeClass(clsname, if(supcls != null) supcls else baseArrayCls)
-
-    if(cnt > 1) {
-      cls.addField(CtField.make(s"private ${config.arrayprefix + baseType + "_" + (cnt - 1)} ir[];", cls))
+    val cls = if(makeInterface) {
+      runningPool.makeInterface(clsname, baseArrayClsInter)
     } else {
-      cls.addField(CtField.make(s"private ${wrapType}[] ir;", cls))
+      runningPool.makeClass(clsname, baseArrayClsImpl)
     }
+
+    if(!makeInterface)
+      if(cnt > 1) {
+        cls.addField(CtField.make(s"public ${config.arrayprefix + baseType + "_" + (cnt - 1)} ir[];", cls))
+      } else {
+        cls.addField(CtField.make(s"public ${wrapType}[] ir;", cls))
+      }
     val length_mth =
       s"""
          public int length() {
@@ -817,12 +828,20 @@ private[rt] class Rewriter (private val manager : MasterManager) {
            }
          }
        """
-    cls.addMethod(CtMethod.make(length_mth, cls))
+    val length_mth_int = "int length();"
+    if(makeInterface)
+      //cls.addMethod(CtMethod.make(length_mth_int, cls))
+    {} else
+      cls.addMethod(CtMethod.make(length_mth, cls))
 
     if(cnt > 1) {
       val typname = config.arrayprefix + baseType + "_" + (cnt - 1)
-      val get_mth =
-        s"""
+      if(makeInterface) {
+        val get_mth_int = s"${typname} get(int i);"
+        cls.addMethod(CtMethod.make(get_mth_int, cls))
+      } else {
+        val get_mth =
+          s"""
            public ${typname} get(int i) {
              if((__dj_class_mode & 0x01) != 0) {
                return (${typname}) __dj_class_manager.readField_A(i + ${baseFieldCount});
@@ -831,11 +850,16 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-      cls.addMethod(CtMethod.make(get_mth, cls))
+        cls.addMethod(CtMethod.make(get_mth, cls))
+      }
 
-      val set_mth =
-        s"""
-           public void (int i, ${typname} v) {
+      if(makeInterface) {
+        val set_mth_int = s"void set(int i, ${typname} v);"
+        cls.addMethod(CtMethod.make(set_mth_int, cls))
+      } else {
+        val set_mth =
+          s"""
+           public void set(int i, ${typname} v) {
              if((__dj_class_mode & 0x02) != 0) {
                __dj_class_manager.writeField_A(i + ${baseFieldCount}, v);
              } else {
@@ -843,10 +867,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
           """
-      cls.addMethod(CtMethod.make(set_mth, cls))
+        cls.addMethod(CtMethod.make(set_mth, cls))
+      }
 
-      val dj_write_mth =
-        s"""
+      if(!makeInterface) {
+        val dj_write_mth =
+          s"""
            public void __dj_writeFieldID_A(int id, Object v) {
              if(id < ${baseFieldCount}) {
                super.__dj_writeFieldID_A(id, v);
@@ -855,10 +881,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-      cls.addMethod(CtMethod.make(dj_write_mth, cls))
+        cls.addMethod(CtMethod.make(dj_write_mth, cls))
 
-      val dj_read_mth =
-        s"""
+        val dj_read_mth =
+          s"""
            public Object __dj_readFieldID_A(int id) {
              if(id < ${baseFieldCount}) {
                return super.__dj_readFieldID_A(id);
@@ -867,14 +893,20 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-      cls.addMethod(CtMethod.make(dj_read_mth, cls))
+        cls.addMethod(CtMethod.make(dj_read_mth, cls))
+
+      }
 
     } else {
 
       val refname = if(isPrimitive) wrapType else "Object"
 
-      val get_mth =
-        s"""
+      if(makeInterface) {
+        val get_mth_int = s"${wrapType} get(int i);"
+        cls.addMethod(CtMethod.make(get_mth_int, cls))
+      } else {
+        val get_mth =
+          s"""
            public ${wrapType} get(int i) {
              if((__dj_class_mode & 0x1) != 0) {
                return (${wrapType}) __dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount});
@@ -883,10 +915,15 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-      cls.addMethod(CtMethod.make(get_mth, cls))
+        cls.addMethod(CtMethod.make(get_mth, cls))
+      }
 
-      val set_mth =
-        s"""
+      if(makeInterface) {
+        val set_mth_int = s"void set(int i, ${wrapType} v);"
+        cls.addMethod(CtMethod.make(set_mth_int, cls))
+      } else {
+        val set_mth =
+          s"""
            public void set(int i, ${wrapType} v) {
              if((__dj_class_mode & 0x2) != 0) {
                __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, v);
@@ -895,10 +932,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-      cls.addMethod(CtMethod.make(set_mth, cls))
+        cls.addMethod(CtMethod.make(set_mth, cls))
+      }
 
-      val dj_read_mth =
-        s"""
+      if(!makeInterface) {
+        val dj_read_mth =
+          s"""
            public ${refname} __dj_readFieldID_${jvmtyp} (int id) {
              if(id < ${baseFieldCount}) {
                return super.__dj_readFieldID_${jvmtyp}(id);
@@ -907,10 +946,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-      cls.addMethod(CtMethod.make(dj_read_mth, cls))
+        cls.addMethod(CtMethod.make(dj_read_mth, cls))
 
-      val dj_write_mth =
-        s"""
+        val dj_write_mth =
+          s"""
            public void __dj_writeFieldID_${jvmtyp} (int id, ${refname} val) {
              if(id < ${baseFieldCount}) {
                super.__dj_writeFieldID_${jvmtyp}(id, val);
@@ -919,19 +958,25 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-      cls.addMethod(CtMethod.make(dj_write_mth, cls))
-
+        cls.addMethod(CtMethod.make(dj_write_mth, cls))
+      }
     }
-    cls.addConstructor(CtNewConstructor.defaultConstructor(cls))
-    val static_constructor =
-      s"""
-         public static ${clsname} newInstance_1(int i) {
+    if(!makeInterface) {
+      cls.addConstructor(CtNewConstructor.defaultConstructor(cls))
+
+      // the constructors will have to go onto the classes since javassist doesn't support having static methods
+      // on interfaces
+      val inter_name = config.arrayprefix + baseType + "_" + cnt
+      val static_constructor =
+        s"""
+         public static ${inter_name} newInstance_1(int i) {
            ${clsname} ret = new ${clsname}();
            ret.ir = new ${wrapType}[i];
            return ret;
          }
        """
-    cls.addMethod(CtMethod.make(static_constructor, cls))
+      cls.addMethod(CtMethod.make(static_constructor, cls))
+    }
 
     cls
   }
@@ -1007,10 +1052,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         modifyInternalClass(cls)
         return cls
       }
-      val uindx = classname.lastIndexOf("_")
-      val sp = classname.substring(0, uindx).drop(config.arrayprefix.size)
-      val cnt = classname.substring(uindx + 1).toInt
-      return makeArrayClass(classname, sp, cnt)
+      //val uindx = classname.lastIndexOf("_")
+      //val sp = classname.substring(0, uindx).drop(config.arrayprefix.size)
+      //val cnt = classname.substring(uindx + 1).toInt
+      return makeArrayClass(classname) //, sp, cnt)
 
     }
 

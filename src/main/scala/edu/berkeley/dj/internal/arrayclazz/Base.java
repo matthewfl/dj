@@ -1,28 +1,16 @@
 package edu.berkeley.dj.internal.arrayclazz;
 
-import edu.berkeley.dj.internal.ObjectBase;
+import edu.berkeley.dj.internal.RewriteAllBut;
 
 /**
  * Created by matthewfl
  */
-public abstract class Base extends ObjectBase {
+@RewriteAllBut(nonModClasses = {})
+public interface Base /*extends Object00 */ {
 
-    abstract int length();
-
-    //void store_B(Base arr, int indx, byte v) { throw new NotImplementedException(); }
-
-    //void store_C(Base arr, int indx, byte v) { throw new NotImplementedException(); }
-
-
-    //static public Base ANewArray(int )
+    int length();
 
     static int length(Base b) { return b.length(); }
 
-    public int __dj_readFieldID_I(int id) {
-        if(id == 9) {
-            return length();
-        } else {
-            return super.__dj_readFieldID_I(id);
-        }
-    }
 }
+

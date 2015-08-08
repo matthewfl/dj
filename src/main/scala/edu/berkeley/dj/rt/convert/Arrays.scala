@@ -1,10 +1,10 @@
 package edu.berkeley.dj.rt.convert
 
 import javassist.CtClass
+import javassist.bytecode.Opcode._
 import javassist.bytecode.{CodeIterator, ConstPool}
 import javassist.convert.Transformer
 
-import javassist.bytecode.Opcode._
 import edu.berkeley.dj.rt.Config
 
 /**
@@ -67,7 +67,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
         case 11 => "Long"
         case _ => throw new NotImplementedError()
       }
-      val clsref = cp.addClassInfo(config.arrayprefix + tname + "_1")
+      val clsref = cp.addClassInfo(config.arrayprefix + tname + "_impl_1")
       val mthref = cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${(config.arrayprefix + tname + "_1").replace(".","/")};")
 
       it.writeByte(NOP, pos)
@@ -79,6 +79,8 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
     } else if(c == ANEWARRAY) {
       val tindx = it.u16bitAt(pos + 1)
       val typ = cp.getClassInfo(tindx)
+      assert(typ(0) == 'L')
+
       // change the reference to be the constructor on
     } else if(c == MULTIANEWARRAY) {
 
