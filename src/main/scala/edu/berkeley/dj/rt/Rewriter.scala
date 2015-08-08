@@ -812,12 +812,20 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       runningPool.makeClass(clsname, baseArrayClsImpl)
     }
 
-    if(!makeInterface)
-      if(cnt > 1) {
+    val intercls = if(!makeInterface) {
+      // add the interface of the type that this class is going to implement
+      val i = runningPool.get(config.arrayprefix + baseType + "_" + cnt)
+      cls.addInterface(i)
+      i
+    } else null
+
+    if(!makeInterface) {
+      if (cnt > 1) {
         cls.addField(CtField.make(s"public ${config.arrayprefix + baseType + "_" + (cnt - 1)} ir[];", cls))
       } else {
         cls.addField(CtField.make(s"public ${wrapType}[] ir;", cls))
       }
+    }
     val length_mth =
       s"""
          public int length() {
