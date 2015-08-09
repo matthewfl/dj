@@ -812,16 +812,38 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       runningPool.makeClass(clsname, baseArrayClsImpl)
     }
 
+
+    val allInheritedTypes = new mutable.HashSet[String]()
+    def addInterfaces(inter: CtClass): Unit = {
+      val cn = inter.getName
+      val uidx = cn.lastIndexOf("_")
+      if(uidx < 0) return
+      val btype = cn.substring(config.arrayprefix.size, uidx)
+      if(!allInheritedTypes.contains(btype) && cn.startsWith(config.arrayprefix)) {
+        allInheritedTypes += btype
+        for (i <- inter.getInterfaces)
+          addInterfaces(i)
+      }
+    }
+
     val intercls = if(!makeInterface) {
       // add the interface of the type that this class is going to implement
       val i = runningPool.get(config.arrayprefix + baseType + "_" + cnt)
       cls.addInterface(i)
+      if(!isPrimitive)
+        addInterfaces(i)
       i
     } else null
 
+    if(isPrimitive)
+      allInheritedTypes += wrapType
+    else
+      allInheritedTypes += baseType
+
+
     if(!makeInterface) {
       if (cnt > 1) {
-        cls.addField(CtField.make(s"public ${config.arrayprefix + baseType + "_" + (cnt - 1)} ir[];", cls))
+        cls.addField(CtField.make(s"public ${config.arrayprefix + baseType + "_" + (cnt - 1)}[] ir;", cls))
       } else {
         cls.addField(CtField.make(s"public ${wrapType}[] ir;", cls))
       }
@@ -913,9 +935,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         val get_mth_int = s"${wrapType} get(int i);"
         cls.addMethod(CtMethod.make(get_mth_int, cls))
       } else {
-        val get_mth =
-          s"""
-           public ${wrapType} get(int i) {
+        for(itype <- allInheritedTypes) {
+          val get_mth =
+            s"""
+            public ${itype} get(int i) {
              if((__dj_class_mode & 0x1) != 0) {
                return (${wrapType}) __dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount});
              } else {
@@ -923,24 +946,52 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            }
          """
-        cls.addMethod(CtMethod.make(get_mth, cls))
+          cls.addMethod(CtMethod.make(get_mth, cls))
+        }
+
+        val get_mth_obj =
+          s"""
+             public Object get(int i) {
+               if((__dj_class_mode & 0x1) != 0) {
+                 return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (__dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount}));
+               } else {
+                 return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (ir[i]);
+               }
+             }
+           """
+
+        cls.addMethod(CtMethod.make(get_mth_obj, cls))
       }
 
       if(makeInterface) {
         val set_mth_int = s"void set(int i, ${wrapType} v);"
         cls.addMethod(CtMethod.make(set_mth_int, cls))
       } else {
-        val set_mth =
-          s"""
-           public void set(int i, ${wrapType} v) {
+        for(itype <- allInheritedTypes) {
+          val set_mth =
+            s"""
+             public void set(int i, ${itype} v) {
              if((__dj_class_mode & 0x2) != 0) {
                __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, v);
              } else {
-               ir[i] = v;
+               ir[i] = (${wrapType})v;
              }
            }
          """
-        cls.addMethod(CtMethod.make(set_mth, cls))
+          cls.addMethod(CtMethod.make(set_mth, cls))
+        }
+
+        val set_mth_obj =
+          s"""
+             public void set(int i, Object v) {
+               if((__dj_class_mode & 0x2) != 0) {
+                 __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) );
+               } else {
+                 ir[i] = (${wrapType}) ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) ;
+               }
+             }
+           """
+        cls.addMethod(CtMethod.make(set_mth_obj, cls))
       }
 
       if(!makeInterface) {
