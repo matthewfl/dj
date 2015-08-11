@@ -2,7 +2,8 @@ package edu.berkeley.dj.rt.convert
 
 import javassist.CtClass
 import javassist.bytecode.Opcode._
-import javassist.bytecode.{CodeIterator, ConstPool}
+import javassist.bytecode.analysis.{Type, Analyzer, Frame}
+import javassist.bytecode.{MethodInfo, CodeIterator, ConstPool}
 import javassist.convert.Transformer
 
 import edu.berkeley.dj.rt.Config
@@ -31,9 +32,20 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
   An array of objects can be casted to Object[], if it is primitive then this will fail
    */
 
+  private var analysis: Array[Frame] = null
+  private var addedSpaces: Int = 0
+
+  override def initialize(cp: ConstPool, cls: CtClass, minfo: MethodInfo): Unit = {
+    val ana = new Analyzer
+    analysis = ana.analyze(cls, minfo)
+    addedSpaces = 0
+    //println("gg")
+  }
+
   private def placeArrayFunc(method: String, pos: Int, it: CodeIterator, cp: ConstPool) = {
 
   }
+
 
 
   override def transform(clazz: CtClass, _pos: Int, it: CodeIterator, cp: ConstPool) : Int = {
@@ -43,12 +55,26 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
     if(clazz.getName.startsWith(config.internalPrefix))
       return pos
 
+    val frame = analysis(pos - addedSpaces)
+
+    def makeMthod(intername: String, mthname: String, mthsig: String, count: Int) = {
+      // assume that it is on some item that only has one byte
+      // invoke a method on an interface that will get or set a value in an array
+
+      val clsref = cp.addClassInfo(intername)
+      val mthref = cp.addInterfaceMethodrefInfo(clsref, mthname, mthsig)
+      it.writeByte(NOP, pos)
+      addedSpaces += it.insertGapAt(pos, 4, false).length
+      it.writeByte(INVOKEINTERFACE, pos)
+      it.write16bit(mthref, pos + 1)
+      it.writeByte(count, pos + 3)
+    }
 
     if(c == ARRAYLENGTH) {
       val clsref = cp.addClassInfo(config.arrayprefix + "Base")
       val mthref = cp.addMethodrefInfo(clsref, "length", s"(L${(config.arrayprefix + "Base").replace(".","/")};)I")
       it.writeByte(NOP, pos)
-      it.insertGapAt(pos, 2, false)
+      addedSpaces += it.insertGapAt(pos, 2, false).length
 
       it.writeByte(INVOKESTATIC, pos)
       it.write16bit(mthref, pos + 1)
@@ -72,7 +98,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
 
       it.writeByte(NOP, pos)
       it.writeByte(NOP, pos + 1)
-      it.insertGapAt(pos, 1, false)
+      addedSpaces += it.insertGapAt(pos, 1, false).length
       it.writeByte(INVOKESTATIC, pos)
       it.write16bit(mthref, pos + 1)
 
@@ -80,10 +106,65 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       val tindx = it.u16bitAt(pos + 1)
       val typ = cp.getClassInfo(tindx)
       assert(typ(0) == 'L')
+      val tname = typ.substring(1, typ.length - 1).replace('/', '.')
 
-      // change the reference to be the constructor on
+      val clsref = cp.addClassInfo(config.arrayprefix + tname + "_impl_1")
+      val mthref = cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${(config.arrayprefix + tname + "_1").replace('.','/')};")
+
+      it.writeByte(INVOKESTATIC, pos)
+      it.write16bit(mthref, pos + 1)
+
     } else if(c == MULTIANEWARRAY) {
+      // TODO:
+      ???
 
+    } else if(c == BASTORE) { // byte and boolean
+      val ct = frame.getStack(frame.getTopIndex- 2)
+      if(ct.getComponent == Type.BOOLEAN) {
+        // this is a boolean array
+        makeMthod(config.arrayprefix + "Boolean_1", "set", "(IZ)V", 3)
+      } else {
+        assert(ct.getComponent == Type.BYTE)
+        makeMthod(config.arrayprefix + "Byte_1", "set", "(IB)V", 3)
+        // assume that this is a byte
+      }
+    } else if(c == BALOAD) {
+      val ct = frame.getStack(frame.getTopIndex- 1)
+      if(ct.getComponent == Type.BOOLEAN) {
+        // this is a boolean array
+        makeMthod(config.arrayprefix + "Boolean_1", "get", "(I)Z", 2)
+      } else {
+        assert(ct.getComponent == Type.BYTE)
+        makeMthod(config.arrayprefix + "Byte_1", "get", "(I)B", 2)
+      }
+    } else if(c == CALOAD) { // char
+      makeMthod(config.arrayprefix + "Char_1", "get", "(I)C", 2)
+    } else if(c == CASTORE) {
+      makeMthod(config.arrayprefix + "Char_1", "set", "(IC)V", 3)
+    } else if(c == DALOAD) { // double
+      makeMthod(config.arrayprefix + "Double_1", "get", "(I)D", 2)
+    } else if(c == DASTORE) {
+      makeMthod(config.arrayprefix + "Double_1", "set","(ID)V", 3)
+    } else if(c == FALOAD) { // float
+      makeMthod(config.arrayprefix + "Float_1", "get", "(I)F", 2)
+    } else if(c == FASTORE) {
+      makeMthod(config.arrayprefix + "Float_1", "set", "(IF)V", 3)
+    } else if(c == IALOAD) { // int
+      makeMthod(config.arrayprefix + "Integer_1", "get", "(I)I", 2)
+    } else if(c == IASTORE) {
+      makeMthod(config.arrayprefix + "Integet_1", "set", "(II)V", 3)
+    } else if(c == LALOAD) { // long
+      makeMthod(config.arrayprefix + "Long_1", "get", "(I)J", 2)
+    } else if(c == LASTORE) {
+      makeMthod(config.arrayprefix + "Long_1", "set", "(IJ)V", 3)
+    } else if(c == SALOAD) { // short
+      makeMthod(config.arrayprefix + "Short_1", "get", "(I)S", 2)
+    } else if(c == SASTORE) {
+      makeMthod(config.arrayprefix + "Short_1", "set", "(IS)V", 3)
+    } else if(c == AALOAD) { // object
+      ???
+    } else if(c == AASTORE) {
+      ???
     }
 
 

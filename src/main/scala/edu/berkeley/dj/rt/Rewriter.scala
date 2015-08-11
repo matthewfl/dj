@@ -2,6 +2,7 @@ package edu.berkeley.dj.rt
 
 import java.lang.reflect.UndeclaredThrowableException
 import javassist._
+import javassist.bytecode.analysis.Analyzer
 import javassist.bytecode.{Descriptor, MethodInfo}
 
 import edu.berkeley.dj.internal._
@@ -499,14 +500,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       m.set
     }*/
 
-    val codeConverter = new CodeConverter
-    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
     //codeConverter.addTransform(new ArraysTypeRefs(codeConverter.prevTransforms, config))
 
+    val anaMths = cls.getDeclaredMethods.map(m => {
+      val a = new Analyzer
+      Map(m.getName -> a.analyze(m))
+    }).reduce(_ ++ _)
+
+    val codeConverter = new CodeConverter
+    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+
+    cls.instrument(codeConverter)
 
     cls.replaceClassName(new ArrayClassMap(this))
 
-    cls.instrument(codeConverter)
+
 
     val mregx = """(\[+)([ZCBSIJFD]|L.*?;)""".r
 
