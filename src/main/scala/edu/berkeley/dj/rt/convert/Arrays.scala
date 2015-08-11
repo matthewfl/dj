@@ -152,7 +152,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
     } else if(c == IALOAD) { // int
       makeMthod(config.arrayprefix + "Integer_1", "get", "(I)I", 2)
     } else if(c == IASTORE) {
-      makeMthod(config.arrayprefix + "Integet_1", "set", "(II)V", 3)
+      makeMthod(config.arrayprefix + "Integer_1", "set", "(II)V", 3)
     } else if(c == LALOAD) { // long
       makeMthod(config.arrayprefix + "Long_1", "get", "(I)J", 2)
     } else if(c == LASTORE) {

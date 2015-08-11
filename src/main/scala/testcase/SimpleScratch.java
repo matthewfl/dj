@@ -24,15 +24,15 @@ public class SimpleScratch {
 
         test = new byte[6];
 
-        byte[] qq = new byte[5];
+        int[] qq = new int[5];
 
         boolean[] vv = new boolean[10];
 
-        qq[0] = (byte)22;
+        qq[0] = 22;
 
-        assert(qq[0] == 22);
+        //assert(qq[0] == 22);
 
-        vv[1] = true;
+        //vv[1] = true;
     }
 
 }
