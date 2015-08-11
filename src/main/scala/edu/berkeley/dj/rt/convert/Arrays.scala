@@ -70,6 +70,8 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       it.writeByte(count, pos + 3)
     }
 
+    def augName(n: String) = n.replaceAll("[^A-Za-z0-9]", "_")
+
     if(c == ARRAYLENGTH) {
       val clsref = cp.addClassInfo(config.arrayprefix + "Base")
       val mthref = cp.addMethodrefInfo(clsref, "length", s"(L${(config.arrayprefix + "Base").replace(".","/")};)I")
@@ -122,45 +124,45 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       val ct = frame.getStack(frame.getTopIndex- 2)
       if(ct.getComponent == Type.BOOLEAN) {
         // this is a boolean array
-        makeMthod(config.arrayprefix + "Boolean_1", "set", "(IZ)V", 3)
+        makeMthod(config.arrayprefix + "Boolean_1", "set_boolean", "(IZ)V", 3)
       } else {
         assert(ct.getComponent == Type.BYTE)
-        makeMthod(config.arrayprefix + "Byte_1", "set", "(IB)V", 3)
+        makeMthod(config.arrayprefix + "Byte_1", "set_byte", "(IB)V", 3)
         // assume that this is a byte
       }
     } else if(c == BALOAD) {
       val ct = frame.getStack(frame.getTopIndex- 1)
       if(ct.getComponent == Type.BOOLEAN) {
         // this is a boolean array
-        makeMthod(config.arrayprefix + "Boolean_1", "get", "(I)Z", 2)
+        makeMthod(config.arrayprefix + "Boolean_1", "get_boolean", "(I)Z", 2)
       } else {
         assert(ct.getComponent == Type.BYTE)
-        makeMthod(config.arrayprefix + "Byte_1", "get", "(I)B", 2)
+        makeMthod(config.arrayprefix + "Byte_1", "get_byte", "(I)B", 2)
       }
     } else if(c == CALOAD) { // char
-      makeMthod(config.arrayprefix + "Char_1", "get", "(I)C", 2)
+      makeMthod(config.arrayprefix + "Char_1", "get_char", "(I)C", 2)
     } else if(c == CASTORE) {
-      makeMthod(config.arrayprefix + "Char_1", "set", "(IC)V", 3)
+      makeMthod(config.arrayprefix + "Char_1", "set_char", "(IC)V", 3)
     } else if(c == DALOAD) { // double
-      makeMthod(config.arrayprefix + "Double_1", "get", "(I)D", 2)
+      makeMthod(config.arrayprefix + "Double_1", "get_double", "(I)D", 2)
     } else if(c == DASTORE) {
-      makeMthod(config.arrayprefix + "Double_1", "set","(ID)V", 3)
+      makeMthod(config.arrayprefix + "Double_1", "set_double","(ID)V", 3)
     } else if(c == FALOAD) { // float
-      makeMthod(config.arrayprefix + "Float_1", "get", "(I)F", 2)
+      makeMthod(config.arrayprefix + "Float_1", "get_float", "(I)F", 2)
     } else if(c == FASTORE) {
-      makeMthod(config.arrayprefix + "Float_1", "set", "(IF)V", 3)
+      makeMthod(config.arrayprefix + "Float_1", "set_float", "(IF)V", 3)
     } else if(c == IALOAD) { // int
-      makeMthod(config.arrayprefix + "Integer_1", "get", "(I)I", 2)
+      makeMthod(config.arrayprefix + "Integer_1", "get_int", "(I)I", 2)
     } else if(c == IASTORE) {
-      makeMthod(config.arrayprefix + "Integer_1", "set", "(II)V", 3)
+      makeMthod(config.arrayprefix + "Integer_1", "set_int", "(II)V", 3)
     } else if(c == LALOAD) { // long
-      makeMthod(config.arrayprefix + "Long_1", "get", "(I)J", 2)
+      makeMthod(config.arrayprefix + "Long_1", "get_long", "(I)J", 2)
     } else if(c == LASTORE) {
-      makeMthod(config.arrayprefix + "Long_1", "set", "(IJ)V", 3)
+      makeMthod(config.arrayprefix + "Long_1", "set_long", "(IJ)V", 3)
     } else if(c == SALOAD) { // short
-      makeMthod(config.arrayprefix + "Short_1", "get", "(I)S", 2)
+      makeMthod(config.arrayprefix + "Short_1", "get_short", "(I)S", 2)
     } else if(c == SASTORE) {
-      makeMthod(config.arrayprefix + "Short_1", "set", "(IS)V", 3)
+      makeMthod(config.arrayprefix + "Short_1", "set_short", "(IS)V", 3)
     } else if(c == AALOAD) { // object
       ???
     } else if(c == AASTORE) {

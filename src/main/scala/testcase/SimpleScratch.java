@@ -30,7 +30,7 @@ public class SimpleScratch {
 
         qq[0] = 22;
 
-        //assert(qq[0] == 22);
+        assert(qq[0] == 22);
 
         //vv[1] = true;
     }

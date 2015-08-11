@@ -814,6 +814,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
     }
 
+    def augName(n: String) = n.replaceAll("[^A-Za-z0-9]", "_")
+
     val cls = if(makeInterface) {
       runningPool.makeInterface(clsname, baseArrayClsInter)
     } else {
@@ -875,12 +877,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(cnt > 1) {
       val typname = config.arrayprefix + baseType + "_" + (cnt - 1)
       if(makeInterface) {
-        val get_mth_int = s"${typname} get(int i);"
+        val get_mth_int = s"${typname} get_${augName(typname)}(int i);"
         cls.addMethod(CtMethod.make(get_mth_int, cls))
       } else {
         val get_mth =
           s"""
-           public ${typname} get(int i) {
+           public ${typname} get_${augName(typname)}(int i) {
              if((__dj_class_mode & 0x01) != 0) {
                return (${typname}) __dj_class_manager.readField_A(i + ${baseFieldCount});
              } else {
@@ -892,12 +894,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
 
       if(makeInterface) {
-        val set_mth_int = s"void set(int i, ${typname} v);"
+        val set_mth_int = s"void set_${augName(typname)}(int i, ${typname} v);"
         cls.addMethod(CtMethod.make(set_mth_int, cls))
       } else {
         val set_mth =
           s"""
-           public void set(int i, ${typname} v) {
+           public void set_${augName(typname)}(int i, ${typname} v) {
              if((__dj_class_mode & 0x02) != 0) {
                __dj_class_manager.writeField_A(i + ${baseFieldCount}, v);
              } else {
@@ -940,13 +942,13 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val refname = if(isPrimitive) wrapType else "Object"
 
       if(makeInterface) {
-        val get_mth_int = s"${wrapType} get(int i);"
+        val get_mth_int = s"${wrapType} get_${augName(wrapType)}(int i);"
         cls.addMethod(CtMethod.make(get_mth_int, cls))
       } else {
         for(itype <- allInheritedTypes) {
           val get_mth =
             s"""
-            public ${itype} get(int i) {
+            public ${itype} get_${augName(itype)}(int i) {
              if((__dj_class_mode & 0x1) != 0) {
                return (${wrapType}) __dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount});
              } else {
@@ -959,7 +961,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
         val get_mth_obj =
           s"""
-             public Object get(int i) {
+             public Object get_java_lang_Object(int i) {
                if((__dj_class_mode & 0x1) != 0) {
                  return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (__dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount}));
                } else {
@@ -972,13 +974,13 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
 
       if(makeInterface) {
-        val set_mth_int = s"void set(int i, ${wrapType} v);"
+        val set_mth_int = s"void set_${augName(wrapType)}(int i, ${wrapType} v);"
         cls.addMethod(CtMethod.make(set_mth_int, cls))
       } else {
         for(itype <- allInheritedTypes) {
           val set_mth =
             s"""
-             public void set(int i, ${itype} v) {
+             public void set_${augName(itype)} (int i, ${itype} v) {
              if((__dj_class_mode & 0x2) != 0) {
                __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, v);
              } else {
@@ -991,7 +993,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
         val set_mth_obj =
           s"""
-             public void set(int i, Object v) {
+             public void set_java_lang_Object(int i, Object v) {
                if((__dj_class_mode & 0x2) != 0) {
                  __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) );
                } else {
