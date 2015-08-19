@@ -1,17 +1,16 @@
 package edu.berkeley.dj.rt
 
+import java.lang.StringBuilder
 import java.lang.reflect.UndeclaredThrowableException
 import javassist._
 import javassist.bytecode.analysis.Analyzer
-import javassist.bytecode.{Descriptor, MethodInfo}
+import javassist.bytecode.{BadBytecode, Descriptor, MethodInfo}
 
 import edu.berkeley.dj.internal._
 import edu.berkeley.dj.rt.convert.{CodeConverter, _}
 import edu.berkeley.dj.utils.Memo
 
 import scala.collection.mutable
-
-import java.lang.StringBuilder
 
 
 /**
@@ -431,9 +430,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   def addRPCRedirects(cls: CtClass): Unit = {
     val (cls_mode, cls_manager) = if (Modifier.isInterface(cls.getModifiers)) {
-      ("__dj_getClassMode()", "__dj_getManager()")
+      ("this.__dj_getClassMode()", "this.__dj_getManager()")
     } else {
-      ("__dj_class_mode", "__dj_class_manager")
+      ("this.__dj_class_mode", "this.__dj_class_manager")
     }
 
 
@@ -473,9 +472,6 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   def modifyArrays(cls: CtClass): Unit = {
 
-    if(!cls.getName.contains("SimpleScratch"))
-      return
-
     /*for(f <- cls.getDeclaredFields) {
       if (f.getType.isArray) {
         var typ = f.getType
@@ -503,10 +499,19 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     //codeConverter.addTransform(new ArraysTypeRefs(codeConverter.prevTransforms, config))
 
-    val anaMths = cls.getDeclaredMethods.map(m => {
-      val a = new Analyzer
-      Map(m.getName -> a.analyze(m))
-    }).reduce(_ ++ _)
+    try {
+      val anaMths = cls.getDeclaredMethods.map(m => {
+        val a = new Analyzer
+        Map(m.getName -> a.analyze(m))
+      }).reduce(_ ++ _)
+    } catch {
+      case _: BadBytecode => {}
+    }
+
+
+    if(!cls.getName.contains("SimpleScratch"))
+      return
+
 
     val codeConverter = new CodeConverter
     codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
