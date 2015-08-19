@@ -192,7 +192,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       val comp = ct.getComponent
       val arrdim = ct.getDimensions
       val name = comp.getCtClass.getName
-      makeMthod(config.arrayprefix + name + "_" + arrdim, "set_"+augName(name), s"(I)L${name.replace('.','/')};", 3)
+      makeMthod(config.arrayprefix + name + "_" + arrdim, "set_"+augName(name), s"(IL${name.replace('.','/')};)V", 3)
       //???
     }
 

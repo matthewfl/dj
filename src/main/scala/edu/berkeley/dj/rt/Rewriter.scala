@@ -513,8 +513,25 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     cls.instrument(codeConverter)
 
+    for(i <- 0 until cls.getClassFile.getConstPool.getSize) {
+      try {
+        val ci = cls.getClassFile.getConstPool.getClassInfo(i)
+        if(ci != null && ci.contains(";") && ci.startsWith("L")) {
+          println("fail "+ci)
+        }
+      } catch { case _: ClassCastException => {}}
+    }
+
     cls.replaceClassName(new ArrayClassMap(this))
 
+    for(i <- 0 until cls.getClassFile.getConstPool.getSize) {
+      try {
+        val ci = cls.getClassFile.getConstPool.getClassInfo(i)
+        if(ci != null && ci.contains(";") && ci.startsWith("L")) {
+          println("fail2 "+ci)
+        }
+      } catch { case _: ClassCastException => {}}
+    }
 
 
     val mregx = """(\[+)([ZCBSIJFD]|L.*?;)""".r
@@ -559,25 +576,32 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private val arrayTypeRegex = """(\[+)([ZCBSIJFD]|L.*?;)""".r
 
-  private[rt] def rewriteArrayType(typ: String) = arrayTypeRegex.replaceAllIn(typ, mt => {
-    val arr_depth = mt.group(1).length
-    val typ = if(mt.group(2).length == 1) {
-      mt.group(2) match {
-        case "Z" => "Boolean"
-        case "C" => "Char"
-        case "B" => "Byte"
-        case "I" => "Integer"
-        case "J" => "Long"
-        case "F" => "Float"
-        case "D" => "Double"
-        case _ => throw new NotImplementedError()
+  private[rt] def rewriteArrayType(typ: String, addL: Boolean) = {
+    arrayTypeRegex.replaceAllIn(typ, mt => {
+      val arr_depth = mt.group(1).length
+      val typ = if(mt.group(2).length == 1) {
+        mt.group(2) match {
+          case "Z" => "Boolean"
+          case "C" => "Char"
+          case "B" => "Byte"
+          case "I" => "Integer"
+          case "J" => "Long"
+          case "F" => "Float"
+          case "D" => "Double"
+          case _ => throw new NotImplementedError()
+        }
+      } else {
+        val s = mt.group(2)
+        s.substring(1, s.length - 1)//.replace("/", ".")
       }
-    } else {
-      val s = mt.group(2)
-      s.substring(1, s.length - 1)//.replace("/", ".")
-    }
-    "L"+(config.arrayprefix + typ + "_" + arr_depth).replace(".", "/") + ";"
-  })
+      val r = (config.arrayprefix + typ + "_" + arr_depth).replace(".", "/")
+      //"L"+
+      if(addL)
+        s"L$r;"
+      else
+        r
+    })
+  }
 
 
   private def modifyClass(cls: CtClass): Unit = {
@@ -973,7 +997,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
              }
            """
 
-        cls.addMethod(CtMethod.make(get_mth_obj, cls))
+        if(!allInheritedTypes.contains("java.lang.Object"))
+          cls.addMethod(CtMethod.make(get_mth_obj, cls))
       }
 
       if(makeInterface) {
@@ -1004,7 +1029,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                }
              }
            """
-        cls.addMethod(CtMethod.make(set_mth_obj, cls))
+        if(!allInheritedTypes.contains("java.lang.Object"))
+          cls.addMethod(CtMethod.make(set_mth_obj, cls))
       }
 
       if(!makeInterface) {

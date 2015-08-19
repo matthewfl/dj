@@ -41,7 +41,7 @@ public class SimpleScratch {
         Object[] oo = new Object[5];
         oo[0] = ee;
 
-        //assert(23 == 22);
+        assert(23 == 22);
         //assert(qq[0] == 22);
 
         //vv[1] = true;

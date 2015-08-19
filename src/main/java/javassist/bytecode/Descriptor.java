@@ -207,7 +207,7 @@ public class Descriptor {
 
         // TODO: remove fcking hack
         if(map instanceof ArrayClassMap) {
-            String res = (String)map.get(desc);
+            String res = ((ArrayClassMap)map).getM(desc, true);
             if(res != null)
                 return res;
             return desc;
