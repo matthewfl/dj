@@ -34,11 +34,13 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
 
   private var analysis: Array[Frame] = null
   private var addedSpaces: Int = 0
+  private var minfo: MethodInfo = null
 
   override def initialize(cp: ConstPool, cls: CtClass, minfo: MethodInfo): Unit = {
     val ana = new Analyzer
     analysis = ana.analyze(cls, minfo)
     addedSpaces = 0
+    this.minfo = minfo
     //println("gg")
   }
 
@@ -68,6 +70,15 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       it.writeByte(INVOKEINTERFACE, pos)
       it.write16bit(mthref, pos + 1)
       it.writeByte(count, pos + 3)
+    }
+
+    def makeStaticMethod(clsname: String, mthname: String, mthsig: String) = {
+      val clsref = cp.addClassInfo(clsname)
+      val mthref = cp.addMethodrefInfo(clsref, mthname, mthsig)
+      it.writeByte(NOP, pos)
+      addedSpaces += it.insertGapAt(pos, 2, false).length
+      it.writeByte(INVOKESTATIC, pos)
+      it.write16bit(mthref, pos + 1)
     }
 
     def augName(n: String) = n.replaceAll("[^A-Za-z0-9]", "_")
@@ -107,8 +118,12 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
     } else if(c == ANEWARRAY) {
       val tindx = it.u16bitAt(pos + 1)
       val typ = cp.getClassInfo(tindx)
-      assert(typ(0) == 'L')
-      val tname = typ.substring(1, typ.length - 1).replace('/', '.')
+      //assert(typ(0) == 'L')
+      val tname = if(typ.endsWith(";") && typ.startsWith("L")) {
+        typ.substring(1, typ.length - 1)
+      } else {
+        typ
+      }.replace('/', '.')
 
       val clsref = cp.addClassInfo(config.arrayprefix + tname + "_impl_1")
       val mthref = cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${(config.arrayprefix + tname + "_1").replace('.','/')};")
@@ -152,8 +167,10 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
     } else if(c == FASTORE) {
       makeMthod(config.arrayprefix + "Float_1", "set_float", "(IF)V", 3)
     } else if(c == IALOAD) { // int
+      //makeStaticMethod(config.arrayprefix + "Integer_impl_1", "helper_get", "(Ledu/berkeley/dj/internal/arrayclazz/Integer_1;I)I")
       makeMthod(config.arrayprefix + "Integer_1", "get_int", "(I)I", 2)
     } else if(c == IASTORE) {
+      //makeStaticMethod(config.arrayprefix + "Integer_impl_1", "helper_set", "(Ledu/berkeley/dj/internal/arrayclazz/Integer_1;II)V")
       makeMthod(config.arrayprefix + "Integer_1", "set_int", "(II)V", 3)
     } else if(c == LALOAD) { // long
       makeMthod(config.arrayprefix + "Long_1", "get_long", "(I)J", 2)
@@ -164,9 +181,19 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
     } else if(c == SASTORE) {
       makeMthod(config.arrayprefix + "Short_1", "set_short", "(IS)V", 3)
     } else if(c == AALOAD) { // object
-      ???
+      val ct = frame.getStack(frame.getTopIndex - 1)
+      val comp = ct.getComponent
+      val arrdim = ct.getDimensions
+      val name = comp.getCtClass.getName
+      makeMthod(config.arrayprefix + name + "_" + arrdim, "get_"+augName(name), s"(I)L${name.replace('.','/')};", 2)
+      //???
     } else if(c == AASTORE) {
-      ???
+      val ct = frame.getStack(frame.getTopIndex - 2)
+      val comp = ct.getComponent
+      val arrdim = ct.getDimensions
+      val name = comp.getCtClass.getName
+      makeMthod(config.arrayprefix + name + "_" + arrdim, "set_"+augName(name), s"(I)L${name.replace('.','/')};", 3)
+      //???
     }
 
 

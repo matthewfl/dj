@@ -75,4 +75,12 @@ public class AugmentedClassLoader {
         throw new NotImplementedException();
     }
 
+
+    public static boolean desiredAssertionStatus(Object cls) {
+        // TODO: load the assertion status from a central location
+
+        //cls instanceof Class<?>
+
+        return false;
+    }
 }

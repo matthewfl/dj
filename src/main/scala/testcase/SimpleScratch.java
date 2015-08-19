@@ -2,6 +2,8 @@ package testcase;
 
 import edu.berkeley.dj.internal.InternalInterface;
 
+import java.util.ArrayList;
+
 /**
  * Created by matthewfl
  */
@@ -30,7 +32,17 @@ public class SimpleScratch {
 
         qq[0] = 22;
 
-        assert(qq[0] == 22);
+        int a = qq[0];
+        System.out.println("something");
+
+        ArrayList<Integer> ee = new ArrayList<>();
+        ee.add(123);
+
+        Object[] oo = new Object[5];
+        oo[0] = ee;
+
+        //assert(23 == 22);
+        //assert(qq[0] == 22);
 
         //vv[1] = true;
     }

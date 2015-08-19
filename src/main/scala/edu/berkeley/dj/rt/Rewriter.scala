@@ -58,7 +58,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader"),
-    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader")
+    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("desiredAssertionStatus", "()Z", "java.lang.Class") -> ("desiredAssertionStatus", s"${config.internalPrefix}AugmentedClassLoader")
 
     // rewrite the string init method since this is package private
     // this just gets the field inside the class and sets it to the char array
@@ -819,7 +820,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val cls = if(makeInterface) {
       runningPool.makeInterface(clsname, baseArrayClsInter)
     } else {
-      runningPool.makeClass(clsname, baseArrayClsImpl)
+      val c = runningPool.makeClass(clsname, baseArrayClsImpl)
+      c.setModifiers(c.getModifiers | Modifier.FINAL)
+      c
     }
 
 
@@ -1045,6 +1048,22 @@ private[rt] class Rewriter (private val manager : MasterManager) {
          }
        """
       cls.addMethod(CtMethod.make(static_constructor, cls))
+
+      val get_helper =
+        s"""
+           public static ${wrapType} helper_get(${inter_name} inst, int i) {
+             return inst.get_${augName(wrapType)}(i);
+           }
+         """
+      cls.addMethod(CtMethod.make(get_helper, cls))
+
+      val set_helper =
+        s"""
+           public static void helper_set(${inter_name} inst, int i, ${wrapType} val) {
+             inst.set_${augName(wrapType)}(i, val);
+           }
+         """
+      cls.addMethod(CtMethod.make(set_helper, cls))
     }
 
     cls
