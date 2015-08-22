@@ -454,6 +454,56 @@ public class Descriptor {
         }
     }
 
+    public static String[] getParameterNames(String desc) throws NotFoundException {
+        if(desc.charAt(0) != '(') {
+            return null;
+        } else {
+            int num = numOfParameters(desc);
+            String[] args = new String[num];
+            int n = 0;
+            int i = 1;
+            while(n < num) {
+                char a = desc.charAt(i);
+                if(a == '[') {
+                    // array
+                    int end = i + 1;
+                    while(desc.charAt(end) == '[') end++;
+                    if(desc.charAt(end) == 'L')
+                        end = desc.indexOf(';', end);
+                    args[n++] = desc.substring(i, end + 1);
+                    i = end + 1;
+                } else if(a == 'L') {
+                    // this is an object type
+                    int end = desc.indexOf(';', i);
+                    args[n++] = desc.substring(i + 1, end).replace('/', '.');
+                    i = end + 1;
+                } else {
+                    if(a == 'Z') {
+                        args[n++] = "boolean";
+                    } else if(a == 'C') {
+                        args[n++] = "char";
+                    } else if(a == 'B') {
+                        args[n++] = "byte";
+                    } else if(a == 'S') {
+                        args[n++] = "short";
+                    } else if(a == 'I') {
+                        args[n++] = "int";
+                    } else if(a == 'J') {
+                        args[n++] = "long";
+                    } else if(a == 'F') {
+                        args[n++] = "float";
+                    } else if(a == 'D') {
+                        args[n++] = "double";
+                    } else {
+                        throw new RuntimeException();
+                    }
+                    i++;
+                }
+            }
+            return args;
+        }
+    }
+
     /**
      * Returns true if the list of the parameter types of desc1 is equal to
      * that of desc2.

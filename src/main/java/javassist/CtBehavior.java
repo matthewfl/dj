@@ -17,8 +17,8 @@
 package javassist;
 
 import javassist.bytecode.*;
-import javassist.compiler.Javac;
 import javassist.compiler.CompileError;
+import javassist.compiler.Javac;
 import javassist.expr.ExprEditor;
 
 /**
@@ -195,8 +195,8 @@ public abstract class CtBehavior extends CtMember {
        AnnotationsAttribute ainfo2 = (AnnotationsAttribute)
                    mi.getAttribute(AnnotationsAttribute.visibleTag);  
        return CtClassType.getAnnotationType(clz,
-                                            getDeclaringClass().getClassPool(),
-                                            ainfo, ainfo2);
+               getDeclaringClass().getClassPool(),
+               ainfo, ainfo2);
     }
 
     /**
@@ -296,7 +296,11 @@ public abstract class CtBehavior extends CtMember {
      */
     public CtClass[] getParameterTypes() throws NotFoundException {
         return Descriptor.getParameterTypes(methodInfo.getDescriptor(),
-                                            declaringClass.getClassPool());
+                declaringClass.getClassPool());
+    }
+
+    public String[] getParameterTypesNames() throws NotFoundException {
+        return Descriptor.getParameterNames(methodInfo.getDescriptor());
     }
 
     /**

@@ -438,6 +438,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     val mode = manager.classMode.getMode(cls.getName)
 
+    // TODO: remove fcking hack
+    // this causes something internally to get cached, without it it crashses
+    cls.toString
+
     for(mth <- cls.getDeclaredMethods) {
       val modifiers = mth.getModifiers
       if (!Modifier.isStatic(modifiers) && !Modifier.isAbstract(modifiers) && !mth.getName.startsWith(config.fieldPrefix)) {
@@ -449,11 +453,13 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             (s"(${getUsableName(mth.getReturnType)})", "A")
           }
           val check = mode.addMethodRedirectCheck(id)
-          val ctparams = mth.getParameterTypes
+
+          //val ctparams = mth.getParameterTypes
+          val ctparams = mth.getParameterTypesNames
           val params = if (ctparams.length == 0) {
             "null"
           } else {
-            s"""new String[] { ${ctparams.map(c => "\"" + c.getName + "\"").mkString(", ")} }"""
+            s"""new String[] { ${ctparams.map(c => "\"" + c + "\"").mkString(", ")} }"""
           }
 
           val code =
@@ -506,6 +512,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }).reduce(_ ++ _)
     } catch {
       case _: BadBytecode => {}
+      case _: UnsupportedOperationException => {} // there are no declared methods
     }
 
 
@@ -1140,7 +1147,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-  def createCtClass(classname: String): CtClass = {
+  def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
     MethodInfo.doPreverify = true
 
     if(classname.startsWith(config.coreprefix) && classname.endsWith("00")) {
@@ -1157,7 +1164,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(classname.endsWith("[]")) {
       // this is some array type, so treat it as such
       // in the future we should rewrite arrays with our methods,
-      return new CtArray(classname, runningPool)
+      val ret = new CtArray(classname, runningPool)
+      addToCache(ret)
+      return ret
     }
 
 
@@ -1168,20 +1177,23 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(classname.startsWith(config.arrayprefix)) {
       if(cls != null) {
         reassociateClass(cls)
+        addToCache(cls)
         modifyInternalClass(cls)
         return cls
       }
       //val uindx = classname.lastIndexOf("_")
       //val sp = classname.substring(0, uindx).drop(config.arrayprefix.size)
       //val cnt = classname.substring(uindx + 1).toInt
-      return makeArrayClass(classname) //, sp, cnt)
-
+      val ret = makeArrayClass(classname) //, sp, cnt)
+      addToCache(ret)
+      return ret
     }
 
     // for edu.berkeley.dj.internal.coreclazz.
     if (classname.startsWith(config.coreprefix)) {
       if (cls != null) {
         reassociateClass(cls)
+        addToCache(cls)
         modifyInternalClass(cls)
         return cls
       }
@@ -1192,6 +1204,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }*/
       reassociateClass(clso)
       clso.setName(classname)
+      addToCache(clso)
       if(hasNativeMethods(clso)) {
         overwriteNativeMethods(clso)
       }
@@ -1208,19 +1221,22 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       return null
 
     if(cls.isPrimitive) {
+      addToCache(cls)
       return cls
     } else if(cls.isArray) {
       // TODO: some custom handling for array types
 
       // don't think tha this is ever used
-
+      ???
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
+      addToCache(cls)
       if(!checkIsAThrowable(cls))
         modifyClass(cls)
       else {
         println("??")
       }
     } else if (classname.startsWith(config.internalPrefix)) {
+      addToCache(cls)
       modifyInternalClass(cls)
     }
     cls
