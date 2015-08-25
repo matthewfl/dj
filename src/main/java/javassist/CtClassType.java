@@ -16,43 +16,17 @@
 
 package javassist;
 
-import java.lang.ref.WeakReference;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Set;
-
-import javassist.bytecode.AccessFlag;
-import javassist.bytecode.AttributeInfo;
-import javassist.bytecode.AnnotationsAttribute;
-import javassist.bytecode.BadBytecode;
-import javassist.bytecode.Bytecode;
-import javassist.bytecode.ClassFile;
-import javassist.bytecode.CodeAttribute;
-import javassist.bytecode.ConstantAttribute;
-import javassist.bytecode.CodeIterator;
-import javassist.bytecode.ConstPool;
-import javassist.bytecode.Descriptor;
-import javassist.bytecode.EnclosingMethodAttribute;
-import javassist.bytecode.FieldInfo;
-import javassist.bytecode.InnerClassesAttribute;
-import javassist.bytecode.MethodInfo;
-import javassist.bytecode.ParameterAnnotationsAttribute;
-import javassist.bytecode.SignatureAttribute;
+import javassist.bytecode.*;
 import javassist.bytecode.annotation.Annotation;
 import javassist.compiler.AccessorMaker;
 import javassist.compiler.CompileError;
 import javassist.compiler.Javac;
 import javassist.expr.ExprEditor;
+
+import java.io.*;
+import java.lang.ref.WeakReference;
+import java.net.URL;
+import java.util.*;
 
 /**
  * Class types.
@@ -92,7 +66,7 @@ class CtClassType extends CtClass {
     }
 
     CtClassType(InputStream ins, ClassPool cp) throws IOException {
-        this((String)null, cp);
+        this((String) null, cp);
         classfile = new ClassFile(new DataInputStream(ins));
         qualifiedName = classfile.getName();
     }
@@ -143,7 +117,7 @@ class CtClassType extends CtClass {
         exToString(buffer, " constructors=",
                 memCache.consHead(), memCache.lastCons());
         exToString(buffer, " methods=",
-                   memCache.methodHead(), memCache.lastMethod());
+                memCache.methodHead(), memCache.lastMethod());
     }
 
     private void exToString(StringBuffer buffer, String msg,
@@ -736,8 +710,10 @@ class CtClassType extends CtClass {
         String[] ifs = getClassFile2().getInterfaces();
         int num = ifs.length;
         CtClass[] ifc = new CtClass[num];
-        for (int i = 0; i < num; ++i)
+        for (int i = 0; i < num; ++i) {
             ifc[i] = classPool.get(ifs[i]);
+            //assert(ifc[i].getClassPool() == classPool);
+        }
 
         return ifc;
     }

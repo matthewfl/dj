@@ -615,6 +615,14 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     })
   }
 
+  private def isInheritedFromBase(cls: CtClass) = {
+    /*if(cls.isInterface) {
+      cls.subtypeOf(objectBaseInterface)
+    } else {
+      cls.subtypeOf()
+    }*/
+    cls.subtypeOf(objectBaseInterface)
+  }
 
   private def modifyClass(cls: CtClass): Unit = {
     //println("rewriting class: " + cls.getName)
@@ -624,9 +632,16 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     modifyStaticInit(cls)
     rewriteUsedClasses(cls)
-    modifyArrays(cls)
-    addRPCRedirects(cls)
-    transformClass(cls)
+    if (isInheritedFromBase(cls)) {
+      modifyArrays(cls)
+      addRPCRedirects(cls)
+      transformClass(cls)
+    } else {
+      // this is really annoying, some classes are not inherited from objectbase
+      // and if we end up trying to work with them then they will end up not being able to find
+      // the fields on objectbase that it needs for various operations to work
+      System.err.println("cls is not inherited from objectbase and we are trying to work with it: "+cls.getName)
+    }
   }
 
   private def modifyInternalClass(cls: CtClass): Unit ={
@@ -1236,6 +1251,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         println("??")
       }
     } else if (classname.startsWith(config.internalPrefix)) {
+      reassociateClass(cls)
       addToCache(cls)
       modifyInternalClass(cls)
     }
