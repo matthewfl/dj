@@ -894,6 +894,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       // add the interface of the type that this class is going to implement
       val i = runningPool.get(config.arrayprefix + baseType + "_" + cnt)
       cls.addInterface(i)
+      if(baseType != "java.lang.Object")
+        cls.addInterface(runningPool.get(config.arrayprefix + "java.lang.Object_"+cnt))
       if(!isPrimitive)
         addInterfaces(i)
       i

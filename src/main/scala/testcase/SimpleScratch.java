@@ -11,6 +11,8 @@ public class SimpleScratch {
 
     static byte[] test;
 
+    static Object[] argstest;
+
     public static void main(String[] args) throws Throwable {
 
         //Thread.sleep(1000);
@@ -42,6 +44,12 @@ public class SimpleScratch {
         oo[0] = ee;
 
         assert(23 == 22);
+
+        argstest = (Object[])args;
+
+        String[] a1 = (String[])argstest;
+        if(a1.length > 0)
+            a1[0].toString();
         //assert(qq[0] == 22);
 
         //vv[1] = true;

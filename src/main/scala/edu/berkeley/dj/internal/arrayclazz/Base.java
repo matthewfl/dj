@@ -5,8 +5,9 @@ import edu.berkeley.dj.internal.RewriteAllBut;
 /**
  * Created by matthewfl
  */
+
 @RewriteAllBut(nonModClasses = {})
-public interface Base /*extends Object00 */ {
+public interface Base {
 
     int length();
 
