@@ -66,7 +66,8 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
         println("rewriter failed to create class: " + e)
         if(classname.contains("testcase") ||
           e.isInstanceOf[UnsupportedOperationException] ||
-          e.isInstanceOf[CannotCompileException])
+          e.isInstanceOf[CannotCompileException] ||
+          classname.contains("BigDec"))
           e.printStackTrace()
         null
       }

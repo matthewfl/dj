@@ -516,9 +516,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
 
 
-    if(!cls.getName.contains("SimpleScratch"))
+    /*if(!cls.getName.contains("SimpleScratch"))
       return
-
+*/
 
     val codeConverter = new CodeConverter
     codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
@@ -586,9 +586,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   }
 
-  private val arrayTypeRegex = """(\[+)([ZCBSIJFD]|L.*?;)""".r
+  private val arrayTypeRegex = """(\[+)([ZCBSIJFD]|L[^;]+?;)""".r
 
-  private[rt] def rewriteArrayType(typ: String, addL: Boolean) = {
+  // TODO: this is crashing for some reason inside the scala lib implementation
+  private[rt] def rewriteArrayTypeFail(typ: String, addL: Boolean) = {
     arrayTypeRegex.replaceAllIn(typ, mt => {
       val arr_depth = mt.group(1).length
       val typ = if(mt.group(2).length == 1) {
@@ -613,6 +614,42 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       else
         r
     })
+  }
+
+  // fcking haxs, some issue sometimes with the scala findallandreplace
+  private[rt] def rewriteArrayType(typ: String, addL: Boolean) = {
+    val matches = arrayTypeRegex.findAllMatchIn(typ)
+    var ret = typ
+    for(mt <- matches) {
+      val arr_depth = mt.group(1).length
+      val typ = if(mt.group(2).length == 1) {
+        mt.group(2) match {
+          case "Z" => "Boolean"
+          case "C" => "Char"
+          case "B" => "Byte"
+          case "I" => "Integer"
+          case "J" => "Long"
+          case "F" => "Float"
+          case "D" => "Double"
+          case _ => throw new NotImplementedError()
+        }
+      } else {
+        val s = mt.group(2)
+        s.substring(1, s.length - 1)//.replace("/", ".")
+      }
+      val r = (config.arrayprefix + typ + "_" + arr_depth).replace(".", "/")
+      //"L"+
+      val rs = if(addL)
+        s"L$r;"
+      else
+        r
+      //println(ret)
+      // TODO: this is wrong and may fail in a case like [I[[I
+      ret = ret.replace(mt.group(0), rs)
+      //println(ret)
+    }
+    //println(ret)
+    ret
   }
 
   private def isInheritedFromBase(cls: CtClass) = {
