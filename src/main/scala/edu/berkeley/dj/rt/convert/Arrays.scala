@@ -2,16 +2,19 @@ package edu.berkeley.dj.rt.convert
 
 import javassist.CtClass
 import javassist.bytecode.Opcode._
-import javassist.bytecode.analysis.{Type, Analyzer, Frame}
-import javassist.bytecode.{MethodInfo, CodeIterator, ConstPool}
+import javassist.bytecode.analysis.{Frame, Type}
+import javassist.bytecode.{CodeIterator, ConstPool, MethodInfo}
 import javassist.convert.Transformer
 
-import edu.berkeley.dj.rt.Config
+import edu.berkeley.dj.rt.{JClassMap, Config, MethodAnalysis}
 
 /**
  * Created by matthewfl
  */
-class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
+class Arrays (next: Transformer,
+              val config: Config,
+              val mana: MethodAnalysis,
+              val classmap: JClassMap) extends Transformer(next) {
 
   /*
   Arrays are going to be tricky, as they are basically their own objects,
@@ -33,15 +36,24 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
    */
 
   private var analysis: Array[Frame] = null
-  private var addedSpaces: Int = 0
+  //private var addedSpaces: Int = 0
   private var minfo: MethodInfo = null
 
   override def initialize(cp: ConstPool, cls: CtClass, minfo: MethodInfo): Unit = {
-    val ana = new Analyzer
-    analysis = ana.analyze(cls, minfo)
-    addedSpaces = 0
+    //val ana = new Analyzer
+    //analysis = ana.analyze(cls, minfo)
+    analysis = mana.m.get(minfo).orNull
+    //addedSpaces = 0
     this.minfo = minfo
     //println("gg")
+  }
+
+  private def getSpace(pos: Int) = {
+    mana.getPlace(minfo, pos)
+  }
+
+  private def addSpace(pos: Int, len: Int): Unit = {
+    mana.addOffset(minfo, pos, len)
   }
 
   private def placeArrayFunc(method: String, pos: Int, it: CodeIterator, cp: ConstPool) = {
@@ -54,10 +66,28 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
     var pos = _pos
     val c : Int = it.byteAt(pos)
 
-    if(clazz.getName.startsWith(config.internalPrefix))
+    if(clazz.getName.startsWith(config.internalPrefix) && !clazz.getName.startsWith(config.coreprefix))
       return pos
 
-    val frame = analysis(pos - addedSpaces)
+    if(analysis == null)
+      return pos
+
+
+
+    val frame = try {
+      val pp = getSpace(pos)
+      if(pp > analysis.length || pp < 0) {
+        println("WTF")
+        throw new RuntimeException()
+      }
+      analysis(pp)
+    } catch {
+      case e: ArrayIndexOutOfBoundsException => {
+        println("SOMETHING FUNCKING HAPPENED "+ clazz.getName + " " + minfo.getName + " " + analysis.length)
+
+        throw e
+      }
+    }
 
     def makeMthod(intername: String, mthname: String, mthsig: String, count: Int) = {
       // assume that it is on some item that only has one byte
@@ -66,7 +96,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       val clsref = cp.addClassInfo(intername)
       val mthref = cp.addInterfaceMethodrefInfo(clsref, mthname, mthsig)
       it.writeByte(NOP, pos)
-      addedSpaces += it.insertGapAt(pos, 4, false).length
+      addSpace(pos, it.insertGapAt(pos, 4, false).length)
       it.writeByte(INVOKEINTERFACE, pos)
       it.write16bit(mthref, pos + 1)
       it.writeByte(count, pos + 3)
@@ -76,7 +106,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       val clsref = cp.addClassInfo(clsname)
       val mthref = cp.addMethodrefInfo(clsref, mthname, mthsig)
       it.writeByte(NOP, pos)
-      addedSpaces += it.insertGapAt(pos, 2, false).length
+      addSpace(pos, it.insertGapAt(pos, 2, false).length)
       it.writeByte(INVOKESTATIC, pos)
       it.write16bit(mthref, pos + 1)
     }
@@ -87,7 +117,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
       val clsref = cp.addClassInfo(config.arrayprefix + "Base")
       val mthref = cp.addMethodrefInfo(clsref, "length", s"(L${(config.arrayprefix + "Base").replace(".","/")};)I")
       it.writeByte(NOP, pos)
-      addedSpaces += it.insertGapAt(pos, 2, false).length
+      addSpace(pos, it.insertGapAt(pos, 2, false).length)
 
       it.writeByte(INVOKESTATIC, pos)
       it.write16bit(mthref, pos + 1)
@@ -111,7 +141,7 @@ class Arrays (next: Transformer, val config: Config) extends Transformer(next) {
 
       it.writeByte(NOP, pos)
       it.writeByte(NOP, pos + 1)
-      addedSpaces += it.insertGapAt(pos, 1, false).length
+      addSpace(pos, it.insertGapAt(pos, 1, false).length)
       it.writeByte(INVOKESTATIC, pos)
       it.write16bit(mthref, pos + 1)
 

@@ -412,6 +412,11 @@ public class CodeIterator implements Opcode {
         return insert0(currentPos, code, true);
     }
 
+    public Gap insertExg(byte[] code)
+            throws BadBytecode {
+        return insert0g(currentPos, code, true);
+    }
+
     /**
      * Inserts the given bytecode sequence exclusively
      * before the instruction at the given index <code>pos</code>.
@@ -465,21 +470,30 @@ public class CodeIterator implements Opcode {
      * @return          the index indicating the first byte of the
      *                  inserted byte sequence.
      */
-    private int insert0(int pos, byte[] code, boolean exclusive)
+    private Gap insert0g(int pos, byte[] code, boolean exclusive)
         throws BadBytecode
     {
         int len = code.length;
-        if (len <= 0)
-            return pos;
+        if (len <= 0) {
+            Gap g = new Gap();
+            g.position = pos;
+            return g;
+        }
 
         // currentPos will change.
-        pos = insertGapAt(pos, len, exclusive).position;
+        Gap g = insertGapAt(pos, len, exclusive);
+        pos = g.position;
 
         int p = pos;
         for (int j = 0; j < len; ++j)
             bytecode[p++] = code[j];
 
-        return pos;
+        return g;
+    }
+
+    private int insert0(int pos, byte[] code, boolean exclusive)
+            throws BadBytecode {
+        return insert0g(pos, code, exclusive).position;
     }
 
     /**
