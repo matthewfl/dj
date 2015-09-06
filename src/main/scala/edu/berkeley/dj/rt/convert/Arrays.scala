@@ -126,7 +126,7 @@ class Arrays (next: Transformer,
       // http://cs.au.dk/~mis/dOvs/jvmspec/ref-newarray.html
       val tname = typ match {
         case 4 => "Boolean"
-        case 5 => "Char"
+        case 5 => "Character"
         case 6 => "Float"
         case 7 => "Double"
         case 8 => "Byte"
@@ -184,9 +184,9 @@ class Arrays (next: Transformer,
         makeMthod(config.arrayprefix + "Byte_1", "get_byte", "(I)B", 2)
       }
     } else if(c == CALOAD) { // char
-      makeMthod(config.arrayprefix + "Char_1", "get_char", "(I)C", 2)
+      makeMthod(config.arrayprefix + "Character_1", "get_char", "(I)C", 2)
     } else if(c == CASTORE) {
-      makeMthod(config.arrayprefix + "Char_1", "set_char", "(IC)V", 3)
+      makeMthod(config.arrayprefix + "Character_1", "set_char", "(IC)V", 3)
     } else if(c == DALOAD) { // double
       makeMthod(config.arrayprefix + "Double_1", "get_double", "(I)D", 2)
     } else if(c == DASTORE) {

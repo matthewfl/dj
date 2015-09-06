@@ -526,7 +526,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val typ = if(mt.group(2).length == 1) {
         mt.group(2) match {
           case "Z" => "Boolean"
-          case "C" => "Char"
+          case "C" => "Character"
           case "B" => "Byte"
           case "I" => "Integer"
           case "J" => "Long"
@@ -557,7 +557,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val typ = if(mt.group(2).length == 1) {
         mt.group(2) match {
           case "Z" => "Boolean"
-          case "C" => "Char"
+          case "C" => "Character"
           case "B" => "Byte"
           case "I" => "Integer"
           case "J" => "Long"
@@ -601,11 +601,16 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     cls.subtypeOf(objectBaseInterface)
   }
 
+  private def makePublic(cls: CtClass): Unit = {
+    cls.setModifiers((cls.getModifiers | Modifier.PUBLIC) & ~(Modifier.PRIVATE | Modifier.PROTECTED))
+  }
+
   private def modifyClass(cls: CtClass, mana: MethodAnalysis): Unit = {
     //println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
     //println("modifiers: " + Modifier.toString(mods))
     reassociateClass(cls)
+    makePublic(cls)
 
     modifyStaticInit(cls, mana)
     rewriteUsedClasses(cls)
@@ -833,7 +838,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     val (wrapType, jvmtyp, isPrimitive) = baseType match {
       case "Byte" => ("byte", "B", true)
-      case "Char" => ("char", "C", true)
+      case "Character" => ("char", "C", true)
       case "Short" => ("short", "S", true)
       case "Integer" => ("int", "I", true)
       case "Long" => ("long", "J", true)

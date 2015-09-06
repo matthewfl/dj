@@ -5995,7 +5995,7 @@ Error message and password prompt
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="[[Directions for DJ]] [[Previous work]] Documentation" title="$:/StoryList">
+<div list="Documentation Internals Rewriter" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6446,7 +6446,7 @@ Previous work for distributed languages:
 <div created="20150521213601188" creator="matthewfl" modified="20150521214241570" modifier="matthewfl" title="Proxy generator">
 <pre>When we are using the [[Namespace rewriter]], we end up changing the name for a number of classes.  However, the JVM still requires that some classes maintain the same name as it needs to link up native methods.  To make this continue to work, we create proxy classes that wrap the original class and pass all method invocations back to the original class.</pre>
 </div>
-<div created="20150503220844359" creator="matthewfl" modified="20150521202830269" modifier="matthewfl" tags="Documentation Internals" title="Rewriter">
+<div created="20150503220844359" creator="matthewfl" modified="20150906214250722" modifier="matthewfl" tags="Documentation Internals" title="Rewriter">
 <pre>The rewriter takes bytecode from the project and automatically redirects all variable reads and writes so that we can appear as if we have shared memory architecture.
 
 The smallest unit of a distributed element will be an object in the java program.  If an object is currently not operating in a distributed fashion, then the additional overhead should only be a quick read from some status element on the object followed with an and operation for the specific bit.
@@ -6461,6 +6461,7 @@ When an object is remote, but being accessed locally, it will still have a local
 * [[Function call redirector]]
 * [[Namespace rewriter]]
 * [[Proxy generator]]
+* [[Array classes]]
 
 </pre>
 </div>
