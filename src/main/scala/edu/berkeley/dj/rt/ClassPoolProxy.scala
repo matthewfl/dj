@@ -67,7 +67,8 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
         if(classname.contains("testcase") ||
           e.isInstanceOf[UnsupportedOperationException] ||
           e.isInstanceOf[CannotCompileException] ||
-          classname.contains("BigDec"))
+          classname.contains("BigDec") ||
+          classname.contains("ObjectOutputStream"))
           e.printStackTrace()
         null
       }

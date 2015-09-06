@@ -487,50 +487,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   def modifyArrays(cls: CtClass, mana: MethodAnalysis): Unit = {
 
-    /*for(f <- cls.getDeclaredFields) {
-      if (f.getType.isArray) {
-        var typ = f.getType
-        var cnt = 0
-        while (typ.isArray) {
-          typ = typ.asInstanceOf[CtArray].getComponentType
-          cnt += 1
-        }
-        val name = if (typ.isPrimitive) {
-          typ.getName match {
-            case "int" => "Integer"
-            case s: String => {
-              s(0).toUpper + s.substring(1)
-            }
-          }
-        } else typ.getName
-        val cname = config.arrayprefix + name + "_" + cnt
-        f.setType(runningPool.get(cname))
-      }
-    }
-
-    for(m <- cls.getDeclaredMethods) {
-      m.set
-    }*/
-
-    //codeConverter.addTransform(new ArraysTypeRefs(codeConverter.prevTransforms, config))
-
-    /*try {
-      val anaMths = cls.getDeclaredMethods.map(m => {
-        val a = new Analyzer
-        Map(m.getName -> a.analyze(m))
-      }).reduce(_ ++ _)
-    } catch {
-      case _: BadBytecode => {}
-      case _: UnsupportedOperationException => {} // there are no declared methods
-    }*/
-
-
-    /*if(!cls.getName.contains("SimpleScratch"))
-      return
-*/
 
     val codeConverter = new CodeConverter
-    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config, mana, jclassmap))
+    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config, mana, jclassmap, this))
 
 
     cls.replaceClassName(new ArrayClassMap(this))
@@ -556,46 +515,6 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       } catch { case _: ClassCastException => {}}
     }
 
-
-
-    val mregx = """(\[+)([ZCBSIJFD]|L.*?;)""".r
-
-    /*val cp = cls.getClassFile.getConstPool
-    for(i <- 0 until cp.getSize) {
-      try {
-        val typ_idx = cp.getNameAndTypeDescriptor(i)
-        val str = cp.getUtf8Info(typ_idx)
-        if(str.contains("[")) {
-          val rstr = mregx.replaceAllIn(str, mt => {
-            val arr_depth = mt.group(1).length
-            val typ = if(mt.group(2).length == 1) {
-              mt.group(2) match {
-                case "Z" => "Boolean"
-                case "C" => "Char"
-                case "B" => "Byte"
-                case "I" => "Integer"
-                case "J" => "Long"
-                case "F" => "Float"
-                case "D" => "Double"
-                case _ => throw new NotImplementedError()
-              }
-            } else {
-              val s = mt.group(2)
-              s.substring(1, s.length - 1)//.replace("/", ".")
-            }
-            "L"+(config.arrayprefix + typ + "_" + arr_depth).replace(".", "/") + ";"
-          })
-          cp.setUtf8Info(i, rstr)
-        }
-      } catch {
-        case e: ClassCastException => {}
-        case e: NullPointerException => {}
-      }
-    }*/
-
-    //cls.instrument(new CodeConverter)
-
-
   }
 
   private val arrayTypeRegex = """(\[+)([ZCBSIJFD]|L[^;]+?;)""".r
@@ -613,6 +532,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           case "J" => "Long"
           case "F" => "Float"
           case "D" => "Double"
+          case "S" => "Short"
           case _ => throw new NotImplementedError()
         }
       } else {
@@ -643,13 +563,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           case "J" => "Long"
           case "F" => "Float"
           case "D" => "Double"
-          case _ => throw new NotImplementedError()
+          case "S" => "Short"
+          case _ => ???
         }
       } else {
         val s = mt.group(2)
         s.substring(1, s.length - 1)//.replace("/", ".")
       }
-      val r = (config.arrayprefix + typ + "_" + arr_depth).replace(".", "/")
+      val typ_mapped = {
+        val r = jclassmap.get(typ.replace('.', '/'))
+        if(r != null)
+          r.asInstanceOf[String]
+        else
+          typ
+      }
+      val r = (config.arrayprefix + typ_mapped + "_" + arr_depth).replace(".", "/")
       //"L"+
       val rs = if(addL)
         s"L$r;"
@@ -693,10 +621,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-  private def modifyInternalClass(cls: CtClass, mana: MethodAnalysis): Unit ={
+  private def modifyInternalClass(cls: CtClass/*, mana: MethodAnalysis*/): Unit ={
     // the internal classes have special annotations on them to control how they are rwriten
     var clsa = cls
     // if the class is internal to something, we still want the annotations for the file to be "active"
+
+    lazy val mana = getMethodAnalysis(cls)
 
     var rewriteUseAccessor = false
     val classMode = manager.classMode.getMode(cls.getName)
@@ -715,7 +645,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           }
           case nrw: RewriteClassRefCls => {
             try {
-              cls.replaceClassName(nrw.oldCls().getName, nrw.newName());
+              cls.replaceClassName(nrw.oldCls().getName, nrw.newName())
             } catch {
               case e: UndeclaredThrowableException => {
                 println(e.getCause)
@@ -899,14 +829,6 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       clsname.substring(config.arrayprefix.size, uindx)
     } else {
       clsname.substring(config.arrayprefix.size, uindx - 5)
-    }
-
-    val mappedType = {
-      val r = jclassmap.get(baseType.replace('.','/'))
-      if(r != null)
-        r.asInstanceOf[String].replace('/','.')
-      else
-        baseType
     }
 
     val (wrapType, jvmtyp, isPrimitive) = baseType match {
@@ -1270,10 +1192,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     if(classname.startsWith(config.arrayprefix)) {
       if(cls != null) {
-        val mana = getMethodAnalysis(cls)
+        //val mana = getMethodAnalysis(cls)
         reassociateClass(cls)
         addToCache(cls)
-        modifyInternalClass(cls, mana)
+        modifyInternalClass(cls)
         return cls
       }
       //val uindx = classname.lastIndexOf("_")
@@ -1287,10 +1209,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     // for edu.berkeley.dj.internal.coreclazz.
     if (classname.startsWith(config.coreprefix)) {
       if (cls != null) {
-        val mana = getMethodAnalysis(cls)
+        //val mana = getMethodAnalysis(cls)
         reassociateClass(cls)
         addToCache(cls)
-        modifyInternalClass(cls, mana)
+        modifyInternalClass(cls)
         return cls
       }
       var orgName = classname.drop(config.coreprefix.size)
@@ -1335,10 +1257,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         println("??")
       }
     } else if (classname.startsWith(config.internalPrefix)) {
-      val mana = getMethodAnalysis(cls)
+      //val mana = getMethodAnalysis(cls)
       reassociateClass(cls)
       addToCache(cls)
-      modifyInternalClass(cls, mana)
+      modifyInternalClass(cls)
     }
     cls
   }

@@ -6,7 +6,7 @@ import javassist.bytecode.analysis.{Frame, Type}
 import javassist.bytecode.{CodeIterator, ConstPool, MethodInfo}
 import javassist.convert.Transformer
 
-import edu.berkeley.dj.rt.{JClassMap, Config, MethodAnalysis}
+import edu.berkeley.dj.rt.{Rewriter, JClassMap, Config, MethodAnalysis}
 
 /**
  * Created by matthewfl
@@ -14,7 +14,8 @@ import edu.berkeley.dj.rt.{JClassMap, Config, MethodAnalysis}
 class Arrays (next: Transformer,
               val config: Config,
               val mana: MethodAnalysis,
-              val classmap: JClassMap) extends Transformer(next) {
+              val classmap: JClassMap,
+              val rewriter: Rewriter) extends Transformer(next) {
 
   /*
   Arrays are going to be tricky, as they are basically their own objects,
@@ -71,8 +72,6 @@ class Arrays (next: Transformer,
 
     if(analysis == null)
       return pos
-
-
 
     val frame = try {
       val pp = getSpace(pos)
@@ -214,14 +213,22 @@ class Arrays (next: Transformer,
       val ct = frame.getStack(frame.getTopIndex - 1)
       val comp = ct.getComponent
       val arrdim = ct.getDimensions
-      val name = comp.getCtClass.getName
+      val name = {
+        val n = comp.getCtClass.getName.replace('.','/')
+        val r = classmap.get(n).asInstanceOf[String]
+        if(r == null) n else r
+      }
       makeMthod(config.arrayprefix + name + "_" + arrdim, "get_"+augName(name), s"(I)L${name.replace('.','/')};", 2)
       //???
     } else if(c == AASTORE) {
       val ct = frame.getStack(frame.getTopIndex - 2)
       val comp = ct.getComponent
       val arrdim = ct.getDimensions
-      val name = comp.getCtClass.getName
+      val name = {
+        val n = comp.getCtClass.getName.replace('.','/')
+        val r = classmap.get(n).asInstanceOf[String]
+        if(r == null) n else r
+      }
       makeMthod(config.arrayprefix + name + "_" + arrdim, "set_"+augName(name), s"(IL${name.replace('.','/')};)V", 3)
       //???
     }
