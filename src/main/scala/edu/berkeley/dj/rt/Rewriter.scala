@@ -669,6 +669,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             if(clsa == cls)
               cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
           }
+          case _: RewriteAddArrayWrap => {
+            addArrayWrapMethods(cls)
+          }
           case _ => {} // nop
         }
       }
@@ -695,6 +698,42 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(cls.isInterface) {
       // WTF: the base of an interface always needs to be java.lang.Object, but somehow this is being overwritten
       cls.getClassFile.setSuperclass("java.lang.Object")
+    }
+  }
+
+  private def addArrayWrapMethods(cls: CtClass): Unit = {
+    for(m <- cls.getDeclaredMethods) {
+      if(m.getSignature.contains("[")) {
+        // we need to add another method to wrap this
+        val rt = {
+          if(m.getReturnType.isArray) {
+            ??? // TODO:
+            cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(m.getReturnType), false).replace('/','.'))
+          } else {
+            m.getReturnType
+          }
+        }
+        val argsM = m.getParameterTypes.map(a => {
+          if(a.isArray) {
+            (cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(a), false).replace('/','.')), true, a)
+          } else (a, false, null)
+        })
+        val body =
+          s"""
+             {
+               return ${m.getName} (${
+            argsM.zipWithIndex.map(a => {
+              if(a._1._2 == false) {
+                "$"+(a._2+1)
+              } else {
+                "("+a._1._3.getName+ ")" +config.internalPrefix + "ArrayHelpers.makeNativeArray( $"+(a._2+1) +")"
+              }
+            }).mkString(", ")
+          }) ;
+             }
+           """
+        cls.addMethod(CtNewMethod.make(m.getModifiers, rt, m.getName, argsM.map(_._1), m.getExceptionTypes, body, cls))
+      }
     }
   }
 

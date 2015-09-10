@@ -193,7 +193,7 @@ public class ArrayHelpers {
 
     static private Object makeDJArrayPrimitive(String type, Object arr) {
         try {
-            String newname = "edu.berkeley.dj.internal.arrayclazz." + type + "_1";
+            String newname = "edu.berkeley.dj.internal.arrayclazz." + type + "_impl_1";
             Class<?> ncls = Class.forName(newname);
             Object ret = ncls.newInstance();
             Field irf = ncls.getField("ir");
@@ -211,6 +211,17 @@ public class ArrayHelpers {
     static public Object makeNativeArray(Base_impl arr) {
         if((arr.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             throw new NotImplementedException();
-        throw new NotImplementedException();
+        try {
+            Field irf = arr.getClass().getDeclaredField("ir");
+            irf.setAccessible(true);
+            return irf.get(arr);
+        } catch (NoSuchFieldException|
+                IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static public Object makeNativeArray(Object o) {
+        return makeNativeArray((Base_impl)o);
     }
 }

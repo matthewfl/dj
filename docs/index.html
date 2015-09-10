@@ -275,6 +275,8 @@ Error message and password prompt
 
 <li>$:/view</li>
 
+<li>Array classes</li>
+
 <li>Basic usage</li>
 
 <li>Directions for DJ</li>
@@ -5962,8 +5964,8 @@ Error message and password prompt
 <div modified="20150503222258295" modifier="matthewfl" title="$:/state/add-plugin-info/$:/temp/ServerConnection/http://tiddlywiki.com/library/v5.1.8/index.html/$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/themes/tiddlywiki/snowwhite">
 <pre>no</pre>
 </div>
-<div modified="20150604005527006" modifier="matthewfl" title="$:/state/showeditpreview">
-<pre>yes</pre>
+<div modified="20150906220058972" modifier="matthewfl" title="$:/state/showeditpreview">
+<pre>no</pre>
 </div>
 <div modified="20150602172658013" modifier="matthewfl" title="$:/state/sidebar">
 <pre>yes</pre>
@@ -5995,7 +5997,7 @@ Error message and password prompt
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="Documentation Internals Rewriter" title="$:/StoryList">
+<div list="Documentation Internals Rewriter [[Array classes]]" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6356,6 +6358,11 @@ At this point it is largely for experimentation by @zooko.
 </div>
 <div modified="20150602091549283" modifier="matthewfl" title="$:/view">
 <pre>classic</pre>
+</div>
+<div created="20150906215935012" creator="matthewfl" modified="20150907003132576" modifier="matthewfl" title="Array classes">
+<pre>In DJ we require the ability to see all reads and writes that are preform.  This is because for instances of an object that are remote, we must intercept the writes and reads and redirect them to an alternate machine.
+
+For managing the redirection for array object, we replace all references to array types to a special class instances that allows us to track which instance of an array we have as well as replace the getting and setting operations for the array.</pre>
 </div>
 <div created="20150602091150851" creator="matthewfl" modified="20150602091355978" modifier="matthewfl" title="Basic usage">
 <pre>```sh
