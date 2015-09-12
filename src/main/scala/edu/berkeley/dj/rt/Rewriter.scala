@@ -486,11 +486,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   }
 
   def modifyArrays(cls: CtClass, mana: MethodAnalysis): Unit = {
-
-
     val codeConverter = new CodeConverter
     codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config, mana, jclassmap, this))
-
 
     cls.replaceClassName(new ArrayClassMap(this))
 
@@ -502,7 +499,6 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         }
       } catch { case _: ClassCastException => {}}
     }
-
 
     cls.instrument(codeConverter)
 
@@ -605,10 +601,15 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     cls.setModifiers((cls.getModifiers | Modifier.PUBLIC) & ~(Modifier.PRIVATE | Modifier.PROTECTED))
   }
 
-  private def modifyClass(cls: CtClass, mana: MethodAnalysis): Unit = {
+  private def modifyClass(cls: CtClass, mana: MethodAnalysis, overrideNative: Boolean=false): Unit = {
     //println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
     //println("modifiers: " + Modifier.toString(mods))
+
+    if(overrideNative && hasNativeMethods(cls)) {
+      overwriteNativeMethods(cls)
+    }
+
     reassociateClass(cls)
     makePublic(cls)
 
@@ -623,6 +624,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       // and if we end up trying to work with them then they will end up not being able to find
       // the fields on objectbase that it needs for various operations to work
       System.err.println("cls is not inherited from objectbase and we are trying to work with it: "+cls.getName)
+      ???
     }
   }
 
@@ -741,7 +743,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     // if this clsas contains some native methods then we can't
     // directly instaniate this class, as it will need the native methods
     // so instead we will make proxy methods for all of its public and protected methods
-    cls.getDeclaredMethods.foreach(m => {
+    for(m <- cls.getDeclaredMethods) {
       if(Modifier.isNative(m.getModifiers))
         return true
     })
@@ -797,7 +799,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     val orgClassName = cls.getName.substring(config.coreprefix.length)
 
-    rwMembers.foreach(m=>{
+    //rwMembers.foreach(m=>{
+    for(m <- rwMembers) {
       //val args = getArguments(m.getSignature)
       val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
       // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
@@ -811,7 +814,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       } else {
         (s"new ``java``.``lang``.``String`` [] { ${
           args.map(v => {
-            if(v.isArray) {
+            if(v.getName.startsWith(config.arrayprefix)) {
+              ??? // this needs to determine the origional array type
+            } else if(v.isArray) {
+              ??? // how are we now getting an array at this point
               "\"" + Descriptor.toJvmName(v).replace('/', '.') + "\""
             } else {
               "\"" + v.getName + "\""
@@ -1268,10 +1274,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       reassociateClass(clso)
       clso.setName(classname)
       addToCache(clso)
-      if(hasNativeMethods(clso)) {
-        overwriteNativeMethods(clso)
-      }
-      modifyClass(clso, manao)
+      modifyClass(clso, manao, overrideNative = true)
       return clso
     }
 
