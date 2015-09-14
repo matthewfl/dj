@@ -601,13 +601,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     cls.setModifiers((cls.getModifiers | Modifier.PUBLIC) & ~(Modifier.PRIVATE | Modifier.PROTECTED))
   }
 
+  private def addMethods(cls: CtClass, methods: Iterable[CtMethod]): Unit = {
+    for(m <- methods) {
+      cls.addMethod(m)
+    }
+  }
+
   private def modifyClass(cls: CtClass, mana: MethodAnalysis, overrideNative: Boolean=false): Unit = {
     //println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
     //println("modifiers: " + Modifier.toString(mods))
 
+    val addedMethods = new collection.mutable.MutableList[CtMethod]()
+
     if(overrideNative && hasNativeMethods(cls)) {
-      overwriteNativeMethods(cls)
+      addedMethods ++= makeOverwriteenNativeMethods(cls)
     }
 
     reassociateClass(cls)
@@ -618,6 +626,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if (isInheritedFromBase(cls)) {
       modifyArrays(cls, mana)
       addRPCRedirects(cls)
+      addMethods(cls, addedMethods)
       transformClass(cls)
     } else {
       // this is really annoying, some classes are not inherited from objectbase
@@ -703,39 +712,48 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-  private def addArrayWrapMethods(cls: CtClass): Unit = {
-    for(m <- cls.getDeclaredMethods) {
-      if(m.getSignature.contains("[")) {
-        // we need to add another method to wrap this
-        val rt = {
-          if(m.getReturnType.isArray) {
-            ??? // TODO:
-            cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(m.getReturnType), false).replace('/','.'))
-          } else {
-            m.getReturnType
-          }
-        }
-        val argsM = m.getParameterTypes.map(a => {
-          if(a.isArray) {
-            (cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(a), false).replace('/','.')), true, a)
-          } else (a, false, null)
-        })
-        val body =
-          s"""
+  private def arrayWrapMethod(cls: CtClass, m: CtMethod): CtMethod = {
+    if(!m.getSignature.contains("["))
+      return null// we do not need to wrap this method
+
+    val rt = {
+      if(m.getReturnType.isArray) {
+        ??? // TODO:
+        cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(m.getReturnType), false).replace('/','.'))
+      } else {
+        m.getReturnType
+      }
+    }
+    val argsM = m.getParameterTypes.map(a => {
+      if(a.isArray) {
+        (cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(a), false).replace('/','.')), true, a)
+      } else (a, false, null)
+    })
+    val body =
+      s"""
              {
                return ${m.getName} (${
-            argsM.zipWithIndex.map(a => {
-              if(a._1._2 == false) {
-                "$"+(a._2+1)
-              } else {
-                "("+a._1._3.getName+ ")" +config.internalPrefix + "ArrayHelpers.makeNativeArray( $"+(a._2+1) +")"
-              }
-            }).mkString(", ")
-          }) ;
+        argsM.zipWithIndex.map(a => {
+          if(a._1._2 == false) {
+            "$"+(a._2+1)
+          } else {
+            "("+a._1._3.getName+ ")" +config.internalPrefix + "ArrayHelpers.makeNativeArray( $"+(a._2+1) +")"
+          }
+        }).mkString(", ")
+      }) ;
              }
            """
-        cls.addMethod(CtNewMethod.make(m.getModifiers, rt, m.getName, argsM.map(_._1), m.getExceptionTypes, body, cls))
-      }
+    CtNewMethod.make(m.getModifiers, rt, m.getName, argsM.map(_._1), m.getExceptionTypes, body, cls)
+  }
+
+  private def addArrayWrapMethods(cls: CtClass): Unit = {
+    for(m <- cls.getDeclaredMethods) {
+      //if(m.getSignature.contains("[")) {
+        // we need to add another method to wrap this
+      val r = arrayWrapMethod(cls, m)
+      if(r != null)
+        cls.addMethod(r)
+    //}
     }
   }
 
@@ -746,7 +764,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     for(m <- cls.getDeclaredMethods) {
       if(Modifier.isNative(m.getModifiers))
         return true
-    })
+    }
     false
   }
 
@@ -786,7 +804,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-  private def overwriteNativeMethods(cls: CtClass) = {
+  private def makeOverwriteenNativeMethods(cls: CtClass): Iterable[CtMethod] = {
     // For now if
     // something is going to need a native method, we can just manually overwrite the native method
     // calls, otherwise this is going to end up becoming a really complicated system
@@ -800,7 +818,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val orgClassName = cls.getName.substring(config.coreprefix.length)
 
     //rwMembers.foreach(m=>{
-    for(m <- rwMembers) {
+    for(m <- rwMembers) yield {
       //val args = getArguments(m.getSignature)
       val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
       // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
@@ -817,7 +835,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             if(v.getName.startsWith(config.arrayprefix)) {
               ??? // this needs to determine the origional array type
             } else if(v.isArray) {
-              ??? // how are we now getting an array at this point
+              //??? // how are we now getting an array at this point
               "\"" + Descriptor.toJvmName(v).replace('/', '.') + "\""
             } else {
               "\"" + v.getName + "\""
@@ -857,15 +875,16 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                  ) ${if(rt_type != CtClass.voidType) cast_suffix else "" } ;
            }
          """
-      try {
+      /*try {
         cls.addMethod(CtMethod.make(mth_code, cls))
       } catch {
         case e: Throwable => {
           println(e)
           throw e
         }
-      }
-    })
+      }*/
+      CtMethod.make(mth_code, cls)
+    }
   }
 
   private lazy val baseArrayClsImpl = runningPool.get(config.arrayprefix + "Base_impl")

@@ -168,7 +168,7 @@ public class ArrayHelpers {
     }
 
     static public Object makeDJArray(char[] arr) {
-        return makeDJArrayPrimitive("Char", arr);
+        return makeDJArrayPrimitive("Character", arr);
     }
 
     static public Object makeDJArray(short[] arr) {
