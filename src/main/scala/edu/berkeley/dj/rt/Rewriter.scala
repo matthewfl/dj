@@ -516,7 +516,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   private val arrayTypeRegex = """(\[+)([ZCBSIJFD]|L[^;]+?;)""".r
 
   // TODO: this is crashing for some reason inside the scala lib implementation
-  private[rt] def rewriteArrayTypeFail(typ: String, addL: Boolean) = {
+  /*private[rt] def rewriteArrayTypeFail(typ: String, addL: Boolean) = {
     arrayTypeRegex.replaceAllIn(typ, mt => {
       val arr_depth = mt.group(1).length
       val typ = if(mt.group(2).length == 1) {
@@ -542,7 +542,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       else
         r
     })
-  }
+  }*/
 
   // fcking haxs, some issue sometimes with the scala findallandreplace
   private[rt] def rewriteArrayType(typ: String, addL: Boolean) = {
@@ -601,22 +601,23 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     cls.setModifiers((cls.getModifiers | Modifier.PUBLIC) & ~(Modifier.PRIVATE | Modifier.PROTECTED))
   }
 
-  private def addMethods(cls: CtClass, methods: Iterable[CtMethod]): Unit = {
+  /*private def addMethods(cls: CtClass, methods: Iterable[CtMethod]): Unit = {
     for(m <- methods) {
       cls.addMethod(m)
     }
-  }
+  }*/
 
   private def modifyClass(cls: CtClass, mana: MethodAnalysis, overrideNative: Boolean=false): Unit = {
     //println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
     //println("modifiers: " + Modifier.toString(mods))
 
-    val addedMethods = new collection.mutable.MutableList[CtMethod]()
+    //val addedMethods = new collection.mutable.MutableList[CtMethod]()
 
-    if(overrideNative && hasNativeMethods(cls)) {
-      addedMethods ++= makeOverwriteenNativeMethods(cls)
-    }
+    val nativeM = if(overrideNative && hasNativeMethods(cls)) {
+      findNativeMethodsToOverwrite(cls)
+      //addedMethods ++= makeOverwrittenNativeMethods(cls)
+    } else null
 
     reassociateClass(cls)
     makePublic(cls)
@@ -626,7 +627,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if (isInheritedFromBase(cls)) {
       modifyArrays(cls, mana)
       addRPCRedirects(cls)
-      addMethods(cls, addedMethods)
+      if(nativeM != null)
+        addOverwrittenNativeMethods(cls, nativeM)
+      //addMethods(cls, addedMethods)
       transformClass(cls)
     } else {
       // this is really annoying, some classes are not inherited from objectbase
@@ -804,7 +807,96 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-  private def makeOverwriteenNativeMethods(cls: CtClass): Iterable[CtMethod] = {
+  private def findNativeMethodsToOverwrite(cls: CtClass) = {
+    val rwMembers = cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers))
+
+    if(rwMembers.isEmpty) {
+      null
+    } else {
+      rwMembers.foreach(m => {
+        cls.removeMethod(m)
+      })
+      rwMembers
+    }
+  }
+
+  private def addOverwrittenNativeMethods(cls: CtClass, rwMembers: Iterable[CtMethod]) = {
+
+    val orgClassName = cls.getName.substring(config.coreprefix.length)
+
+    for(m <- rwMembers) {
+      //val args = getArguments(m.getSignature)
+      val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
+      // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
+      val static = if (Modifier.isStatic(m.getModifiers)) "static" else ""
+
+      // ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+
+      // work around javassist bug
+      val (cls_types, arg_vals) = if (args.length == 0) {
+        ("new java.lang.String[0]", "new java.lang.Object[0]")
+      } else {
+        (s"new ``java``.``lang``.``String`` [] { ${
+          args.map(v => {
+            if (v.getName.startsWith(config.arrayprefix)) {
+              ??? // this needs to determine the origional array type
+            } else if (v.isArray) {
+              //??? // how are we now getting an array at this point
+              "\"" + Descriptor.toJvmName(v).replace('/', '.') + "\""
+            } else {
+              "\"" + v.getName + "\""
+            }
+          }).mkString(", ")
+        } }",
+          s"new java.lang.Object [] { ${
+            args.zipWithIndex.map(v => {
+              if (v._1.isPrimitive) {
+                // we need to manually box this
+                s"${v._1.asInstanceOf[CtPrimitiveType].getWrapperName}.valueOf( a${v._2} )"
+              } else {
+                s"a${v._2}"
+              }
+            }).mkString(", ")
+          } }")
+      }
+
+      var rt_type = m.getReturnType
+
+      // work around for javassist not automatically undoing boxing
+      val (cast_prefix, cast_suffix) = if (rt_type.isPrimitive) {
+        (s"((edu.berkeley.dj.internal.coreclazz.${rt_type.asInstanceOf[CtPrimitiveType].getWrapperName})", s").${rt_type.getName}Value()")
+      } else {
+        (s"(${getUsableName(rt_type)})", "")
+      }
+
+      val mth_code = s"""
+           ${getAccessControl(m.getModifiers)} ${static} ${getUsableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsableName(v._1) + " a" + v._2).mkString(", ")}) {
+             edu.berkeley.dj.internal.InternalInterface.getInternalInterface().simplePrint("\t\tcall native: ${cls.getName} ${m.getName}");
+               ${if (rt_type != CtClass.voidType) s"return $cast_prefix " else ""}
+               edu.berkeley.dj.internal.ProxyHelper.invokeProxy(
+                 ${if (Modifier.isStatic(m.getModifiers)) "null" else "this"} ,
+                 "${orgClassName}",
+                 ${getUsableName(cls)}.class ,
+                 $cls_types,
+                 "${m.getName}",
+                 $arg_vals
+                 ) ${if (rt_type != CtClass.voidType) cast_suffix else ""} ;
+           }
+         """
+      try {
+        cls.addMethod(CtMethod.make(mth_code, cls))
+
+      } catch {
+        case e: Throwable => {
+          println(e)
+          throw e
+        }
+      }
+    }
+  }
+
+
+  /*private def makeOverwrittenNativeMethods(cls: CtClass): Iterable[CtMethod] = {
     // For now if
     // something is going to need a native method, we can just manually overwrite the native method
     // calls, otherwise this is going to end up becoming a really complicated system
@@ -885,7 +977,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }*/
       CtMethod.make(mth_code, cls)
     }
-  }
+  }*/
 
   private lazy val baseArrayClsImpl = runningPool.get(config.arrayprefix + "Base_impl")
   private lazy val baseArrayClsInter = runningPool.get(config.arrayprefix + "Base")

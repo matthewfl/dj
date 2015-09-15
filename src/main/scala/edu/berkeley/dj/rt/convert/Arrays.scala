@@ -112,6 +112,8 @@ class Arrays (next: Transformer,
 
     def augName(n: String) = n.replaceAll("[^A-Za-z0-9]", "_")
 
+    def
+
     if(c == ARRAYLENGTH) {
       val clsref = cp.addClassInfo(config.arrayprefix + "Base")
       val mthref = cp.addMethodrefInfo(clsref, "length", s"(L${(config.arrayprefix + "Base").replace(".","/")};)I")
