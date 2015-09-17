@@ -58,8 +58,17 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader"),
     ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader"),
-    ("desiredAssertionStatus", "()Z", "java.lang.Class") -> ("desiredAssertionStatus", s"${config.internalPrefix}AugmentedClassLoader")
+    ("desiredAssertionStatus", "()Z", "java.lang.Class") -> ("desiredAssertionStatus", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("getComponentType", "()Ljava/lang/Class;", "java.lang.Class") -> ("getComponentType", s"${config.internalPrefix}AugmentedClassLoader"),
 
+
+    // some string stuff
+    ("getChars", "(IILedu/berkeley/dj/internal/arrayclazz/Character_1;I)V", "java.lang.String") -> ("getChars", s"${config.internalPrefix}AugmentedString"),
+
+    // array internal stuff
+  // TODO: this method is the wrong one to replace since it is internal to the reflect class which we are not rewriting....
+    ("newInstance", "(Ljava/lang/Class;I)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers"),
+    ("newInstance", "(Ljava/lang/Class;Ledu/berkeley/dj/internal/arrayclazz/Integer_1;)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers")
     // rewrite the string init method since this is package private
     // this just gets the field inside the class and sets it to the char array
   )

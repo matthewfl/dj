@@ -87,4 +87,8 @@ public class AugmentedString {
     public static String make(StringBuilder b) {
         return new String(b);
     }
+
+    public static void getChars(Object self, int a, int b, char[] arr, int c) {
+        ((String)self).getChars(a,b,arr,c);
+    }
 }

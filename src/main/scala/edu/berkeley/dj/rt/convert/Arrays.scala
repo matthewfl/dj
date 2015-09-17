@@ -6,7 +6,7 @@ import javassist.bytecode.analysis.{Frame, Type}
 import javassist.bytecode.{CodeIterator, ConstPool, MethodInfo}
 import javassist.convert.Transformer
 
-import edu.berkeley.dj.rt.{Rewriter, JClassMap, Config, MethodAnalysis}
+import edu.berkeley.dj.rt.{Config, JClassMap, MethodAnalysis, Rewriter}
 
 /**
  * Created by matthewfl
@@ -112,8 +112,6 @@ class Arrays (next: Transformer,
 
     def augName(n: String) = n.replaceAll("[^A-Za-z0-9]", "_")
 
-    def
-
     if(c == ARRAYLENGTH) {
       val clsref = cp.addClassInfo(config.arrayprefix + "Base")
       val mthref = cp.addMethodrefInfo(clsref, "length", s"(L${(config.arrayprefix + "Base").replace(".","/")};)I")
@@ -192,7 +190,7 @@ class Arrays (next: Transformer,
     } else if(c == DALOAD) { // double
       makeMthod(config.arrayprefix + "Double_1", "get_double", "(I)D", 2)
     } else if(c == DASTORE) {
-      makeMthod(config.arrayprefix + "Double_1", "set_double","(ID)V", 3)
+      makeMthod(config.arrayprefix + "Double_1", "set_double","(ID)V", 4) // freaking spec
     } else if(c == FALOAD) { // float
       makeMthod(config.arrayprefix + "Float_1", "get_float", "(I)F", 2)
     } else if(c == FASTORE) {
@@ -206,7 +204,7 @@ class Arrays (next: Transformer,
     } else if(c == LALOAD) { // long
       makeMthod(config.arrayprefix + "Long_1", "get_long", "(I)J", 2)
     } else if(c == LASTORE) {
-      makeMthod(config.arrayprefix + "Long_1", "set_long", "(IJ)V", 3)
+      makeMthod(config.arrayprefix + "Long_1", "set_long", "(IJ)V", 4) // freaking spec
     } else if(c == SALOAD) { // short
       makeMthod(config.arrayprefix + "Short_1", "get_short", "(I)S", 2)
     } else if(c == SASTORE) {
@@ -215,7 +213,23 @@ class Arrays (next: Transformer,
       val ct = frame.getStack(frame.getTopIndex - 1)
       val comp = ct.getComponent
       val arrdim = ct.getDimensions
-      val name = {
+      val name = if(arrdim > 1) {
+        var base = comp
+        while(base.isArray)
+          base = base.getComponent
+        val basect = base.getCtClass
+        val bname = if(basect.isPrimitive) {
+          import CtClass._
+          basect match {
+            case `intType` => "Integer"
+            case `charType` => "Character"
+            case a => a.getName.capitalize
+          }
+        } else basect.getName
+        val n = bname.replace('.', '/')
+        val r = classmap.get(n).asInstanceOf[String]
+        config.arrayprefix + (if(r == null) n else r) + "_" + (arrdim - 1)
+      } else {
         val n = comp.getCtClass.getName.replace('.','/')
         val r = classmap.get(n).asInstanceOf[String]
         if(r == null) n else r
@@ -226,7 +240,23 @@ class Arrays (next: Transformer,
       val ct = frame.getStack(frame.getTopIndex - 2)
       val comp = ct.getComponent
       val arrdim = ct.getDimensions
-      val name = {
+      val name = if(arrdim > 1) {
+        var base = comp
+        while(base.isArray)
+          base = base.getComponent
+        val basect = base.getCtClass
+        val bname = if(basect.isPrimitive) {
+          import CtClass._
+          basect match {
+            case `intType` => "Integer"
+            case `charType` => "Character"
+            case a => a.getName.capitalize
+          }
+        } else basect.getName
+        val n = bname.replace('.', '/')
+        val r = classmap.get(n).asInstanceOf[String]
+        config.arrayprefix + (if(r == null) n else r) + "_" + (arrdim - 1)
+      } else {
         val n = comp.getCtClass.getName.replace('.','/')
         val r = classmap.get(n).asInstanceOf[String]
         if(r == null) n else r
