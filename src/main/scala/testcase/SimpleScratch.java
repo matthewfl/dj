@@ -2,12 +2,16 @@ package testcase;
 
 import edu.berkeley.dj.internal.InternalInterface;
 
+import java.util.ArrayList;
+
 /**
  * Created by matthewfl
  */
 public class SimpleScratch {
 
     static byte[] test;
+
+    static Object[] argstest;
 
     public static void main(String[] args) throws Throwable {
 
@@ -30,6 +34,22 @@ public class SimpleScratch {
 
         qq[0] = 22;
 
+        int a = qq[0];
+        System.out.println("something");
+
+        ArrayList<Integer> ee = new ArrayList<>();
+        ee.add(123);
+
+        Object[] oo = new Object[5];
+        oo[0] = ee;
+
+        assert(23 == 22);
+
+        argstest = (Object[])args;
+
+        String[] a1 = (String[])argstest;
+        if(a1.length > 0)
+            a1[0].toString();
         //assert(qq[0] == 22);
 
         //vv[1] = true;

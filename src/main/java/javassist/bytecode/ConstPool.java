@@ -16,6 +16,7 @@
 
 package javassist.bytecode;
 
+import edu.berkeley.dj.rt.ArrayClassMap;
 import javassist.CtClass;
 
 import java.io.*;
@@ -1390,9 +1391,16 @@ class ClassInfo extends ConstInfo {
         String oldName = cp.getUtf8Info(name);
         String newName = null;
         if (oldName.charAt(0) == '[') {
-            String s = Descriptor.rename(oldName, map);
-            if (oldName != s)
-                newName = s;
+            // fcking hack, fml
+            if(map instanceof ArrayClassMap) {
+                String s = ((ArrayClassMap)map).getM(oldName, false);
+                if(oldName != s)
+                    newName = s;
+            } else {
+                String s = Descriptor.rename(oldName, map);
+                if (oldName != s)
+                    newName = s;
+            }
         }
         else {
             String s = (String)map.get(oldName);

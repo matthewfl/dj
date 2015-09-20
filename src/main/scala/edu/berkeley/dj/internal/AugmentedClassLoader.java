@@ -75,4 +75,46 @@ public class AugmentedClassLoader {
         throw new NotImplementedException();
     }
 
+
+    public static boolean desiredAssertionStatus(Object cls) {
+        // TODO: load the assertion status from a central location
+
+        //cls instanceof Class<?>
+
+        return false;
+    }
+
+    public static Class<?> getClassA(String name) throws ClassNotFoundException {
+        if(name.equals("void"))
+            return void.class;
+        if(name.equals("boolean"))
+            return boolean.class;
+        if(name.equals("char"))
+            return char.class;
+        if(name.equals("byte"))
+            return byte.class;
+        if(name.equals("short"))
+            return short.class;
+        if(name.equals("int"))
+            return int.class;
+        if(name.equals("long"))
+            return long.class;
+        if(name.equals("float"))
+            return float.class;
+        if(name.equals("double"))
+            return double.class;
+        return forName(name);
+    }
+
+    public static Class<?> getComponentType(Object cl) {
+        Class<?> self = (Class<?>)cl;
+        if(!self.getName().startsWith("edu.berkeley.dj.internal.arrayclazz."))
+            return self.getComponentType();
+        // this will only work if this is the _impl_ type, so we should
+        try {
+            return self.getField("ir").getType().getComponentType();
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

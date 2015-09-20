@@ -5,6 +5,7 @@ import edu.berkeley.dj.internal.arrayclazz.Base_impl;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * Created by matthewfl
@@ -13,125 +14,7 @@ public class ArrayHelpers {
 
     private ArrayHelpers() {}
 
-    /*static public int length_A(Object arr[]) {
-        return arr.length;
-    }
-
-    static public int length_Z(boolean arr[]) {
-        return arr.length;
-    }
-
-    static public int length_C(char arr[]) {
-        return arr.length;
-    }
-
-    static public int length_B(byte arr[]) {
-        return arr.length;
-    }
-
-    static public int length_S(short arr[]) {
-        return arr.length;
-    }
-
-    static public int length_I(int arr[]) {
-        return arr.length;
-    }
-
-    static public int length_J(long arr[]) {
-        return arr.length;
-    }
-
-    static public int length_F(float arr[]) {
-        return arr.length;
-    }
-
-    static public int length_D(double arr[]) {
-        return arr.length;
-    }
-
-    static public int length(Object arr) {
-        // have to determine the type of the array and then cast it to make the array length work...
-        return 0;
-    }
-
-
-    static public void store_A(int ind, Object v, Object arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_Z(int ind, boolean v, boolean arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_C(int ind, char v, char arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_B(int ind, byte v, byte arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_S(int ind, short v, short arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_I(int ind, int v, int arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_J(int ind, long v, long arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_F(int ind, float v, float arr[]) {
-        arr[ind] = v;
-    }
-
-    static public void store_D(int ind, double v, double arr[]) {
-        arr[ind] = v;
-    }
-
-    static public Object get_A(int ind, Object arr[]) {
-        return arr[ind];
-    }
-
-    static public boolean get_Z(int ind, boolean arr[]) {
-        return arr[ind];
-    }
-
-    static public char get_C(int ind, char arr[]) {
-        return arr[ind];
-    }
-
-    static public byte get_B(int ind, byte arr[]) {
-        return arr[ind];
-    }
-
-    static public short get_S(int ind, short arr[]) {
-        return arr[ind];
-    }
-
-    static public int get_I(int ind, int arr[]) {
-        return arr[ind];
-    }
-
-    static public long get_J(int ind, long arr[]) {
-        return arr[ind];
-    }
-
-    static public float get_F(int ind, float arr[]) {
-        return arr[ind];
-    }
-
-    static public double get_D(int ind, double arr[]) {
-        return arr[ind];
-    }
-
-*/
-
-    /*static public int getLength(ObjectBase arr) {
-
-    }*/
+    static final String arrayPrefix = "edu.berkeley.dj.internal.arrayclazz.";
 
     static public Object makeDJArray(Object[] obj) {
         try {
@@ -168,7 +51,7 @@ public class ArrayHelpers {
     }
 
     static public Object makeDJArray(char[] arr) {
-        return makeDJArrayPrimitive("Char", arr);
+        return makeDJArrayPrimitive("Character", arr);
     }
 
     static public Object makeDJArray(short[] arr) {
@@ -193,7 +76,7 @@ public class ArrayHelpers {
 
     static private Object makeDJArrayPrimitive(String type, Object arr) {
         try {
-            String newname = "edu.berkeley.dj.internal.arrayclazz." + type + "_1";
+            String newname = "edu.berkeley.dj.internal.arrayclazz." + type + "_impl_1";
             Class<?> ncls = Class.forName(newname);
             Object ret = ncls.newInstance();
             Field irf = ncls.getField("ir");
@@ -211,6 +94,51 @@ public class ArrayHelpers {
     static public Object makeNativeArray(Base_impl arr) {
         if((arr.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             throw new NotImplementedException();
+        try {
+            Field irf = arr.getClass().getDeclaredField("ir");
+            irf.setAccessible(true);
+            return irf.get(arr);
+        } catch (NoSuchFieldException|
+                IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static public Object makeNativeArray(Object o) {
+        return makeNativeArray((Base_impl)o);
+    }
+
+    static public Object tryMakeNativeArray(Object o) {
+        try {
+            return makeNativeArray((Base_impl)o);
+        } catch (ClassCastException e) {
+            return o;
+        }
+    }
+
+    // replace java.lang.reflect.Array:newInstance
+    static public Object newInstance(Class<?> componentType, int length) {
+        String name = componentType.getName();
+        if(name.startsWith(arrayPrefix)) {
+            // compute the dimension and increment it by one
+
+            throw new NotImplementedException();
+        } else {
+            try {
+                Class<?> arrcls = Class.forName("edu.berkeley.dj.internal.arrayclazz."+name+"_impl_1");
+                Object arr = arrcls.getDeclaredMethod("newInstance_1", int.class).invoke(null, length);
+                return arr;
+            } catch (ClassNotFoundException|
+                    NoSuchMethodException|
+                    IllegalAccessException|
+                    InvocationTargetException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    // replace java.lang.reflect:newInstance
+    static public Object newInstance(Class<?> componentType, int ...lengths) {
         throw new NotImplementedException();
     }
 }

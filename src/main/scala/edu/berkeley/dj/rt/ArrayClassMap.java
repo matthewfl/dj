@@ -20,10 +20,17 @@ public class ArrayClassMap extends ClassMap {
         try {
             String name = (String)jvn;
             if(name.contains("[")) {
-                return rewriter.rewriteArrayType(name);
+                return rewriter.rewriteArrayType(name, true);
             }
         } catch (ClassCastException e) {
             throw new RuntimeException(e);
+        }
+        return null;
+    }
+
+    public String getM(String jvn, boolean addL) {
+        if(jvn.contains("[")) {
+            return rewriter.rewriteArrayType(jvn, addL);
         }
         return null;
     }

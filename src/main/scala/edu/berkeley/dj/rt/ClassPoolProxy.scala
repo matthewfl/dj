@@ -1,6 +1,6 @@
 package edu.berkeley.dj.rt
 
-import javassist.CtClass
+import javassist.{CannotCompileException, CtClass}
 import javassist.bytecode.Descriptor
 
 import scala.collection.mutable
@@ -44,16 +44,31 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
       // this is a jvm qualified name
       return Descriptor.toCtClass(classname, this)
     }
+    if(useCache) {
+      val cc = getCached(classname)
+      if(cc != null)
+        return cc
+    }
 
     if(!ClassPoolProxy.canRewrite(classname)) {
       return manager.pool.get(classname)
     }
     val res = try {
-      rewriter.createCtClass(classname)
+
+      rewriter.createCtClass(classname, if(useCache) setClass(classname, _) else c => {})
     } catch {
+      case e: RuntimeException => {
+        println("runtime failure with class with rt error:" + e)
+        e.printStackTrace()
+        null
+      }
       case e: Throwable => {
         println("rewriter failed to create class: " + e)
-        if(classname.contains("testcase"))
+        if(classname.contains("testcase") ||
+          e.isInstanceOf[UnsupportedOperationException] ||
+          e.isInstanceOf[CannotCompileException] ||
+          classname.contains("BigDec") ||
+          classname.contains("ObjectOutputStream"))
           e.printStackTrace()
         null
       }

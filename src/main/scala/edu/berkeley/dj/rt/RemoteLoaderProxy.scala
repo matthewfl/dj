@@ -16,7 +16,7 @@ class RemoteLoaderProxy (private val manager: Manager, private val pool: ClassPo
   override def getClassBytes(classname: String): Array[Byte] = {
     // this calls back to the master and loads the content of some class
     //throw new NotImplementedError()
-    Await.result(manager.networkInterface.sendWrpl(0, 1, classname.getBytes), 300 seconds)
+    Await.result(manager.networkInterface.sendWrpl(0, 1, classname.getBytes), 600 seconds)
   }
 
 }

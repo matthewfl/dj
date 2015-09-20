@@ -99,7 +99,8 @@ public class RPCHelpers {
             Class<?>[] argsTypes = new Class<?>[arg_length];
             Object[] argValues = new Object[arg_length];
             for (int i = 0; i < arg_length; i++) {
-                argsTypes[i] = Class.forName(new String(req[i + 3]));
+                //argsTypes[i] = Class.forName(new String(req[i + 3]));
+                argsTypes[i] = AugmentedClassLoader.getClassA(new String(req[i + 3]));
                 argValues[i] = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(req[i + 3 + arg_length]));
             }
 

@@ -5,14 +5,15 @@ import edu.berkeley.dj.internal.RewriteAllBut;
 /**
  * Created by matthewfl
  */
+
 @RewriteAllBut(nonModClasses = {})
-public interface Base /*extends Object00 */ {
+public interface Base {
 
     int length();
 
-    Object get(int i);
+    Object get_java_lang_Object(int i);
 
-    void set(int i, Object v);
+    void set_java_lang_Object(int i, Object v);
 
     static int length(Base b) { return b.length(); }
 
