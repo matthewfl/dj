@@ -11,6 +11,7 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
+@RewriteAddArrayWrap
 public class InternalInterface {
 
     InternalInterface() {}

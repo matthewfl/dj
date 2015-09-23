@@ -728,12 +728,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(!m.getSignature.contains("["))
       return null// we do not need to wrap this method
 
-    val rt = {
+    val (rt, rt_cast) = {
       if(m.getReturnType.isArray) {
-        ??? // TODO:
-        cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(m.getReturnType), false).replace('/','.'))
+        val arr = cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(m.getReturnType), false).replace('/','.'))
+        (arr, s"(${arr.getName}) ${config.internalPrefix}ArrayHelpers.makeDJArray ")
       } else {
-        m.getReturnType
+        (m.getReturnType, "")
       }
     }
     val argsM = m.getParameterTypes.map(a => {
@@ -744,7 +744,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val body =
       s"""
              {
-               return ${m.getName} (${
+               return $rt_cast (${m.getName} (${
         argsM.zipWithIndex.map(a => {
           if(a._1._2 == false) {
             "$"+(a._2+1)
@@ -752,10 +752,13 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             "("+a._1._3.getName+ ")" +config.internalPrefix + "ArrayHelpers.makeNativeArray( $"+(a._2+1) +")"
           }
         }).mkString(", ")
-      }) ;
+      })) ;
              }
            """
-    CtNewMethod.make(m.getModifiers, rt, m.getName, argsM.map(_._1), m.getExceptionTypes, body, cls)
+    // hack with name so that we call the origional method even if we only differ in return type
+    val ret = CtNewMethod.make(m.getModifiers, rt, m.getName + "_new_name", argsM.map(_._1), m.getExceptionTypes, body, cls)
+    ret.setName(m.getName)
+    ret
   }
 
   private def addArrayWrapMethods(cls: CtClass): Unit = {

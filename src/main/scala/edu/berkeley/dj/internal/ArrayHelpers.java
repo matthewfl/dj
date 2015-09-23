@@ -18,6 +18,8 @@ public class ArrayHelpers {
 
     static public Object makeDJArray(Object[] obj) {
         try {
+            if(obj == null)
+                return null;
             Class<?> acls = obj.getClass();
             if (!acls.isArray()) {
                 throw new RuntimeException("Is not an array type" + acls.getName());
@@ -76,6 +78,8 @@ public class ArrayHelpers {
 
     static private Object makeDJArrayPrimitive(String type, Object arr) {
         try {
+            if(arr == null)
+                return null;
             String newname = "edu.berkeley.dj.internal.arrayclazz." + type + "_impl_1";
             Class<?> ncls = Class.forName(newname);
             Object ret = ncls.newInstance();

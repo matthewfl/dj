@@ -153,15 +153,23 @@ class Arrays (next: Transformer,
       } else {
         typ
       }.replace('/', '.')
-
-      val clsref = cp.addClassInfo(config.arrayprefix + tname + "_impl_1")
-      val mthref = cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${(config.arrayprefix + tname + "_1").replace('.','/')};")
-
+      val mthref = if(tname.startsWith(config.arrayprefix)) {
+        // this class has already been converted to our array names, so we need to determine what the size of this array is
+        val uindx = tname.lastIndexOf("_")
+        val cnt = tname.substring(uindx + 1).toInt
+        val baseType = tname.substring(config.arrayprefix.length, uindx)
+        val clsref = cp.addClassInfo(config.arrayprefix + baseType + "_impl_"+cnt)
+        cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L$tname;".replace('.', '/'))
+      } else {
+        val clsref = cp.addClassInfo(config.arrayprefix + tname + "_impl_1")
+        cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${(config.arrayprefix + tname + "_1").replace('.', '/')};")
+      }
       it.writeByte(INVOKESTATIC, pos)
       it.write16bit(mthref, pos + 1)
 
     } else if(c == MULTIANEWARRAY) {
       // TODO:
+      println("multinewarray not implemented yet")
       ???
 
     } else if(c == BASTORE) { // byte and boolean
@@ -213,7 +221,7 @@ class Arrays (next: Transformer,
       val ct = frame.getStack(frame.getTopIndex - 1)
       val comp = ct.getComponent
       val arrdim = ct.getDimensions
-      val name = if(arrdim > 1) {
+      val (btype, name) = if(arrdim > 1) {
         var base = comp
         while(base.isArray)
           base = base.getComponent
@@ -228,19 +236,21 @@ class Arrays (next: Transformer,
         } else basect.getName
         val n = bname.replace('.', '/')
         val r = classmap.get(n).asInstanceOf[String]
-        config.arrayprefix + (if(r == null) n else r) + "_" + (arrdim - 1)
+        val btype = if(r == null) n else r
+        (btype, config.arrayprefix + btype + "_" + (arrdim - 1))
       } else {
         val n = comp.getCtClass.getName.replace('.','/')
         val r = classmap.get(n).asInstanceOf[String]
-        if(r == null) n else r
+        val btype = if(r == null) n else r
+        (btype, btype)
       }
-      makeMthod(config.arrayprefix + name + "_" + arrdim, "get_"+augName(name), s"(I)L${name.replace('.','/')};", 2)
+      makeMthod(config.arrayprefix + btype + "_" + arrdim, "get_"+augName(name), s"(I)L${name.replace('.','/')};", 2)
       //???
     } else if(c == AASTORE) {
       val ct = frame.getStack(frame.getTopIndex - 2)
       val comp = ct.getComponent
       val arrdim = ct.getDimensions
-      val name = if(arrdim > 1) {
+      val (btype, name) = if(arrdim > 1) {
         var base = comp
         while(base.isArray)
           base = base.getComponent
@@ -255,13 +265,15 @@ class Arrays (next: Transformer,
         } else basect.getName
         val n = bname.replace('.', '/')
         val r = classmap.get(n).asInstanceOf[String]
-        config.arrayprefix + (if(r == null) n else r) + "_" + (arrdim - 1)
+        val btype = if(r == null) n else r
+        (btype, config.arrayprefix + btype + "_" + (arrdim - 1))
       } else {
         val n = comp.getCtClass.getName.replace('.','/')
         val r = classmap.get(n).asInstanceOf[String]
-        if(r == null) n else r
+        val btype = if(r == null) n else r
+        (btype, btype)
       }
-      makeMthod(config.arrayprefix + name + "_" + arrdim, "set_"+augName(name), s"(IL${name.replace('.','/')};)V", 3)
+      makeMthod(config.arrayprefix + btype + "_" + arrdim, "set_"+augName(name), s"(IL${name.replace('.','/')};)V", 3)
       //???
     }
 
