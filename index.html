@@ -275,6 +275,8 @@ Error message and password prompt
 
 <li>$:/view</li>
 
+<li>Array classes</li>
+
 <li>Basic usage</li>
 
 <li>Directions for DJ</li>
@@ -284,6 +286,8 @@ Error message and password prompt
 <li>Function call redirector</li>
 
 <li>Internals</li>
+
+<li>Introduction</li>
 
 <li>matthewfl</li>
 
@@ -5801,8 +5805,9 @@ Error message and password prompt
     }
 }</pre>
 </div>
-<div created="20150503220513255" creator="matthewfl" modified="20150503222110865" modifier="matthewfl" title="$:/DefaultTiddlers">
-<pre>Documentation
+<div created="20150503220513255" creator="matthewfl" modified="20150921085829781" modifier="matthewfl" title="$:/DefaultTiddlers">
+<pre>Introduction
+Documentation
 </pre>
 </div>
 <div title="$:/isEncrypted">
@@ -5962,7 +5967,7 @@ Error message and password prompt
 <div modified="20150503222258295" modifier="matthewfl" title="$:/state/add-plugin-info/$:/temp/ServerConnection/http://tiddlywiki.com/library/v5.1.8/index.html/$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/themes/tiddlywiki/snowwhite">
 <pre>no</pre>
 </div>
-<div modified="20150604005527006" modifier="matthewfl" title="$:/state/showeditpreview">
+<div modified="20150920181651696" modifier="matthewfl" title="$:/state/showeditpreview">
 <pre>yes</pre>
 </div>
 <div modified="20150602172658013" modifier="matthewfl" title="$:/state/sidebar">
@@ -5980,14 +5985,14 @@ Error message and password prompt
 <div modified="20150602172413148" modifier="matthewfl" title="$:/state/tab-1342078386">
 <pre>$:/core/ui/ControlPanel/Plugins/Add/Themes</pre>
 </div>
-<div modified="20150602172407306" modifier="matthewfl" title="$:/state/tab-1749438307">
-<pre>$:/core/ui/ControlPanel/Plugins</pre>
+<div modified="20150921085813016" modifier="matthewfl" title="$:/state/tab-1749438307">
+<pre>$:/core/ui/ControlPanel/Info</pre>
 </div>
 <div modified="20150521214429559" modifier="matthewfl" title="$:/state/tab/moresidebar-401116514">
 <pre>$:/core/ui/MoreSideBar/Orphans</pre>
 </div>
-<div modified="20150603002805904" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
-<pre>$:/core/ui/SideBar/Recent</pre>
+<div modified="20150921085757308" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
+<pre>$:/core/ui/SideBar/Tools</pre>
 </div>
 <div modified="20150522084850108" modifier="matthewfl" title="$:/state/tabs/controlpanel/toolbars-1345989671">
 <pre>$:/core/ui/ControlPanel/Toolbars/PageControls</pre>
@@ -5995,7 +6000,7 @@ Error message and password prompt
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="[[Directions for DJ]] [[Previous work]] Documentation" title="$:/StoryList">
+<div list="Introduction Documentation" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6015,7 +6020,7 @@ Error message and password prompt
     }
 }</pre>
 </div>
-<div created="20150503220354505" modified="20150503220448485" title="$:/temp/NewTagName">
+<div created="20150503220354505" modified="20150920181419209" modifier="matthewfl" title="$:/temp/NewTagName">
 <pre></pre>
 </div>
 <div author="Zdeněk Jašek" core-version="&gt;=5.0.0" created="20150503222212011" creator="matthewfl" dependents="" description="Česky (Czech Republic)" icon="data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%3F%3E%0A%3Csvg%20version%3D%221.0%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22900%22%20height%3D%22600%22%3E%0A%09%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22%23d7141a%22%2F%3E%0A%09%3Crect%20width%3D%22900%22%20height%3D%22300%22%20fill%3D%22%23fff%22%2F%3E%0A%09%3Cpath%20d%3D%22M%20450%2C300%200%2C0%20V%20600%20z%22%20fill%3D%22%2311457e%22%2F%3E%0A%3C%2Fsvg%3E%0A" modified="20150503222212011" modifier="matthewfl" name="cs-CZ" original-plugin-type="language" original-tags="" original-title="$:/languages/cs-CZ" original-type="application/json" server-url="http://tiddlywiki.com/library/v5.1.8/index.html" tags="$:/tags/RemoteAssetInfo" title="$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/languages/cs-CZ" type="text/vnd.tiddlywiki" version="5.1.8">
@@ -6357,6 +6362,11 @@ At this point it is largely for experimentation by @zooko.
 <div modified="20150602091549283" modifier="matthewfl" title="$:/view">
 <pre>classic</pre>
 </div>
+<div created="20150906215935012" creator="matthewfl" modified="20150907003132576" modifier="matthewfl" title="Array classes">
+<pre>In DJ we require the ability to see all reads and writes that are preform.  This is because for instances of an object that are remote, we must intercept the writes and reads and redirect them to an alternate machine.
+
+For managing the redirection for array object, we replace all references to array types to a special class instances that allows us to track which instance of an array we have as well as replace the getting and setting operations for the array.</pre>
+</div>
 <div created="20150602091150851" creator="matthewfl" modified="20150602091355978" modifier="matthewfl" title="Basic usage">
 <pre>```sh
 sbt assembly
@@ -6405,6 +6415,15 @@ java -jar target/scala-2.11/dj-assembly-0.0.1.jar -fjar target/scala-2.11/dj-ass
 <div created="20150503220449624" creator="matthewfl" modified="20150521214418483" modifier="matthewfl" tags="Documentation Internals" title="Internals">
 <pre>* [[Rewriter]]</pre>
 </div>
+<div created="20150920181408795" creator="matthewfl" modified="20150921085245630" modifier="matthewfl" tags="" title="Introduction">
+<pre>! DJ: Distributed JIT
+
+With existing systems, when one writes a distributed program they have to explicitly think about how a program will be split.  This is seen in systems such as Map reduce where tasks are split into mapping and reducing states by the programmer.  In a micro service oriented system, a programmer will end up making a number of smaller components each to do one small task and then explicitly defining how these services interact.
+
+On the other hand, DJ is designed to dynamically manage the split of programs and data while the program is running.  That means that a program can instead be written as single logical component.  DJ automatically splits the data between a number of hosts.  Computation is also migratable between hosts either through remotely starting threads on a remote host or as rewriting method calls as RPC.
+
+DJ is split into two major components.  First the runtime component manages rewriting java programs such that they can have their data and execution split between multiple hosts without affecting the correctness of the program.  The second component of DJ is the &quot;JIT&quot; which controls how a program is distributed.  It collects statistics from the runtime and uses this information to determine the best places to locate data and split computation.  These decisions made by the JIT are pushed back into the runtime which adjusts the the running program to reflect the JITs decisions.  </pre>
+</div>
 <div created="20150521214252927" creator="matthewfl" modified="20150521214351092" modifier="matthewfl" title="matthewfl">
 <pre>*Name: Matthew Francis-Landau
 *Website: [[matthewfl.com|http://matthewfl.com]]
@@ -6446,7 +6465,7 @@ Previous work for distributed languages:
 <div created="20150521213601188" creator="matthewfl" modified="20150521214241570" modifier="matthewfl" title="Proxy generator">
 <pre>When we are using the [[Namespace rewriter]], we end up changing the name for a number of classes.  However, the JVM still requires that some classes maintain the same name as it needs to link up native methods.  To make this continue to work, we create proxy classes that wrap the original class and pass all method invocations back to the original class.</pre>
 </div>
-<div created="20150503220844359" creator="matthewfl" modified="20150521202830269" modifier="matthewfl" tags="Documentation Internals" title="Rewriter">
+<div created="20150503220844359" creator="matthewfl" modified="20150906214250722" modifier="matthewfl" tags="Documentation Internals" title="Rewriter">
 <pre>The rewriter takes bytecode from the project and automatically redirects all variable reads and writes so that we can appear as if we have shared memory architecture.
 
 The smallest unit of a distributed element will be an object in the java program.  If an object is currently not operating in a distributed fashion, then the additional overhead should only be a quick read from some status element on the object followed with an and operation for the specific bit.
@@ -6461,6 +6480,7 @@ When an object is remote, but being accessed locally, it will still have a local
 * [[Function call redirector]]
 * [[Namespace rewriter]]
 * [[Proxy generator]]
+* [[Array classes]]
 
 </pre>
 </div>
