@@ -1059,12 +1059,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       allInheritedTypes += baseType
 
 
+    val inner_arr_typ = if(cnt > 1)
+      config.arrayprefix + baseType + "_" + (cnt - 1)
+    else
+      wrapType
     if(!makeInterface) {
-      if (cnt > 1) {
-        cls.addField(CtField.make(s"public ${config.arrayprefix + baseType + "_" + (cnt - 1)}[] ir;", cls))
-      } else {
-        cls.addField(CtField.make(s"public ${wrapType}[] ir;", cls))
-      }
+      cls.addField(CtField.make(s"public ${inner_arr_typ}[] ir;", cls))
     }
     val length_mth =
       s"""
@@ -1250,13 +1250,13 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         s"""
          public static ${inter_name} newInstance_1(int i) {
            ${clsname} ret = new ${clsname}();
-           ret.ir = new ${wrapType}[i];
+           ret.ir = new ${inner_arr_typ}[i];
            return ret;
          }
        """
       cls.addMethod(CtMethod.make(static_constructor, cls))
 
-      val get_helper =
+      /*val get_helper =
         s"""
            public static ${wrapType} helper_get(${inter_name} inst, int i) {
              return inst.get_${augName(wrapType)}(i);
@@ -1271,6 +1271,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
            }
          """
       cls.addMethod(CtMethod.make(set_helper, cls))
+      */
     }
 
     cls

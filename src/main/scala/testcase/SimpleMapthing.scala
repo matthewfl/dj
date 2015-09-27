@@ -1,5 +1,6 @@
 package testcase
 
+import java.math.BigInteger
 import java.util.concurrent.Callable
 
 import edu.berkeley.dj.internal.{ObjectBase, DistributedRunner, InternalInterface}
@@ -36,6 +37,13 @@ object SimpleMapthing {
     }
 
     val thing = new makeThisRpc
+
+
+    Class.forName("edu.berkeley.dj.internal.arrayclazz.edu.berkeley.dj.internal.coreclazz.java.math.BigInteger_1")
+    Class.forName("edu.berkeley.dj.internal.arrayclazz.edu.berkeley.dj.internal.coreclazz.java.math.BigInteger_2")
+    Class.forName("edu.berkeley.dj.internal.arrayclazz.edu.berkeley.dj.internal.coreclazz.java.math.BigInteger_impl_1")
+    Class.forName("edu.berkeley.dj.internal.coreclazz.java.math.BigInteger")
+    val bi = BigInteger.valueOf(0)
 
     for(h <- InternalInterface.getInternalInterface.getAllHosts) {
       println(s"see host $h")

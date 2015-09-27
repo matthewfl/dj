@@ -158,8 +158,8 @@ class Arrays (next: Transformer,
         val uindx = tname.lastIndexOf("_")
         val cnt = tname.substring(uindx + 1).toInt
         val baseType = tname.substring(config.arrayprefix.length, uindx)
-        val clsref = cp.addClassInfo(config.arrayprefix + baseType + "_impl_"+cnt)
-        cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L$tname;".replace('.', '/'))
+        val clsref = cp.addClassInfo(config.arrayprefix + baseType + "_impl_"+(cnt + 1))
+        cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${config.arrayprefix + baseType + "_" + (cnt + 1)};".replace('.', '/'))
       } else {
         val clsref = cp.addClassInfo(config.arrayprefix + tname + "_impl_1")
         cp.addMethodrefInfo(clsref, "newInstance_1", s"(I)L${(config.arrayprefix + tname + "_1").replace('.', '/')};")
@@ -244,7 +244,7 @@ class Arrays (next: Transformer,
         val btype = if(r == null) n else r
         (btype, btype)
       }
-      makeMthod(config.arrayprefix + btype + "_" + arrdim, "get_"+augName(name), s"(I)L${name.replace('.','/')};", 2)
+      makeMthod(config.arrayprefix + btype + "_" + arrdim, "get_"+augName(name), s"(I)L${name.replace('.','/')};", 2) // todo: make all byte
       //???
     } else if(c == AASTORE) {
       val ct = frame.getStack(frame.getTopIndex - 2)
