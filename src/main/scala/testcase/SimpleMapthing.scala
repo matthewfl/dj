@@ -17,7 +17,7 @@ class makeThisRpc {
 
   def something = {
     for(a <- 0 until someVal) {
-      someVal += a
+      someVal += 99
     }
   }
 

@@ -54,6 +54,22 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         // recv a write on the static fields
         man.runningInterface.callIn(12, ByteBuffer.wrap(msg))
       }
+      case 109 => {
+        // cache the bytecode for something
+        val bb = ByteBuffer.wrap(msg)
+        val namel = bb.getInt()
+        val name = new String(msg, 4, namel)
+        val clsa = new Array[Byte](msg.length - 4 - namel)
+        Array.copy(msg, 4 + namel, clsa, 0, clsa.length)
+        val cache = man.loader.asInstanceOf[RemoteLoaderProxy].classByteCache
+        man.loader.synchronized {
+          cache += (name -> clsa)
+        }
+      }
+      case 110 => {
+        // reload a class
+        man.loader.reloadClass(new String(msg))
+      }
     }
   } catch {
     case e: Throwable => {
@@ -99,7 +115,8 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
           // set a byte array for the distributed map
           val buff = ByteBuffer.wrap(msg)
           val len = buff.getInt()
-          val name = new String(msg, 0, len)
+          ??? // there was a bug here, idk if anything is using this
+          val name = new String(msg, 4, len)
           val arr = new Array[Byte](msg.length - len - 4)
           Array.copy(msg, 4, arr, 0, arr.length)
           man.runningInterface.setDistributed(name, arr)

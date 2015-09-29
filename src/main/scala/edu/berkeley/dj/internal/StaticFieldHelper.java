@@ -5,6 +5,7 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 
 /**
  * Created by matthewfl
@@ -14,6 +15,8 @@ public class StaticFieldHelper {
     private StaticFieldHelper() {}
 
     static private Object lock = new Object();
+
+    static private HashSet<String> loadedClasses = new HashSet<>();
 
     static public void writeField_Z(String identifier, boolean val) {
         ByteBuffer b = writeReq(identifier, 1);
@@ -92,7 +95,11 @@ public class StaticFieldHelper {
                 String id = new String(buf.array(), 4, idlength);
                 buf.position(idlength + 4);
                 String ids[] = id.split("::");
-                if(!InternalInterface.getInternalInterface().checkClassIsLoaded(ids[0])) {
+                /*if(!InternalInterface.getInternalInterface().checkClassIsLoaded(ids[0])) {
+                    return;
+                }*/
+                if(!loadedClasses.contains(ids[0])) {
+                    // we haven't finished loading this class yet, so we can ignore this write field request...hopefully
                     return;
                 }
                 Class<?> cls = Class.forName(ids[0]);
@@ -290,11 +297,15 @@ public class StaticFieldHelper {
 
     static public boolean initStaticFields(String classname) {
         if(InternalInterface.getInternalInterface().isMaster()) {
+            loadedClasses.add(classname);
             return true;
         } else {
             byte[] sf = InternalInterface.getInternalInterface().loadStaticFields(classname);
             loadAllStaticFields(classname, ByteBuffer.wrap(sf));
+            loadedClasses.add(classname);
             return false;
         }
     }
+
+
 }
