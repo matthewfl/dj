@@ -55,11 +55,20 @@ public class RPCHelpers {
         callRemote(self, clsname, name, params, args);
     }
 
-    // TODO: make this more efficent and avoid so many copies
+    // TODO: make this more efficient and avoid so many copies
 
     public static ByteBuffer callRemote(Object self_, String clsname, String name, String[] params, Object[] args) {
         ObjectBase self = (ObjectBase)self_;
-        byte[][] sendreq = new byte[params.length * 2 + 3][];
+
+        int params_length = 0;
+        if(params != null) {
+            params_length = params.length;
+            assert(params.length == args.length);
+        } else {
+            assert(args.length == 0);
+        }
+
+        byte[][] sendreq = new byte[params_length * 2 + 3][];
 
         DistributedObjectHelper.DistributedObjectId selfId = DistributedObjectHelper.getDistributedId(self);
 
@@ -67,9 +76,7 @@ public class RPCHelpers {
         sendreq[1] = clsname.getBytes();
         sendreq[2] = name.getBytes();
 
-        assert(params.length == args.length);
-
-        for(int i = 0; i < args.length; i++) {
+        for(int i = 0; i < params_length; i++) {
             DistributedObjectHelper.DistributedObjectId argId = DistributedObjectHelper.getDistributedId(args[i]);
             sendreq[i + 3] = params[i].getBytes();
             sendreq[i + 3 + params.length] = argId.toArr();

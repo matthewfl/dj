@@ -122,10 +122,11 @@ public class DistributedObjectHelper {
 
     static private HashMap<UUID, Object00> localDistributedObjects = new HashMap<>();
 
-    // give the Object some uuid so that it will be distribuited
+    // give the Object some uuid so that it will be distributed
     static public void makeDistributed(ObjectBase o) {
-        InternalInterface.getInternalInterface().typeDistributed(o.getClass().getName());
         if(o.__dj_class_manager == null) {
+            // if we have a class manager then we must already be distributed
+            InternalInterface.getInternalInterface().typeDistributed(o.getClass().getName());
             boolean ownsLock = Thread.currentThread().holdsLock(o);
             synchronized (o) {
                 o.__dj_class_manager = new ClassManager(o);

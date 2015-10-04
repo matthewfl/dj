@@ -17,7 +17,7 @@ class ClassMode(val className: String) {
 
   var loaded = false
 
-  def addMethodRedirect(signature: String) = !ClassReloader.enabled || redirectedMethods.contains(signature)
+  def addMethodRedirect(signature: String) = !ClassReloader.enabled || redirectedMethods.contains(signature) || className.contains("makeThisRpc")
 
   def performRedirect(signature: String) = redirectedMethods.contains(signature)
 

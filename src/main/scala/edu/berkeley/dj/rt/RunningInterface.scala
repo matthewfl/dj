@@ -216,7 +216,8 @@ class RunningInterface (private val config: Config, private val manager: Manager
   def checkShouldRedirectMethod(clsname: String, id: String) = {
     // Have to communicate with the master machine to get this information.....ggg
     //manager.clas
-    false
+    id == "something()V"
+    //false
   }
 
   def redirectMethod(req: ByteBuffer, machine: Int) = {
