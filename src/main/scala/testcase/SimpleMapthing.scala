@@ -1,14 +1,27 @@
 package testcase
 
+import java.math.BigInteger
 import java.util.concurrent.Callable
 
-import edu.berkeley.dj.internal.{ObjectBase, DistributedRunner, InternalInterface}
+import edu.berkeley.dj.internal.{CONSTS, DistributedRunner, InternalInterface, ObjectBase}
 
 /**
  * Created by matthewfl
  */
 
 case class Struct(val a: Int, val b: Int)
+
+class makeThisRpc {
+
+  var someVal: Int = 6
+
+  def something = {
+    for(a <- 0 until someVal) {
+      someVal += 99
+    }
+  }
+
+}
 
 object SimpleMapthing {
 
@@ -22,6 +35,17 @@ object SimpleMapthing {
     while(InternalInterface.getInternalInterface.getAllHosts.length == 1) {
       Thread.sleep(1000)
     }
+
+    val thing = new makeThisRpc
+
+
+    Class.forName("edu.berkeley.dj.internal.arrayclazz.edu.berkeley.dj.internal.coreclazz.java.math.BigInteger_1")
+    Class.forName("edu.berkeley.dj.internal.arrayclazz.edu.berkeley.dj.internal.coreclazz.java.math.BigInteger_2")
+    Class.forName("edu.berkeley.dj.internal.arrayclazz.edu.berkeley.dj.internal.coreclazz.java.math.BigInteger_impl_1")
+    Class.forName("edu.berkeley.dj.internal.coreclazz.java.math.BigInteger")
+    val bi = BigInteger.valueOf(0)
+
+
 
     for(h <- InternalInterface.getInternalInterface.getAllHosts) {
       println(s"see host $h")
@@ -49,8 +73,14 @@ object SimpleMapthing {
         val c = new Callable[Int] {
           override def call = {
             synclock.synchronized { synclock.wait() }
+            // hack to change the mode so we can see what redirects are taking place
+            thing.asInstanceOf[ObjectBase].__dj_class_mode |= CONSTS.PERFORM_RPC_REDIRECTS
+
             InternalInterface.debug("remote debug stuff")
             InternalInterface.debug("the some stuff is "+someTest.a)
+            InternalInterface.debug("before value: "+thing.someVal)
+            thing.something
+            InternalInterface.debug("after val:"+thing.someVal)
             999
           }
         }

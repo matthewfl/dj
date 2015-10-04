@@ -11,6 +11,7 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
+@RewriteAddArrayWrap
 public class InternalInterface {
 
     InternalInterface() {}
@@ -133,6 +134,10 @@ public class InternalInterface {
     public byte[] loadStaticFields(String clsname) { throw new InterfaceException(); }
 
     public boolean checkClassIsLoaded(String clsname) { throw new InterfaceException(); }
+
+    public boolean checkShouldRedirectMethod(String clsname, String id) { throw new InterfaceException(); }
+
+    public ByteBuffer redirectMethod(ByteBuffer req, int machine) { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
@@ -315,6 +320,16 @@ class InternalInterfaceWrap extends  InternalInterface {
         return (boolean)invoke("checkClassIsLoaded", new Class[]{String.class}, clsname);
     }
 
+    @Override
+    public boolean checkShouldRedirectMethod(String clsname, String id) {
+        return (boolean)invoke("checkShouldRedirectMethod", new Class[]{String.class,String.class}, clsname, id);
+    }
+
+    @Override
+    public ByteBuffer redirectMethod(ByteBuffer req, int machine) {
+        return (ByteBuffer)invoke("redirectMethod", new Class[]{ByteBuffer.class,int.class}, req, machine);
+    }
+
 
 
 
@@ -367,6 +382,8 @@ class InternalInterfaceWrap extends  InternalInterface {
             case 12:
                 StaticFieldHelper.recvWriteField((ByteBuffer)args[0]);
                 return null;
+            case 13:
+                return RPCHelpers.recvRemoteCall((ByteBuffer)args[0]);
         }
         return null;
     }

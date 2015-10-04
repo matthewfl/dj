@@ -12,11 +12,12 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread", "java/nio/Buffer"})
+@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread", "java/nio/Buffer", "java/lang/System"})
 public class DistributedObjectHelper {
 
     private DistributedObjectHelper() {}
 
+    // TODO: make this _not_ extend ObjectBase
     static public final class DistributedObjectId implements Serializable {
         int lastKnownHost;
         UUID identifier;
@@ -53,14 +54,29 @@ public class DistributedObjectHelper {
         ByteBuffer toBB() {
             if(lastKnownHost != -2) {
                 byte[] cn = extradata;
-                ByteBuffer ret = ByteBuffer.allocate(cn.length + 20);
+                ByteBuffer ret = ByteBuffer.allocate(cn.length + 24);
                 ret.putInt(lastKnownHost);
                 ret.putLong(identifier.getMostSignificantBits());
                 ret.putLong(identifier.getLeastSignificantBits());
+                ret.putInt(cn.length);
                 ret.put(cn);
                 return ret;
             } else {
                 return ByteBuffer.wrap(extradata);
+            }
+        }
+
+        void saveBB(ByteBuffer ret) {
+            if(lastKnownHost != -2) {
+                ret.putInt(lastKnownHost);
+                ret.putLong(identifier.getMostSignificantBits());
+                ret.putLong(identifier.getLeastSignificantBits());
+                ret.putInt(extradata.length);
+                ret.put(extradata);
+            } else {
+                ret.putInt(-2);
+                ret.putInt(extradata.length);
+                ret.put(extradata);
             }
         }
 
@@ -75,18 +91,29 @@ public class DistributedObjectHelper {
                 extradata = arr;
             } else {
                 identifier = new UUID(b.getLong(), b.getLong());
-                extradata = new byte[arr.length - 20];
-                System.arraycopy(arr, 20, extradata, 0, extradata.length);
+                int length = b.getInt();
+                extradata = new byte[length]; //arr.length - 20];
+                System.arraycopy(arr, 24, extradata, 0, extradata.length);
             }
         }
 
         DistributedObjectId(ByteBuffer b) {
             lastKnownHost = b.getInt();
             if(lastKnownHost == -2) {
-                extradata = b.array();
+                int length = b.getInt();
+                byte[] barr = b.array();
+                if(length == barr.length - 8) {
+                    assert(b.position() == 8);
+                    extradata = barr;
+                } else {
+                    extradata = new byte[length + 8];
+                    b.position(b.position() - 8);
+                    b.get(extradata);
+                }
             } else {
                 identifier = new UUID(b.getLong(), b.getLong());
-                extradata = new byte[b.limit() - b.position()];
+                int length = b.getInt();
+                extradata = new byte[length];//b.limit() - b.position()];
                 b.get(extradata);
             }
         }
@@ -95,10 +122,11 @@ public class DistributedObjectHelper {
 
     static private HashMap<UUID, Object00> localDistributedObjects = new HashMap<>();
 
-    // give the Object some uuid so that it will be distribuited
+    // give the Object some uuid so that it will be distributed
     static public void makeDistributed(ObjectBase o) {
-        InternalInterface.getInternalInterface().typeDistributed(o.getClass().getName());
         if(o.__dj_class_manager == null) {
+            // if we have a class manager then we must already be distributed
+            InternalInterface.getInternalInterface().typeDistributed(o.getClass().getName());
             boolean ownsLock = Thread.currentThread().holdsLock(o);
             synchronized (o) {
                 o.__dj_class_manager = new ClassManager(o);
@@ -165,12 +193,14 @@ public class DistributedObjectHelper {
 
     static Object constructFinalObject(ByteBuffer buf) {
         try {
-            buf.rewind();
+            //buf.rewind();
+            //buf.position(buf.position() - 4); // go back to the start of the message
             int objectIdent = buf.getInt();
             assert (objectIdent == -2); // check that this is of the correct type
+            int msglen = buf.getInt();
             int cnamelen = buf.getInt();
-            String cname = new String(buf.array(), 8, cnamelen);
-            buf.position(cnamelen + 8);
+            String cname = new String(buf.array(), buf.position(), cnamelen);
+            buf.position(cnamelen + buf.position());
             Class<?> cls = Class.forName(cname);
             finalObjectConverter<?> conv = finalObjectConverters.get(cls);
             if (conv == null)
@@ -187,12 +217,20 @@ public class DistributedObjectHelper {
         }
         Class<?> cls = o.getClass();
         finalObjectConverter<?> conv = finalObjectConverters.get(cls);
-        if(conv == null)
-            throw new RuntimeException("could not find a converter for class: "+cls.getName());
+        if(conv == null) {
+            if(Throwable.class.isAssignableFrom(cls)) {
+                cls = Throwable.class;
+                conv = finalObjectConverters.get(cls);
+            } else {
+                InternalInterface.debug("failed class convert " + cls.getName());
+                  throw new RuntimeException("could not find a converter for class: " + cls.getName());
+            }
+        }
         int size = conv.getSizeO(o);
         byte[] cname = cls.getName().getBytes();
-        ByteBuffer a = ByteBuffer.allocate(4 + 4 + cname.length + size);
+        ByteBuffer a = ByteBuffer.allocate(4 + 4 + 4 + cname.length + size);
         a.putInt(-2);
+        a.putInt(cname.length + size + 4);
         a.putInt(cname.length);
         a.put(cname);
         conv.makeIdO(o, a);
@@ -221,17 +259,18 @@ public class DistributedObjectHelper {
         finalObjectConverters.put(NULLCLS.class, new finalObjectConverter<NULLCLS>() {
             @Override
             public int getSize(NULLCLS o) {
-                return 0;
+                return 4;
             }
 
             @Override
             public NULLCLS makeObject(ByteBuffer buf) {
+                buf.getInt();
                 return null;
             }
 
             @Override
             public void makeId(NULLCLS o, ByteBuffer id) {
-
+                id.putInt(0);
             }
         });
         finalObjectConverters.put(String.class, new finalObjectConverter<String>() {
@@ -243,7 +282,9 @@ public class DistributedObjectHelper {
             @Override
             public String makeObject(ByteBuffer buf) {
                 int length = buf.getInt();
-                return new String(buf.array(), buf.position(), length);
+                String r = new String(buf.array(), buf.position(), length);
+                buf.position(buf.position() + length);
+                return r;
             }
 
             @Override
@@ -263,15 +304,16 @@ public class DistributedObjectHelper {
             public Class<?> makeObject(ByteBuffer buf) {
                 int length = buf.getInt();
                 String name = new String(buf.array(), buf.position(), length);
+                buf.position(buf.position() + length);
+                try {
+                    // returns null if name is not a primitive class type
+                    Class<?> ret = AugmentedClassLoader.getPrimitiveClass(name);
+                    if(ret != null)
+                        return ret;
+                } catch(Throwable e) {}
                 try {
                     return Class.forName(name);
                 } catch(ClassNotFoundException e) {
-                    try {
-                        // try and load the primitive type classes such as "long"
-                        if (!name.contains(".")) {
-                            return AugmentedClassLoader.getPrimitiveClass(name);
-                        }
-                    } catch (Throwable t) { }
                     throw new RuntimeException(e);
                 }
             }
@@ -281,6 +323,173 @@ public class DistributedObjectHelper {
                 byte[] name = o.getName().getBytes();
                 id.putInt(name.length);
                 id.put(name);
+            }
+        });
+        finalObjectConverters.put(Throwable.class, new finalObjectConverter<Throwable>() {
+            // should try and seralize the object
+            // and then reconstruct the object on the other end....
+
+            @Override
+            public int getSize(Throwable o) {
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public Throwable makeObject(ByteBuffer buf) {
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public void makeId(Throwable o, ByteBuffer id) {
+                throw new NotImplementedException();
+            }
+        });
+        finalObjectConverters.put(Byte.class, new finalObjectConverter<Byte>() {
+            @Override
+            public int getSize(Byte o) {
+                return 5;
+            }
+
+            @Override
+            public Byte makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.get();
+            }
+
+            @Override
+            public void makeId(Byte o, ByteBuffer id) {
+                id.putInt(1);
+                id.put(o);
+            }
+        });
+        finalObjectConverters.put(Boolean.class, new finalObjectConverter<Boolean>() {
+            @Override
+            public int getSize(Boolean o) {
+                return 5;
+            }
+
+            @Override
+            public Boolean makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.get() == 1;
+            }
+
+            @Override
+            public void makeId(Boolean o, ByteBuffer id) {
+                id.putInt(1);
+                if(o) {
+                    id.put((byte)1);
+                } else {
+                    id.put((byte)0);
+                }
+            }
+        });
+        finalObjectConverters.put(Character.class, new finalObjectConverter<Character>() {
+            @Override
+            public int getSize(Character o) {
+                return 8;
+            }
+
+            @Override
+            public Character makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.getChar();
+            }
+
+            @Override
+            public void makeId(Character o, ByteBuffer id) {
+                id.putInt(4);
+                id.putChar(o);
+            }
+        });
+        finalObjectConverters.put(Short.class, new finalObjectConverter<Short>() {
+            @Override
+            public int getSize(Short o) {
+                return 6;
+            }
+
+            @Override
+            public Short makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.getShort();
+            }
+
+            @Override
+            public void makeId(Short o, ByteBuffer id) {
+                id.putInt(2);
+                id.putShort(o);
+            }
+        });
+        finalObjectConverters.put(Integer.class, new finalObjectConverter<Integer>() {
+            @Override
+            public int getSize(Integer o) {
+                return 8;
+            }
+
+            @Override
+            public Integer makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.getInt();
+            }
+
+            @Override
+            public void makeId(Integer o, ByteBuffer id) {
+                id.putInt(4);
+                id.putInt(o);
+            }
+        });
+        finalObjectConverters.put(Long.class, new finalObjectConverter<Long>() {
+            @Override
+            public int getSize(Long o) {
+                return 12;
+            }
+
+            @Override
+            public Long makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.getLong();
+            }
+
+            @Override
+            public void makeId(Long o, ByteBuffer id) {
+                id.putInt(8);
+                id.putLong(o);
+            }
+        });
+        finalObjectConverters.put(Float.class, new finalObjectConverter<Float>() {
+            @Override
+            public int getSize(Float o) {
+                return 8;
+            }
+
+            @Override
+            public Float makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.getFloat();
+            }
+
+            @Override
+            public void makeId(Float o, ByteBuffer id) {
+                id.putInt(4);
+                id.putFloat(o);
+            }
+        });
+        finalObjectConverters.put(Double.class, new finalObjectConverter<Double>() {
+            @Override
+            public int getSize(Double o) {
+                return 12;
+            }
+
+            @Override
+            public Double makeObject(ByteBuffer buf) {
+                buf.getInt();
+                return buf.getDouble();
+            }
+
+            @Override
+            public void makeId(Double o, ByteBuffer id) {
+                id.putInt(8);
+                id.putDouble(o);
             }
         });
     }

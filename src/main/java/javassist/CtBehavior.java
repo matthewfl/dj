@@ -17,8 +17,8 @@
 package javassist;
 
 import javassist.bytecode.*;
-import javassist.compiler.Javac;
 import javassist.compiler.CompileError;
+import javassist.compiler.Javac;
 import javassist.expr.ExprEditor;
 
 /**
@@ -195,8 +195,8 @@ public abstract class CtBehavior extends CtMember {
        AnnotationsAttribute ainfo2 = (AnnotationsAttribute)
                    mi.getAttribute(AnnotationsAttribute.visibleTag);  
        return CtClassType.getAnnotationType(clz,
-                                            getDeclaringClass().getClassPool(),
-                                            ainfo, ainfo2);
+               getDeclaringClass().getClassPool(),
+               ainfo, ainfo2);
     }
 
     /**
@@ -296,7 +296,11 @@ public abstract class CtBehavior extends CtMember {
      */
     public CtClass[] getParameterTypes() throws NotFoundException {
         return Descriptor.getParameterTypes(methodInfo.getDescriptor(),
-                                            declaringClass.getClassPool());
+                declaringClass.getClassPool());
+    }
+
+    public String[] getParameterTypesNames() throws NotFoundException {
+        return Descriptor.getParameterNames(methodInfo.getDescriptor());
     }
 
     /**
@@ -730,11 +734,11 @@ public abstract class CtBehavior extends CtMember {
      *                  It must be a single statement or block.
      * @see CtConstructor#insertBeforeBody(String)
      */
-    public void insertBefore(String src) throws CannotCompileException {
-        insertBefore(src, true);
+    public CodeIterator.Gap insertBefore(String src) throws CannotCompileException {
+        return insertBefore(src, true);
     }
 
-    private void insertBefore(String src, boolean rebuild)
+    private CodeIterator.Gap insertBefore(String src, boolean rebuild)
         throws CannotCompileException
     {
         CtClass cc = declaringClass;
@@ -762,10 +766,12 @@ public abstract class CtBehavior extends CtMember {
             if (locals > ca.getMaxLocals())
                 ca.setMaxLocals(locals);
 
-            int pos = iterator.insertEx(b.get());
+            CodeIterator.Gap gap = iterator.insertExg(b.get());
+            int pos = gap.position; //iterator.insertEx(b.get());
             iterator.insert(b.getExceptionTable(), pos);
             if (rebuild)
                 methodInfo.rebuildStackMapIf6(cc.getClassPool(), cc.getClassFile2());
+            return gap;
         }
         catch (NotFoundException e) {
             throw new CannotCompileException(e);

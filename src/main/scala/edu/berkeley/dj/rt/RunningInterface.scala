@@ -213,5 +213,17 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.loader.classLoaded(clsname)
   }
 
+  def checkShouldRedirectMethod(clsname: String, id: String) = {
+    // Have to communicate with the master machine to get this information.....ggg
+    //manager.clas
+    id == "something()V"
+    //false
+  }
+
+  def redirectMethod(req: ByteBuffer, machine: Int) = {
+    // TODO: need to make sure that the timer doesn't expire on these rpc calls
+    block(manager.networkInterface.sendWrpl(machine, 31, req))
+  }
+
 
 }

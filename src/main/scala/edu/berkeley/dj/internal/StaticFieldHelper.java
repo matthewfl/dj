@@ -5,6 +5,7 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 
 /**
  * Created by matthewfl
@@ -12,6 +13,10 @@ import java.util.Comparator;
 public class StaticFieldHelper {
 
     private StaticFieldHelper() {}
+
+    static private Object lock = new Object();
+
+    static private HashSet<String> loadedClasses = new HashSet<>();
 
     static public void writeField_Z(String identifier, boolean val) {
         ByteBuffer b = writeReq(identifier, 1);
@@ -84,139 +89,28 @@ public class StaticFieldHelper {
     }
 
     static public void recvWriteField(ByteBuffer buf) {
-        try {
-            int idlength = buf.getInt();
-            String id = new String(buf.array(), 4, idlength);
-            buf.position(idlength + 4);
-            String ids[] = id.split("::");
-            Class<?> cls = AugmentedClassLoader.forName(ids[0]);
-            Field f = cls.getDeclaredField(ids[1]);
-            f.setAccessible(true);
-            if(Modifier.isFinal(f.getModifiers())) {
-                // the fact this works is a little bit crazy
-                Field fm = Field.class.getDeclaredField("modifiers");
-                fm.setAccessible(true);
-                fm.set(f, f.getModifiers() & ~Modifier.FINAL);
-            }
-            Class<?> ftype = f.getType();
-            if (ftype == boolean.class) {
-                f.setBoolean(null, buf.get() == 1);
-            } else if (ftype == char.class) {
-                f.setChar(null, buf.getChar());
-            } else if (ftype == byte.class) {
-                f.setByte(null, buf.get());
-            } else if (ftype == short.class) {
-                f.setShort(null, buf.getShort());
-            } else if (ftype == int.class) {
-                f.setInt(null, buf.getInt());
-            } else if (ftype == long.class) {
-                f.setLong(null, buf.getLong());
-            } else if (ftype == float.class) {
-                f.setFloat(null, buf.getFloat());
-            } else if (ftype == double.class) {
-                f.setDouble(null, buf.getDouble());
-            } else {
-                // we must have an object type
-                byte[] oarr = new byte[buf.limit() - 4 - idlength];
-                buf.get(oarr, 0, oarr.length);
-                Object o = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(oarr));
-                f.set(null, o);
-            }
-        } catch(ClassNotFoundException|
-                NoSuchFieldException|
-                IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static public byte[] getAllStaticFields(String clsname) {
-        try {
-            Field[] fs = getClassFields(clsname);
-            int bufSize = 0;
-            byte[][] dids = new byte[fs.length][];
-            int at = 0;
-            for (Field f : fs) {
-                if (!Modifier.isStatic(f.getModifiers())) {
-                    break;
+        synchronized (lock) {
+            try {
+                int idlength = buf.getInt();
+                String id = new String(buf.array(), 4, idlength);
+                buf.position(idlength + 4);
+                String ids[] = id.split("::");
+                /*if(!InternalInterface.getInternalInterface().checkClassIsLoaded(ids[0])) {
+                    return;
+                }*/
+                if(!loadedClasses.contains(ids[0])) {
+                    // we haven't finished loading this class yet, so we can ignore this write field request...hopefully
+                    return;
                 }
+                Class<?> cls = Class.forName(ids[0]);
+                Field f = cls.getDeclaredField(ids[1]);
                 f.setAccessible(true);
-                if(f.getName().startsWith("__dj_"))
-                    continue;
-                Class<?> ftype = f.getType();
-                if (ftype == boolean.class) {
-                    bufSize += 1;
-                } else if (ftype == char.class) {
-                    bufSize += 4;
-                } else if (ftype == byte.class) {
-                    bufSize += 1;
-                } else if (ftype == short.class) {
-                    bufSize += 2;
-                } else if (ftype == int.class) {
-                    bufSize += 4;
-                } else if (ftype == long.class) {
-                    bufSize += 8;
-                } else if (ftype == float.class) {
-                    bufSize += 4;
-                } else if (ftype == double.class) {
-                    bufSize += 8;
-                } else {
-                    // this is an object type
-                    byte[] did = DistributedObjectHelper.getDistributedId(f.get(null)).toArr();
-                    bufSize += 4 + did.length;
-                    dids[at++] = did;
+                if (Modifier.isFinal(f.getModifiers())) {
+                    // the fact this works is a little bit crazy
+                    Field fm = Field.class.getDeclaredField("modifiers");
+                    fm.setAccessible(true);
+                    fm.set(f, f.getModifiers() & ~Modifier.FINAL);
                 }
-            }
-            ByteBuffer ret = ByteBuffer.allocate(bufSize);
-            at = 0;
-            for (Field f : fs) {
-                if (!Modifier.isStatic(f.getModifiers())) {
-                    break;
-                }
-                if(f.getName().startsWith("__dj_"))
-                    continue;
-                Class<?> ftype = f.getType();
-                if (ftype == boolean.class) {
-                    if (f.getBoolean(null))
-                        ret.put((byte) 1);
-                    else
-                        ret.put((byte) 0);
-                } else if (ftype == char.class) {
-                    ret.putChar(f.getChar(null));
-                } else if (ftype == byte.class) {
-                    ret.put(f.getByte(null));
-                } else if (ftype == short.class) {
-                    ret.putShort(f.getShort(null));
-                } else if (ftype == int.class) {
-                    ret.putInt(f.getInt(null));
-                } else if (ftype == long.class) {
-                    ret.putLong(f.getLong(null));
-                } else if (ftype == float.class) {
-                    ret.putFloat(f.getFloat(null));
-                } else if (ftype == double.class) {
-                    ret.putDouble(f.getDouble(null));
-                } else {
-                    // this is an object type
-                    ret.putInt(dids[at].length);
-                    ret.put(dids[at++]);
-                }
-            }
-            return ret.array();
-        } catch(ClassNotFoundException|
-                IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static public void loadAllStaticFields(String classname, ByteBuffer buf) {
-        try {
-            Field[] fs = getClassFields(classname);
-            for (Field f : fs) {
-                if (!Modifier.isStatic(f.getModifiers())) {
-                    break;
-                }
-                if (f.getName().startsWith("__dj_"))
-                    continue;
-                f.setAccessible(true);
                 Class<?> ftype = f.getType();
                 if (ftype == boolean.class) {
                     f.setBoolean(null, buf.get() == 1);
@@ -235,17 +129,149 @@ public class StaticFieldHelper {
                 } else if (ftype == double.class) {
                     f.setDouble(null, buf.getDouble());
                 } else {
-                    // this is an object type
-                    int length = buf.getInt();
-                    byte[] did = new byte[length];
-                    buf.get(did, 0, length);
-                    Object o = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(did));
+                    // we must have an object type
+                    byte[] oarr = new byte[buf.limit() - 4 - idlength];
+                    buf.get(oarr, 0, oarr.length);
+                    Object o = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(oarr));
                     f.set(null, o);
                 }
+            } catch (ClassNotFoundException |
+                    NoSuchFieldException |
+                    IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch(Throwable e) {
+                System.err.println(e);
+                throw e;
             }
-        } catch(ClassNotFoundException|
-                IllegalAccessException e) {
-            throw new RuntimeException(e);
+        }
+    }
+
+    static public byte[] getAllStaticFields(String clsname) {
+        assert(InternalInterface.getInternalInterface().getSelfId() == 0);
+        synchronized (lock) {
+            try {
+                Field[] fs = getClassFields(clsname);
+                int bufSize = 0;
+                byte[][] dids = new byte[fs.length][];
+                int at = 0;
+                for (Field f : fs) {
+                    if (!Modifier.isStatic(f.getModifiers())) {
+                        break;
+                    }
+                    f.setAccessible(true);
+                    if (f.getName().startsWith("__dj_"))
+                        continue;
+                    Class<?> ftype = f.getType();
+                    if (ftype == boolean.class) {
+                        bufSize += 1;
+                    } else if (ftype == char.class) {
+                        bufSize += 4;
+                    } else if (ftype == byte.class) {
+                        bufSize += 1;
+                    } else if (ftype == short.class) {
+                        bufSize += 2;
+                    } else if (ftype == int.class) {
+                        bufSize += 4;
+                    } else if (ftype == long.class) {
+                        bufSize += 8;
+                    } else if (ftype == float.class) {
+                        bufSize += 4;
+                    } else if (ftype == double.class) {
+                        bufSize += 8;
+                    } else {
+                        // this is an object type
+                        byte[] did = DistributedObjectHelper.getDistributedId(f.get(null)).toArr();
+                        bufSize += /*4 +*/ did.length;
+                        dids[at++] = did;
+                    }
+                }
+                ByteBuffer ret = ByteBuffer.allocate(bufSize);
+                at = 0;
+                for (Field f : fs) {
+                    if (!Modifier.isStatic(f.getModifiers())) {
+                        break;
+                    }
+                    if (f.getName().startsWith("__dj_"))
+                        continue;
+                    Class<?> ftype = f.getType();
+                    if (ftype == boolean.class) {
+                        if (f.getBoolean(null))
+                            ret.put((byte) 1);
+                        else
+                            ret.put((byte) 0);
+                    } else if (ftype == char.class) {
+                        ret.putChar(f.getChar(null));
+                    } else if (ftype == byte.class) {
+                        ret.put(f.getByte(null));
+                    } else if (ftype == short.class) {
+                        ret.putShort(f.getShort(null));
+                    } else if (ftype == int.class) {
+                        ret.putInt(f.getInt(null));
+                    } else if (ftype == long.class) {
+                        ret.putLong(f.getLong(null));
+                    } else if (ftype == float.class) {
+                        ret.putFloat(f.getFloat(null));
+                    } else if (ftype == double.class) {
+                        ret.putDouble(f.getDouble(null));
+                    } else {
+                        // this is an object type
+                        //ret.putInt(dids[at].length);
+                        ret.put(dids[at++]);
+                    }
+                }
+                return ret.array();
+            } catch (ClassNotFoundException |
+                    IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch(Throwable e) {
+                e.printStackTrace();
+                System.err.println(e);
+                throw e;
+            }
+        }
+    }
+
+    static public void loadAllStaticFields(String classname, ByteBuffer buf) {
+        synchronized (lock) {
+            try {
+                Field[] fs = getClassFields(classname);
+                for (Field f : fs) {
+                    if (!Modifier.isStatic(f.getModifiers())) {
+                        break;
+                    }
+                    if (f.getName().startsWith("__dj_"))
+                        continue;
+                    f.setAccessible(true);
+                    Class<?> ftype = f.getType();
+                    if (ftype == boolean.class) {
+                        f.setBoolean(null, buf.get() == 1);
+                    } else if (ftype == char.class) {
+                        f.setChar(null, buf.getChar());
+                    } else if (ftype == byte.class) {
+                        f.setByte(null, buf.get());
+                    } else if (ftype == short.class) {
+                        f.setShort(null, buf.getShort());
+                    } else if (ftype == int.class) {
+                        f.setInt(null, buf.getInt());
+                    } else if (ftype == long.class) {
+                        f.setLong(null, buf.getLong());
+                    } else if (ftype == float.class) {
+                        f.setFloat(null, buf.getFloat());
+                    } else if (ftype == double.class) {
+                        f.setDouble(null, buf.getDouble());
+                    } else {
+                        // this is an object type
+                        //int length = buf.getInt();
+                        //byte[] did = new byte[length];
+                        //buf.get(did, 0, length);
+                        Object o = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(buf));
+                        f.set(null, o);
+                    }
+                }
+            } catch (ClassNotFoundException |
+                    IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -271,11 +297,15 @@ public class StaticFieldHelper {
 
     static public boolean initStaticFields(String classname) {
         if(InternalInterface.getInternalInterface().isMaster()) {
+            loadedClasses.add(classname);
             return true;
         } else {
             byte[] sf = InternalInterface.getInternalInterface().loadStaticFields(classname);
             loadAllStaticFields(classname, ByteBuffer.wrap(sf));
+            loadedClasses.add(classname);
             return false;
         }
     }
+
+
 }

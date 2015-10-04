@@ -74,7 +74,11 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
   loader.setDomain(protectionDomain)
 
   def reloadClass(name: String): Unit = {
-    loader.reloadClass(name)
+    if(ClassReloader.enabled) {
+      loader.reloadClass(name)
+      // TODO: should cache the bytes for the class here
+      networkInterface.sendAll(110, name.getBytes())
+    }
   }
 
   def startMain (mainClass : String, args : Array[String]) = {
@@ -140,6 +144,7 @@ private [rt] class ClientManager (val config: Config) extends Manager {
     } catch {
       case e: InvocationTargetException => {
         println("some internal error on client " + e.getTargetException)
+        e.printStackTrace()
         throw e
       }
     }

@@ -16,6 +16,7 @@
 
 package javassist.bytecode;
 
+import edu.berkeley.dj.rt.ArrayClassMap;
 import javassist.CtClass;
 
 import java.io.*;
@@ -627,6 +628,11 @@ public final class ConstPool {
     public String getUtf8Info(int index) {
         Utf8Info utf = (Utf8Info)getItem(index);
         return utf.string;
+    }
+
+    public void setUtf8Info(int index, String val) {
+        Utf8Info utf = (Utf8Info)getItem(index);
+        utf.string = val;
     }
 
     /**
@@ -1385,9 +1391,16 @@ class ClassInfo extends ConstInfo {
         String oldName = cp.getUtf8Info(name);
         String newName = null;
         if (oldName.charAt(0) == '[') {
-            String s = Descriptor.rename(oldName, map);
-            if (oldName != s)
-                newName = s;
+            // fcking hack, fml
+            if(map instanceof ArrayClassMap) {
+                String s = ((ArrayClassMap)map).getM(oldName, false);
+                if(oldName != s)
+                    newName = s;
+            } else {
+                String s = Descriptor.rename(oldName, map);
+                if (oldName != s)
+                    newName = s;
+            }
         }
         else {
             String s = (String)map.get(oldName);

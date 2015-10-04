@@ -16,6 +16,8 @@
 
 package javassist.bytecode;
 
+import javassist.CannotCompileException;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -23,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import javassist.CannotCompileException;
 
 /**
  * <code>ClassFile</code> represents a Java <code>.class</code> file, which
@@ -44,6 +45,12 @@ public final class ClassFile {
     String thisclassname; // not JVM-internal name
     String[] cachedInterfaces;
     String cachedSuperclass;
+
+
+    public void clearCaches() {
+        cachedInterfaces = null;
+        cachedSuperclass = null;
+    }
 
     /**
      * The major version number of class files
@@ -113,7 +120,8 @@ public final class ClassFile {
             MAJOR_VERSION = JAVA_6;
             Class.forName("java.lang.invoke.CallSite");
             MAJOR_VERSION = JAVA_7;
-            // TODO: class for java 8 version
+            Class.forName("java.net.URLPermission");
+            MAJOR_VERSION = JAVA_8;
         }
         catch (Throwable t) {}
     }
@@ -443,6 +451,7 @@ public final class ClassFile {
             finfo.setDescriptor(Descriptor.rename(desc, oldname, newname));
             AttributeInfo.renameClass(finfo.getAttributes(), oldname, newname);
         }
+        clearCaches();
     }
 
     /**
@@ -480,6 +489,7 @@ public final class ClassFile {
             finfo.setDescriptor(Descriptor.rename(desc, classnames));
             AttributeInfo.renameClass(finfo.getAttributes(), classnames);
         }
+        clearCaches();
     }
 
     /**

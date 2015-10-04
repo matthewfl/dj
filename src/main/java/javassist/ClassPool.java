@@ -450,6 +450,7 @@ public class ClassPool {
             throw new NotFoundException(classname);
         else {
             clazz.incGetCounter();
+            //assert(clazz.getClassPool() == this);
             return clazz;
         }
     }

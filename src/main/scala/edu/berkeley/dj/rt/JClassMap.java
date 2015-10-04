@@ -16,14 +16,14 @@ public class JClassMap extends ClassMap {
 
     final private Rewriter rewriter;
 
-    final private String[] extraExeptedClasses;
+    final private String[] extraExemptedClasses;
 
     final private String prefix;
 
     JClassMap(Manager man, Rewriter rw, String[] exc) {
         manager = man;
         rewriter = rw;
-        extraExeptedClasses = exc;
+        extraExemptedClasses = exc;
         // this should end with a ".", so that means that we will end with a slash
         prefix = manager.config().coreprefix().replace(".", "/");
     }
@@ -117,7 +117,7 @@ public class JClassMap extends ClassMap {
                         if(name.startsWith(e))
                             return name;
                     }
-                    for(String e : extraExeptedClasses) {
+                    for(String e : extraExemptedClasses) {
                         if(name.startsWith(e))
                             return name;
                     }
@@ -133,6 +133,7 @@ public class JClassMap extends ClassMap {
             }
         } catch(ClassCastException e) {
             System.err.println("Some how the get method on the class rewriter failed to cast to string");
+            throw new RuntimeException(e);
         }
         return super.get(jvn);
     }

@@ -1,9 +1,6 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
-import edu.berkeley.dj.internal.InterfaceException;
-import edu.berkeley.dj.internal.InternalInterface;
-import edu.berkeley.dj.internal.RewriteAddAccessorMethods;
-import edu.berkeley.dj.internal.RewriteAllBut;
+import edu.berkeley.dj.internal.*;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
@@ -80,7 +77,8 @@ public class System00 {
     public static void arraycopy(Object src,  int  srcPos,
                                  Object dest, int destPos,
                                  int length) {
-        System.arraycopy(src, srcPos, dest, destPos, length);
+        System.arraycopy(ArrayHelpers.tryMakeNativeArray(src), srcPos,
+                ArrayHelpers.tryMakeNativeArray(dest), destPos, length);
     }
 
     public static int identityHashCode(Object x) {

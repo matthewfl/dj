@@ -18,6 +18,8 @@ case class Config (val uuid: String="DJ"+java.util.UUID.randomUUID.toString.repl
   // and then reload our modified classes in this new namespace
   final val coreprefix = internalPrefix + "coreclazz."
 
+  final val arrayprefix = internalPrefix + "arrayclazz."
+
   final val proxysubclasses = internalPrefix + "proxysubclazz."
 
   final val staticInitMethodName = fieldPrefix + "static_clinit"

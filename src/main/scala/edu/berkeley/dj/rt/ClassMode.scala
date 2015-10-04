@@ -17,6 +17,14 @@ class ClassMode(val className: String) {
 
   var loaded = false
 
+  def addMethodRedirect(signature: String) = !ClassReloader.enabled || redirectedMethods.contains(signature) || className.contains("makeThisRpc")
+
+  def performRedirect(signature: String) = redirectedMethods.contains(signature)
+
+  def addMethodRedirectCheck(signature: String) = !ClassReloader.enabled
+
+  val redirectedMethods = new mutable.HashSet[String]()
+
 }
 
 

@@ -1,16 +1,16 @@
 package edu.berkeley.dj.rt
 
+import java.lang.StringBuilder
 import java.lang.reflect.UndeclaredThrowableException
 import javassist._
-import javassist.bytecode.{Descriptor, MethodInfo}
+import javassist.bytecode.analysis.{Frame, Analyzer}
+import javassist.bytecode.{BadBytecode, Descriptor, MethodInfo}
 
 import edu.berkeley.dj.internal._
 import edu.berkeley.dj.rt.convert.{CodeConverter, _}
 import edu.berkeley.dj.utils.Memo
 
 import scala.collection.mutable
-
-import java.lang.StringBuilder
 
 
 /**
@@ -57,8 +57,18 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("forName", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;", "java.lang.Class") -> ("forName", s"${config.internalPrefix}AugmentedClassLoader"),
     ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.ClassLoader") -> ("loadClass", s"${config.internalPrefix}AugmentedClassLoader"),
-    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader")
+    ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("desiredAssertionStatus", "()Z", "java.lang.Class") -> ("desiredAssertionStatus", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("getComponentType", "()Ljava/lang/Class;", "java.lang.Class") -> ("getComponentType", s"${config.internalPrefix}AugmentedClassLoader"),
 
+
+    // some string stuff
+    ("getChars", "(IILedu/berkeley/dj/internal/arrayclazz/Character_1;I)V", "java.lang.String") -> ("getChars", s"${config.internalPrefix}AugmentedString"),
+
+    // array internal stuff
+  // TODO: this method is the wrong one to replace since it is internal to the reflect class which we are not rewriting....
+    ("newInstance", "(Ljava/lang/Class;I)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers"),
+    ("newInstance", "(Ljava/lang/Class;Ledu/berkeley/dj/internal/arrayclazz/Integer_1;)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers")
     // rewrite the string init method since this is package private
     // this just gets the field inside the class and sets it to the char array
   )
@@ -174,7 +184,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
     codeConverter.addTransform(new SpecialConverter(codeConverter.prevTransforms))
 
-    //codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
+    //if(cls.getName.contains("Scratch")) // TODO: remove
+    //  codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config))
 
     codeConverter.addTransform(new FieldAccess(codeConverter.prevTransforms, config, this))
     codeConverter.addTransform(new Monitors(codeConverter.prevTransforms))
@@ -196,11 +207,15 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private def monitorMethodsRewrite(cls: CtClass): Unit = {
     for(m <- cls.getDeclaredMethods) {
-      //m.setWrappedBody()
+      if(Modifier.isSynchronized(m.getModifiers)) {
+      }
+
     }
     // TODO:
     ???
   }
+
+  private def baseFieldCount = 10
 
   private val fieldCount = new mutable.HashMap[String,Int]()
 
@@ -209,10 +224,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       10
     else {
       if(fieldCount.contains(classname)) {
-        fieldCount.getOrElse(classname, 10)
+        fieldCount.getOrElse(classname, baseFieldCount)
       } else {
         runningPool.get(classname)
-        fieldCount.getOrElse(classname, 10)
+        fieldCount.getOrElse(classname, baseFieldCount)
       }
     }
   }
@@ -396,9 +411,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       """
   }
 
-  def modifyStaticInit(cls: CtClass): Unit = {
+  def modifyStaticInit(cls: CtClass, mana: MethodAnalysis): Unit = {
     if(cls.isInterface)
       return
+    // the method init is already going to exist in the case that there are static variables
+    // that are getting values set, this will either get that method or create a new one
     val clsinit = cls.makeClassInitializer()
     var addInitMethod = false
     var exists_init = false
@@ -417,28 +434,227 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
     })
 
+    // TODO: need to record how big the gap that we are inserting is
+
     if(clsinit != null) {
-      clsinit.insertBefore(s"""if(!edu.berkeley.dj.internal.StaticFieldHelper.initStaticFields("${cls.getName}")) return;""")
+      if(!mana.m.contains(clsinit.getMethodInfo)) {
+        mana.addMethod(cls, clsinit.getMethodInfo)
+      }
+      val gap = clsinit.insertBefore(
+        s"""if(!edu.berkeley.dj.internal.StaticFieldHelper.initStaticFields("${cls.getName}")) return;""")
+      mana.addOffset(clsinit.getMethodInfo, 0, gap.length)
+    }
+  }
+
+  def addRPCRedirects(cls: CtClass): Unit = {
+    val (cls_mode, cls_manager) = if (Modifier.isInterface(cls.getModifiers)) {
+      ("this.__dj_getClassMode()", "this.__dj_getManager()")
+    } else {
+      ("this.__dj_class_mode", "this.__dj_class_manager")
+    }
+
+
+    val mode = manager.classMode.getMode(cls.getName)
+
+    // TODO: remove fcking hack
+    // this causes something internally to get cached, without it it crashses
+    cls.toString
+
+    for(mth <- cls.getDeclaredMethods) {
+      val modifiers = mth.getModifiers
+      if (!Modifier.isStatic(modifiers) && !Modifier.isAbstract(modifiers) && !mth.getName.startsWith(config.fieldPrefix)) {
+        val id = mth.getName + mth.getSignature
+        if (mode.addMethodRedirect(id)) {
+          val (return_cast, return_type) = if (mth.getReturnType.isPrimitive) {
+            ("", mth.getReturnType.asInstanceOf[CtPrimitiveType].getDescriptor.toString)
+          } else {
+            (s"(${getUsableName(mth.getReturnType)})", "A")
+          }
+          val check = mode.addMethodRedirectCheck(id)
+
+          //val ctparams = mth.getParameterTypes
+          val ctparams = mth.getParameterTypesNames
+          val params = if (ctparams.length == 0) {
+            "null"
+          } else {
+            s"""new String[] { ${ctparams.map(c => "\"" + c + "\"").mkString(", ")} }"""
+          }
+
+          val code =
+            s"""
+             if((${cls_mode} & 0x20) != 0 ${if (check) s""" && edu.berkeley.dj.internal.RPCHelpers.checkPerformRPC("${cls.getName}","${id}") """ else ""}) {
+              ${if(mth.getReturnType == CtClass.voidType) "" else s"return ${return_cast}"} edu.berkeley.dj.internal.RPCHelpers.call_${return_type} (this, "${cls.getName}", "${mth.getName}", ${params}, $$args);
+              ${if(mth.getReturnType == CtClass.voidType) "return ;" else  "" }
+             }
+           """
+
+          mth.insertBefore(code)
+        }
+      }
+    }
+  }
+
+  def modifyArrays(cls: CtClass, mana: MethodAnalysis): Unit = {
+    val codeConverter = new CodeConverter
+    codeConverter.addTransform(new Arrays(codeConverter.prevTransforms, config, mana, jclassmap, this))
+
+    cls.replaceClassName(new ArrayClassMap(this))
+
+    for(i <- 0 until cls.getClassFile.getConstPool.getSize) {
+      try {
+        val ci = cls.getClassFile.getConstPool.getClassInfo(i)
+        if(ci != null && ci.contains(";") && ci.startsWith("L")) {
+          println("fail2 "+ci)
+        }
+      } catch { case _: ClassCastException => {}}
+    }
+
+    cls.instrument(codeConverter)
+
+    for(i <- 0 until cls.getClassFile.getConstPool.getSize) {
+      try {
+        val ci = cls.getClassFile.getConstPool.getClassInfo(i)
+        if(ci != null && ci.contains(";") && ci.startsWith("L")) {
+          println("fail "+ci)
+        }
+      } catch { case _: ClassCastException => {}}
     }
 
   }
 
+  private val arrayTypeRegex = """(\[+)([ZCBSIJFD]|L[^;]+?;)""".r
 
-  private def modifyClass(cls: CtClass): Unit = {
+  // TODO: this is crashing for some reason inside the scala lib implementation
+  /*private[rt] def rewriteArrayTypeFail(typ: String, addL: Boolean) = {
+    arrayTypeRegex.replaceAllIn(typ, mt => {
+      val arr_depth = mt.group(1).length
+      val typ = if(mt.group(2).length == 1) {
+        mt.group(2) match {
+          case "Z" => "Boolean"
+          case "C" => "Character"
+          case "B" => "Byte"
+          case "I" => "Integer"
+          case "J" => "Long"
+          case "F" => "Float"
+          case "D" => "Double"
+          case "S" => "Short"
+          case _ => throw new NotImplementedError()
+        }
+      } else {
+        val s = mt.group(2)
+        s.substring(1, s.length - 1)//.replace("/", ".")
+      }
+      val r = (config.arrayprefix + typ + "_" + arr_depth).replace(".", "/")
+      //"L"+
+      if(addL)
+        s"L$r;"
+      else
+        r
+    })
+  }*/
+
+  // fcking haxs, some issue sometimes with the scala findallandreplace
+  private[rt] def rewriteArrayType(typ: String, addL: Boolean) = {
+    val matches = arrayTypeRegex.findAllMatchIn(typ)
+    var ret = typ
+    for(mt <- matches) {
+      val arr_depth = mt.group(1).length
+      val typ = if(mt.group(2).length == 1) {
+        mt.group(2) match {
+          case "Z" => "Boolean"
+          case "C" => "Character"
+          case "B" => "Byte"
+          case "I" => "Integer"
+          case "J" => "Long"
+          case "F" => "Float"
+          case "D" => "Double"
+          case "S" => "Short"
+          case _ => ???
+        }
+      } else {
+        val s = mt.group(2)
+        s.substring(1, s.length - 1)//.replace("/", ".")
+      }
+      val typ_mapped = {
+        val r = jclassmap.get(typ.replace('.', '/'))
+        if(r != null)
+          r.asInstanceOf[String]
+        else
+          typ
+      }
+      val r = (config.arrayprefix + typ_mapped + "_" + arr_depth).replace(".", "/")
+      //"L"+
+      val rs = if(addL)
+        s"L$r;"
+      else
+        r
+      //println(ret)
+      // TODO: this is wrong and may fail in a case like [I[[I
+      ret = ret.replace(mt.group(0), rs)
+      //println(ret)
+    }
+    //println(ret)
+    ret
+  }
+
+  private def isInheritedFromBase(cls: CtClass) = {
+    /*if(cls.isInterface) {
+      cls.subtypeOf(objectBaseInterface)
+    } else {
+      cls.subtypeOf()
+    }*/
+    cls.subtypeOf(objectBaseInterface)
+  }
+
+  private def makePublic(cls: CtClass): Unit = {
+    cls.setModifiers((cls.getModifiers | Modifier.PUBLIC) & ~(Modifier.PRIVATE | Modifier.PROTECTED))
+  }
+
+  /*private def addMethods(cls: CtClass, methods: Iterable[CtMethod]): Unit = {
+    for(m <- methods) {
+      cls.addMethod(m)
+    }
+  }*/
+
+  private def modifyClass(cls: CtClass, mana: MethodAnalysis, overrideNative: Boolean=false): Unit = {
     //println("rewriting class: " + cls.getName)
     val mods = cls.getModifiers
     //println("modifiers: " + Modifier.toString(mods))
-    reassociateClass(cls)
 
-    modifyStaticInit(cls)
+    //val addedMethods = new collection.mutable.MutableList[CtMethod]()
+
+    val nativeM = if(overrideNative && hasNativeMethods(cls)) {
+      findNativeMethodsToOverwrite(cls)
+      //addedMethods ++= makeOverwrittenNativeMethods(cls)
+    } else null
+
+    reassociateClass(cls)
+    makePublic(cls)
+
+    modifyStaticInit(cls, mana)
     rewriteUsedClasses(cls)
-    transformClass(cls)
+    if (isInheritedFromBase(cls)) {
+      modifyArrays(cls, mana)
+      addRPCRedirects(cls)
+      if(nativeM != null)
+        addOverwrittenNativeMethods(cls, nativeM)
+      //addMethods(cls, addedMethods)
+      transformClass(cls)
+    } else {
+      // this is really annoying, some classes are not inherited from objectbase
+      // and if we end up trying to work with them then they will end up not being able to find
+      // the fields on objectbase that it needs for various operations to work
+      System.err.println("cls is not inherited from objectbase and we are trying to work with it: "+cls.getName)
+      ???
+    }
   }
 
-  private def modifyInternalClass(cls: CtClass): Unit ={
+  private def modifyInternalClass(cls: CtClass/*, mana: MethodAnalysis*/): Unit ={
     // the internal classes have special annotations on them to control how they are rwriten
     var clsa = cls
     // if the class is internal to something, we still want the annotations for the file to be "active"
+
+    lazy val mana = getMethodAnalysis(cls)
 
     var rewriteUseAccessor = false
     val classMode = manager.classMode.getMode(cls.getName)
@@ -457,7 +673,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           }
           case nrw: RewriteClassRefCls => {
             try {
-              cls.replaceClassName(nrw.oldCls().getName, nrw.newName());
+              cls.replaceClassName(nrw.oldCls().getName, nrw.newName())
             } catch {
               case e: UndeclaredThrowableException => {
                 println(e.getCause)
@@ -475,6 +691,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             // force the super class to be something else
             if(clsa == cls)
               cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
+          }
+          case _: RewriteAddArrayWrap => {
+            addArrayWrapMethods(cls)
           }
           case _ => {} // nop
         }
@@ -505,14 +724,62 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
+  private def arrayWrapMethod(cls: CtClass, m: CtMethod): CtMethod = {
+    if(!m.getSignature.contains("["))
+      return null// we do not need to wrap this method
+
+    val (rt, rt_cast) = {
+      if(m.getReturnType.isArray) {
+        val arr = cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(m.getReturnType), false).replace('/','.'))
+        (arr, s"(${arr.getName}) ${config.internalPrefix}ArrayHelpers.makeDJArray ")
+      } else {
+        (m.getReturnType, "")
+      }
+    }
+    val argsM = m.getParameterTypes.map(a => {
+      if(a.isArray) {
+        (cls.getClassPool.get(rewriteArrayType(Descriptor.toJvmName(a), false).replace('/','.')), true, a)
+      } else (a, false, null)
+    })
+    val body =
+      s"""
+             {
+               return $rt_cast (${m.getName} (${
+        argsM.zipWithIndex.map(a => {
+          if(a._1._2 == false) {
+            "$"+(a._2+1)
+          } else {
+            "("+a._1._3.getName+ ")" +config.internalPrefix + "ArrayHelpers.makeNativeArray( $"+(a._2+1) +")"
+          }
+        }).mkString(", ")
+      })) ;
+             }
+           """
+    // hack with name so that we call the origional method even if we only differ in return type
+    val ret = CtNewMethod.make(m.getModifiers, rt, m.getName + "_new_name", argsM.map(_._1), m.getExceptionTypes, body, cls)
+    ret.setName(m.getName)
+    ret
+  }
+
+  private def addArrayWrapMethods(cls: CtClass): Unit = {
+    for(m <- cls.getDeclaredMethods) {
+      //if(m.getSignature.contains("[")) {
+        // we need to add another method to wrap this
+      val r = arrayWrapMethod(cls, m)
+      if(r != null)
+        cls.addMethod(r)
+    //}
+    }
+  }
+
   private def hasNativeMethods(cls: CtClass): Boolean = {
     // if this clsas contains some native methods then we can't
     // directly instaniate this class, as it will need the native methods
     // so instead we will make proxy methods for all of its public and protected methods
-    cls.getDeclaredMethods.foreach(m => {
+    for(m <- cls.getDeclaredMethods) {
       if(Modifier.isNative(m.getModifiers))
         return true
-    })
+    }
     false
   }
 
@@ -552,8 +819,98 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-  private def overwriteNativeMethods(cls: CtClass) = {
-    // For now if something is going to need a native method, we can just manually overwrite the native method
+  private def findNativeMethodsToOverwrite(cls: CtClass) = {
+    val rwMembers = cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers))
+
+    if(rwMembers.isEmpty) {
+      null
+    } else {
+      rwMembers.foreach(m => {
+        cls.removeMethod(m)
+      })
+      rwMembers
+    }
+  }
+
+  private def addOverwrittenNativeMethods(cls: CtClass, rwMembers: Iterable[CtMethod]) = {
+
+    val orgClassName = cls.getName.substring(config.coreprefix.length)
+
+    for(m <- rwMembers) {
+      //val args = getArguments(m.getSignature)
+      val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
+      // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
+      val static = if (Modifier.isStatic(m.getModifiers)) "static" else ""
+
+      // ${if (m.getReturnType != CtClass.voidType) "return" else ""} ${makeDummyValue(m.getReturnType)} ;
+
+      // work around javassist bug
+      val (cls_types, arg_vals) = if (args.length == 0) {
+        ("new java.lang.String[0]", "new java.lang.Object[0]")
+      } else {
+        (s"new ``java``.``lang``.``String`` [] { ${
+          args.map(v => {
+            if (v.getName.startsWith(config.arrayprefix)) {
+              ??? // this needs to determine the origional array type
+            } else if (v.isArray) {
+              //??? // how are we now getting an array at this point
+              "\"" + Descriptor.toJvmName(v).replace('/', '.') + "\""
+            } else {
+              "\"" + v.getName + "\""
+            }
+          }).mkString(", ")
+        } }",
+          s"new java.lang.Object [] { ${
+            args.zipWithIndex.map(v => {
+              if (v._1.isPrimitive) {
+                // we need to manually box this
+                s"${v._1.asInstanceOf[CtPrimitiveType].getWrapperName}.valueOf( a${v._2} )"
+              } else {
+                s"a${v._2}"
+              }
+            }).mkString(", ")
+          } }")
+      }
+
+      var rt_type = m.getReturnType
+
+      // work around for javassist not automatically undoing boxing
+      val (cast_prefix, cast_suffix) = if (rt_type.isPrimitive) {
+        (s"((edu.berkeley.dj.internal.coreclazz.${rt_type.asInstanceOf[CtPrimitiveType].getWrapperName})", s").${rt_type.getName}Value()")
+      } else {
+        (s"(${getUsableName(rt_type)})", "")
+      }
+
+      val mth_code = s"""
+           ${getAccessControl(m.getModifiers)} ${static} ${getUsableName(m.getReturnType)} ``${m.getName}`` (${args.zipWithIndex.map(v => getUsableName(v._1) + " a" + v._2).mkString(", ")}) {
+             edu.berkeley.dj.internal.InternalInterface.getInternalInterface().simplePrint("\t\tcall native: ${cls.getName} ${m.getName}");
+               ${if (rt_type != CtClass.voidType) s"return $cast_prefix " else ""}
+               edu.berkeley.dj.internal.ProxyHelper.invokeProxy(
+                 ${if (Modifier.isStatic(m.getModifiers)) "null" else "this"} ,
+                 "${orgClassName}",
+                 ${getUsableName(cls)}.class ,
+                 $cls_types,
+                 "${m.getName}",
+                 $arg_vals
+                 ) ${if (rt_type != CtClass.voidType) cast_suffix else ""} ;
+           }
+         """
+      try {
+        cls.addMethod(CtMethod.make(mth_code, cls))
+
+      } catch {
+        case e: Throwable => {
+          println(e)
+          throw e
+        }
+      }
+    }
+  }
+
+
+  /*private def makeOverwrittenNativeMethods(cls: CtClass): Iterable[CtMethod] = {
+    // For now if
+    // something is going to need a native method, we can just manually overwrite the native method
     // calls, otherwise this is going to end up becoming a really complicated system
 
     val rwMembers = cls.getDeclaredMethods.filter(m=>Modifier.isNative(m.getModifiers))
@@ -564,7 +921,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     val orgClassName = cls.getName.substring(config.coreprefix.length)
 
-    rwMembers.foreach(m=>{
+    //rwMembers.foreach(m=>{
+    for(m <- rwMembers) yield {
       //val args = getArguments(m.getSignature)
       val args = Descriptor.getParameterTypes(m.getSignature, cls.getClassPool)
       // TODO: deal with the fact we have stuff rewritten into internal.coreclazz namespace
@@ -578,7 +936,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       } else {
         (s"new ``java``.``lang``.``String`` [] { ${
           args.map(v => {
-            if(v.isArray) {
+            if(v.getName.startsWith(config.arrayprefix)) {
+              ??? // this needs to determine the origional array type
+            } else if(v.isArray) {
+              //??? // how are we now getting an array at this point
               "\"" + Descriptor.toJvmName(v).replace('/', '.') + "\""
             } else {
               "\"" + v.getName + "\""
@@ -618,15 +979,313 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                  ) ${if(rt_type != CtClass.voidType) cast_suffix else "" } ;
            }
          """
-      try {
+      /*try {
         cls.addMethod(CtMethod.make(mth_code, cls))
       } catch {
         case e: Throwable => {
           println(e)
           throw e
         }
+      }*/
+      CtMethod.make(mth_code, cls)
+    }
+  }*/
+
+  private lazy val baseArrayClsImpl = runningPool.get(config.arrayprefix + "Base_impl")
+  private lazy val baseArrayClsInter = runningPool.get(config.arrayprefix + "Base")
+
+  private def makeArrayClass(clsname: String): CtClass = {
+    val uindx = clsname.lastIndexOf("_")
+    val cnt = clsname.substring(uindx + 1).toInt
+    val makeInterface = !clsname.endsWith(s"_impl_$cnt")
+    val baseType = if(makeInterface) {
+      clsname.substring(config.arrayprefix.size, uindx)
+    } else {
+      clsname.substring(config.arrayprefix.size, uindx - 5)
+    }
+
+    val (wrapType, jvmtyp, isPrimitive) = baseType match {
+      case "Byte" => ("byte", "B", true)
+      case "Character" => ("char", "C", true)
+      case "Short" => ("short", "S", true)
+      case "Integer" => ("int", "I", true)
+      case "Long" => ("long", "J", true)
+      case "Float" => ("float", "F", true)
+      case "Double" => ("double", "D", true)
+      case "Boolean" => ("boolean", "Z", true)
+      case s => {
+        (s, "A", false)
       }
-    })
+    }
+
+    def augName(n: String) = n.replaceAll("[^A-Za-z0-9]", "_")
+
+    val cls = if(makeInterface) {
+      runningPool.makeInterface(clsname, baseArrayClsInter)
+    } else {
+      val c = runningPool.makeClass(clsname, baseArrayClsImpl)
+      c.setModifiers(c.getModifiers | Modifier.FINAL)
+      c
+    }
+
+
+    val allInheritedTypes = new mutable.HashSet[String]()
+    def addInterfaces(inter: CtClass): Unit = {
+      val cn = inter.getName
+      val uidx = cn.lastIndexOf("_")
+      if(uidx < 0) return
+      val btype = cn.substring(config.arrayprefix.size, uidx)
+      if(!allInheritedTypes.contains(btype) && cn.startsWith(config.arrayprefix)) {
+        allInheritedTypes += btype
+        for (i <- inter.getInterfaces)
+          addInterfaces(i)
+      }
+    }
+
+    val intercls = if(!makeInterface) {
+      // add the interface of the type that this class is going to implement
+      val i = runningPool.get(config.arrayprefix + baseType + "_" + cnt)
+      cls.addInterface(i)
+      if(baseType != "java.lang.Object")
+        cls.addInterface(runningPool.get(config.arrayprefix + "java.lang.Object_"+cnt))
+      if(!isPrimitive)
+        addInterfaces(i)
+      i
+    } else null
+
+    if(isPrimitive)
+      allInheritedTypes += wrapType
+    else
+      allInheritedTypes += baseType
+
+
+    val inner_arr_typ = if(cnt > 1)
+      config.arrayprefix + baseType + "_" + (cnt - 1)
+    else
+      wrapType
+    if(!makeInterface) {
+      cls.addField(CtField.make(s"public ${inner_arr_typ}[] ir;", cls))
+    }
+    val length_mth =
+      s"""
+         public int length() {
+           if((__dj_class_mode & 0x01) != 0) {
+             return __dj_class_manager.readField_I(9);
+           } else {
+             return ir.length;
+           }
+         }
+       """
+    val length_mth_int = "int length();"
+    if(makeInterface)
+      //cls.addMethod(CtMethod.make(length_mth_int, cls))
+    {} else
+      cls.addMethod(CtMethod.make(length_mth, cls))
+
+    if(cnt > 1) {
+      val typname = config.arrayprefix + baseType + "_" + (cnt - 1)
+      if(makeInterface) {
+        val get_mth_int = s"${typname} get_${augName(typname)}(int i);"
+        cls.addMethod(CtMethod.make(get_mth_int, cls))
+      } else {
+        val get_mth =
+          s"""
+           public ${typname} get_${augName(typname)}(int i) {
+             if((__dj_class_mode & 0x01) != 0) {
+               return (${typname}) __dj_class_manager.readField_A(i + ${baseFieldCount});
+             } else {
+               return ir[i];
+             }
+           }
+         """
+        cls.addMethod(CtMethod.make(get_mth, cls))
+      }
+
+      if(makeInterface) {
+        val set_mth_int = s"void set_${augName(typname)}(int i, ${typname} v);"
+        cls.addMethod(CtMethod.make(set_mth_int, cls))
+      } else {
+        val set_mth =
+          s"""
+           public void set_${augName(typname)}(int i, ${typname} v) {
+             if((__dj_class_mode & 0x02) != 0) {
+               __dj_class_manager.writeField_A(i + ${baseFieldCount}, v);
+             } else {
+               ir[i] = v;
+             }
+           }
+          """
+        cls.addMethod(CtMethod.make(set_mth, cls))
+      }
+
+      if(!makeInterface) {
+        val dj_write_mth =
+          s"""
+           public void __dj_writeFieldID_A(int id, Object v) {
+             if(id < ${baseFieldCount}) {
+               super.__dj_writeFieldID_A(id, v);
+             } else {
+               ir[id - ${baseFieldCount}] = (${typname})v;
+             }
+           }
+         """
+        cls.addMethod(CtMethod.make(dj_write_mth, cls))
+
+        val dj_read_mth =
+          s"""
+           public Object __dj_readFieldID_A(int id) {
+             if(id < ${baseFieldCount}) {
+               return super.__dj_readFieldID_A(id);
+             } else {
+               return ir[id - ${baseFieldCount}];
+             }
+           }
+         """
+        cls.addMethod(CtMethod.make(dj_read_mth, cls))
+
+      }
+
+    } else {
+
+      val refname = if(isPrimitive) wrapType else "Object"
+
+      if(makeInterface) {
+        val get_mth_int = s"${wrapType} get_${augName(wrapType)}(int i);"
+        cls.addMethod(CtMethod.make(get_mth_int, cls))
+      } else {
+        for(itype <- allInheritedTypes) {
+          val get_mth =
+            s"""
+            public ${itype} get_${augName(itype)}(int i) {
+             if((__dj_class_mode & 0x1) != 0) {
+               return (${wrapType}) __dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount});
+             } else {
+               return ir[i];
+             }
+           }
+         """
+          cls.addMethod(CtMethod.make(get_mth, cls))
+        }
+
+        val get_mth_obj =
+          s"""
+             public Object get_java_lang_Object(int i) {
+               if((__dj_class_mode & 0x1) != 0) {
+                 return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (__dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount}));
+               } else {
+                 return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (ir[i]);
+               }
+             }
+           """
+
+        if(!allInheritedTypes.contains("java.lang.Object"))
+          cls.addMethod(CtMethod.make(get_mth_obj, cls))
+      }
+
+      if(makeInterface) {
+        val set_mth_int = s"void set_${augName(wrapType)}(int i, ${wrapType} v);"
+        cls.addMethod(CtMethod.make(set_mth_int, cls))
+      } else {
+        for(itype <- allInheritedTypes) {
+          val set_mth =
+            s"""
+             public void set_${augName(itype)} (int i, ${itype} v) {
+             if((__dj_class_mode & 0x2) != 0) {
+               __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, v);
+             } else {
+               ir[i] = (${wrapType})v;
+             }
+           }
+         """
+          cls.addMethod(CtMethod.make(set_mth, cls))
+        }
+
+        val set_mth_obj =
+          s"""
+             public void set_java_lang_Object(int i, Object v) {
+               if((__dj_class_mode & 0x2) != 0) {
+                 __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) );
+               } else {
+                 ir[i] = (${wrapType}) ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) ;
+               }
+             }
+           """
+        if(!allInheritedTypes.contains("java.lang.Object"))
+          cls.addMethod(CtMethod.make(set_mth_obj, cls))
+      }
+
+      if(!makeInterface) {
+        val dj_read_mth =
+          s"""
+           public ${refname} __dj_readFieldID_${jvmtyp} (int id) {
+             if(id < ${baseFieldCount}) {
+               return super.__dj_readFieldID_${jvmtyp}(id);
+             } else {
+               return ir[id - ${baseFieldCount}];
+             }
+           }
+         """
+        cls.addMethod(CtMethod.make(dj_read_mth, cls))
+
+        val dj_write_mth =
+          s"""
+           public void __dj_writeFieldID_${jvmtyp} (int id, ${refname} val) {
+             if(id < ${baseFieldCount}) {
+               super.__dj_writeFieldID_${jvmtyp}(id, val);
+             } else {
+               ir[id - ${baseFieldCount}] = val;
+             }
+           }
+         """
+        cls.addMethod(CtMethod.make(dj_write_mth, cls))
+      }
+    }
+    if(!makeInterface) {
+      cls.addConstructor(CtNewConstructor.defaultConstructor(cls))
+
+      // the constructors will have to go onto the classes since javassist doesn't support having static methods
+      // on interfaces
+      val inter_name = config.arrayprefix + baseType + "_" + cnt
+      val static_constructor =
+        s"""
+         public static ${inter_name} newInstance_1(int i) {
+           ${clsname} ret = new ${clsname}();
+           ret.ir = new ${inner_arr_typ}[i];
+           return ret;
+         }
+       """
+      cls.addMethod(CtMethod.make(static_constructor, cls))
+
+      /*val get_helper =
+        s"""
+           public static ${wrapType} helper_get(${inter_name} inst, int i) {
+             return inst.get_${augName(wrapType)}(i);
+           }
+         """
+      cls.addMethod(CtMethod.make(get_helper, cls))
+
+      val set_helper =
+        s"""
+           public static void helper_set(${inter_name} inst, int i, ${wrapType} val) {
+             inst.set_${augName(wrapType)}(i, val);
+           }
+         """
+      cls.addMethod(CtMethod.make(set_helper, cls))
+      */
+    }
+
+    cls
+  }
+
+  private def checkIsAThrowable(cls: CtClass): Boolean = {
+    var at = cls
+    while(at != null) {
+      if(at.getName == "java.lang.Throwable") {
+        return true
+      }
+      at = at.getSuperclass
+    }
+    false
   }
 
   private def findBaseClass(classname: String): CtClass = {
@@ -658,7 +1317,27 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-  def createCtClass(classname: String): CtClass = {
+  //type MethodAnalysis = Map[MethodInfo, Array[Frame]]
+
+  private def getMethodAnalysis(cls: CtClass): MethodAnalysis = {
+    try {
+      val m = cls.getDeclaredBehaviors.map(m => {
+        val a = new Analyzer
+        try {
+          Map(m.getMethodInfo -> a.analyze(cls, m.getMethodInfo))
+        } catch {
+          case _: BadBytecode => null
+        }
+      }).filter(_ != null).reduce(_ ++ _)
+      new MethodAnalysis(m)
+    } catch {
+      //case _: BadBytecode => {}
+      case _: UnsupportedOperationException => new MethodAnalysis(Map()) // there are no declared methods
+    }
+  }
+
+
+  def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
     MethodInfo.doPreverify = true
 
     if(classname.startsWith(config.coreprefix) && classname.endsWith("00")) {
@@ -675,16 +1354,38 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     if(classname.endsWith("[]")) {
       // this is some array type, so treat it as such
       // in the future we should rewrite arrays with our methods,
-      return new CtArray(classname, runningPool)
+      val ret = new CtArray(classname, runningPool)
+      addToCache(ret)
+      return ret
     }
+
 
     val cls = findBaseClass(classname)
     //println("create class name:" + classname)
 
+
+    if(classname.startsWith(config.arrayprefix)) {
+      if(cls != null) {
+        //val mana = getMethodAnalysis(cls)
+        reassociateClass(cls)
+        addToCache(cls)
+        modifyInternalClass(cls)
+        return cls
+      }
+      //val uindx = classname.lastIndexOf("_")
+      //val sp = classname.substring(0, uindx).drop(config.arrayprefix.size)
+      //val cnt = classname.substring(uindx + 1).toInt
+      val ret = makeArrayClass(classname) //, sp, cnt)
+      addToCache(ret)
+      return ret
+    }
+
     // for edu.berkeley.dj.internal.coreclazz.
     if (classname.startsWith(config.coreprefix)) {
       if (cls != null) {
+        //val mana = getMethodAnalysis(cls)
         reassociateClass(cls)
+        addToCache(cls)
         modifyInternalClass(cls)
         return cls
       }
@@ -693,12 +1394,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       /*if(hasNativeMethods(clso)) {
         return makeProxyCls(clso)
       }*/
+      val manao = getMethodAnalysis(clso)
       reassociateClass(clso)
       clso.setName(classname)
-      if(hasNativeMethods(clso)) {
-        overwriteNativeMethods(clso)
-      }
-      modifyClass(clso)
+      addToCache(clso)
+      modifyClass(clso, manao, overrideNative = true)
       return clso
     }
 
@@ -711,18 +1411,75 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       return null
 
     if(cls.isPrimitive) {
+      addToCache(cls)
+
       return cls
     } else if(cls.isArray) {
       // TODO: some custom handling for array types
 
       // don't think tha this is ever used
-
+      ???
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
-      modifyClass(cls)
+      val mana = getMethodAnalysis(cls)
+      addToCache(cls)
+      if(!checkIsAThrowable(cls))
+        modifyClass(cls, mana)
+      else {
+        println("??")
+      }
     } else if (classname.startsWith(config.internalPrefix)) {
+      //val mana = getMethodAnalysis(cls)
+      reassociateClass(cls)
+      addToCache(cls)
       modifyInternalClass(cls)
     }
     cls
   }
+
+}
+
+private[rt] class MethodAnalysis (im: Map[MethodInfo, Array[Frame]]) {
+
+  val m = new mutable.HashMap[MethodInfo, Array[Frame]]()
+  m ++= im.toSeq
+
+  def getPlace(minfo: MethodInfo, place: Int) = {
+    val arr = moffsets.get(minfo).orNull
+    var sum = 0
+    var i = 0
+    while(sum < place) {
+      if(i > arr.length) {
+        println("FFFFFFFFFFFFFFUCK")
+        throw new RuntimeException()
+      }
+      sum += arr(i) + 1
+
+      i += 1
+    }
+    if(i >= arr.length)
+      arr.length - 1
+    else
+      i
+  }
+
+  def addOffset(minfo: MethodInfo, place: Int, gap: Int): Unit = {
+    val arr = moffsets.get(minfo).orNull
+    val p = getPlace(minfo, place)
+    arr(p) += gap
+  }
+
+  def addMethod(cls: CtClass, minfo: MethodInfo): Unit = {
+    val analyzer = new Analyzer
+    val f = analyzer.analyze(cls, minfo)
+    m += (minfo -> f)
+    moffsets += (minfo -> new Array[Int](f.length))
+  }
+
+  private val moffsets = new mutable.HashMap[MethodInfo, Array[Int]]()
+
+  im.map(m => {
+    val l = if(m._2 == null) 0 else m._2.length
+    moffsets += (m._1 -> new Array[Int](l))
+  })
 
 }
