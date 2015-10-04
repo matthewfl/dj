@@ -349,6 +349,7 @@ class InternalInterfaceWrap extends  InternalInterface {
                 return null;
             case 2:
                 // callback for the existence of a new client
+                JITWrapper.registerNewClient((int)args[0]);
                 return null;
             case 3:
                 // callin to run a task on this machine as sent by another machine

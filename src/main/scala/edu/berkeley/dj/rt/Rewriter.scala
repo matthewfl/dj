@@ -457,7 +457,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val mode = manager.classMode.getMode(cls.getName)
 
     // TODO: remove fcking hack
-    // this causes something internally to get cached, without it it crashses
+    // this causes something internally to get cached, without it this crashes
     cls.toString
 
     for(mth <- cls.getDeclaredMethods) {
@@ -687,7 +687,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           case _: RewriteUseAccessorMethods => {
             rewriteUseAccessor = true
           }
-          case sp: SetSuperclass => {
+          case sp: RewriteSetSuperclass => {
             // force the super class to be something else
             if(clsa == cls)
               cls.setSuperclass(cls.getClassPool.get(sp.superclass()))

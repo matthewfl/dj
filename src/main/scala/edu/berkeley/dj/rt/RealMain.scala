@@ -22,7 +22,9 @@ object RealMain {
     "debug_clazz_bytecode" -> null,
     "cluster_code" -> "dummy", // the code code that the nodes use to identify to eachother
     "cluster_conn" -> "dummy", // will start up two processes in the same jvm
-    "mode" -> "master"
+    //"cluster_seed" -> "10.7.0.5,10.7.0.1,10.7.0.17",  (just take this from a system.getProperty
+    "mode" -> "master",
+    "djit" -> "edu.berkeley.dj.jit.SimpleJIT" // the classname of the jit to use
   )
 
   def help = {
@@ -30,6 +32,18 @@ object RealMain {
       """
         |To start a processing node: -cluster_code 'cluster-code-key-board-cat' -mode client
         |To start master: -cluster_code -fjar [fat jar] -maincls [main class]
+        |
+        |Arguments:
+        |\t-fjar\tFat Jar that contains the whole program
+        |\t-cp\tClass path for the program, seperated with `:`
+        |\t-cluster_code\tShared secert for starting a cluster, must be >10 letters
+        |\t-cluster_mode\tCommunication method used by the cluster, currently hazelcast
+        |\t-Ddj.cluster_seed=\tComma seperated list of ips to use for seeding cluster node
+        |\t-mode\t[master|client]
+        |\t-djit\tClassname to load for the distributed JIT
+        |\t-Ddj.classreload=false\tDisable class reloading for debugging
+        |\t-debug_clazz_bytecode\tFile path where to save a copy of the rewritten classes for debugging
+        |
       """.stripMargin)
     println("arguments: -fjar [fat jar] -maincls [[main class]] [class arguments...]")
   }
@@ -136,7 +150,8 @@ object RealMain {
         val config = new Config(
           debug_clazz_bytecode = arguments("debug_clazz_bytecode"),
           cluster_code = arguments("cluster_code"),
-          cluster_conn_mode = arguments("cluster_conn")
+          cluster_conn_mode = arguments("cluster_conn"),
+          distributed_jit = arguments("djit")
         )
 
 

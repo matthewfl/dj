@@ -128,7 +128,9 @@ class HazelcastHost(private val gcode: String,
 
   hconfig.getNetworkConfig.getJoin.setTcpIpConfig(new TcpIpConfig {
     // TODO: take this configuration from the command line
-    addMember("10.7.0.5,10.7.0.1,10.7.0.17")
+    // hack, just take this from the system get property
+    val seed = System.getProperty("dj.cluster_seed", "10.7.0.5,10.7.0.1,10.7.0.17")
+    addMember(seed)
     setEnabled(true)
   })
   hconfig.getNetworkConfig.getJoin.setMulticastConfig(new MulticastConfig {

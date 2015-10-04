@@ -1,5 +1,7 @@
 package edu.berkeley.dj.jit;
 
+import edu.berkeley.dj.internal.InternalInterface;
+
 /**
  * Created by matthewfl
  *
@@ -7,7 +9,11 @@ package edu.berkeley.dj.jit;
  */
 public class SimpleJIT implements JITInterface {
 
-    public void newClient(int id) {
+    public SimpleJIT() {
+        InternalInterface.debug("simple jit constructed");
+    }
 
+    public void newClient(int id) {
+        InternalInterface.debug("see new client "+id);
     }
 }
