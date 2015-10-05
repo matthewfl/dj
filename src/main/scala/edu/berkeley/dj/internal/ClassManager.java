@@ -58,49 +58,49 @@ final public class ClassManager {
             b.put((byte)1);
         else
             b.put((byte)0);
-        requestWrite(b, 20);
+        requestWrite(b, 20, id);
     }
 
     public void writeField_C(int id, char v) {
         ByteBuffer b = requestRemote(id, 4);
         b.putChar(v);
-        requestWrite(b, 21);
+        requestWrite(b, 21, id);
     }
 
     public void writeField_B(int id, byte v) {
         ByteBuffer b = requestRemote(id, 1);
         b.put(v);
-        requestWrite(b, 22);
+        requestWrite(b, 22, id);
     }
 
     public void writeField_S(int id, short v) {
         ByteBuffer b = requestRemote(id, 2);
         b.putShort(v);
-        requestWrite(b, 23);
+        requestWrite(b, 23, id);
     }
 
     public void writeField_I(int id, int v) {
         ByteBuffer b = requestRemote(id, 4);
         b.putInt(v);
-        requestWrite(b, 24);
+        requestWrite(b, 24, id);
     }
 
     public void writeField_J(int id, long v) {
         ByteBuffer b = requestRemote(id, 8);
         b.putLong(v);
-        requestWrite(b, 25);
+        requestWrite(b, 25, id);
     }
 
     public void writeField_F(int id, float v) {
         ByteBuffer b = requestRemote(id, 4);
         b.putFloat(v);
-        requestWrite(b, 26);
+        requestWrite(b, 26, id);
     }
 
     public void writeField_D(int id, double v) {
         ByteBuffer b = requestRemote(id, 8);
         b.putDouble(v);
-        requestWrite(b, 27);
+        requestWrite(b, 27, id);
     }
 
     public void writeField_A(int id, Object v) {
@@ -109,7 +109,7 @@ final public class ClassManager {
             byte[] did = DistributedObjectHelper.getDistributedId(ob).toArr();
             ByteBuffer b = requestRemote(id, did.length);
             b.put(did);
-            requestWrite(b, 28);
+            requestWrite(b, 28, id);
         } else {
             // TODO: have some sort of proxy object that we can then pass
             // to wrap the object that we can't move
@@ -157,6 +157,7 @@ final public class ClassManager {
 
     private ByteBuffer requestRead(int fid, int op) {
         ByteBuffer bb = requestRemote(fid, 0);
+        JITWrapper.recordRemoteRead(managedObject, fid, owning_machine);
         return InternalInterface.getInternalInterface().readField(bb, op, owning_machine);
     }
 
@@ -168,7 +169,8 @@ final public class ClassManager {
         return bb;
     }
 
-    private void requestWrite(ByteBuffer bb, int op) {
+    private void requestWrite(ByteBuffer bb, int op, int fid) {
+        JITWrapper.recordRemoteWrite(managedObject, fid, owning_machine);
         InternalInterface.getInternalInterface().writeField(bb, op, owning_machine);
     }
 
