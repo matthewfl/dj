@@ -349,7 +349,7 @@ public class Thread00 implements Runnable {
 
     /**
      * Causes the currently executing thread to sleep (temporarily cease
-     * execution) for the specified number of milliseconds, subject to
+     * execution) for the specified number of milliseconds, subject tostar
      * the precision and accuracy of system timers and schedulers. The thread
      * does not lose ownership of any monitors.
      *
@@ -803,7 +803,7 @@ public class Thread00 implements Runnable {
 
     private void start0() {
         currentAlive = true;
-        ThreadHelpers.runAsync(new Runnable() {
+        ThreadHelpers.runAsyncCluster(new Runnable() {
             @Override
             public void run() {
                 if (!Thread00.this.isDaemon())
@@ -812,8 +812,7 @@ public class Thread00 implements Runnable {
                 Thread00.this.run();
             }
         });
-        //throw new NotImplementedException();
-    }
+    0}
 
     /**
      * If this thread was constructed using a separate

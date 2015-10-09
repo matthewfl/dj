@@ -59,10 +59,10 @@ public class JITWrapper {
         public final OperationType type;
         public final WeakReference<Object> self;
         public final StackTraceElement[] stack;
-        public final int info;
+        public final Object info;
         public final int target_machine;
 
-        RecordedOperation(OperationType type, Object self, Throwable stack, int info, int target_machine) {
+        RecordedOperation(OperationType type, Object self, Throwable stack, Object info, int target_machine) {
             this.type = type;
             this.self = new WeakReference<>(self);
             this.stack = stack.getStackTrace();
@@ -90,6 +90,21 @@ public class JITWrapper {
         }
     }
 
+    static void recordRemoteRPC(Object self, String method, int target_machine) {
+        RecordedOperation r = new RecordedOperation(OperationType.RemoteRPC, self, new Throwable(), method, target_machine);
+        synchronized (operations) {
+            if(operations.offer(r)) {
+                operations.notify();
+            }
+        }
+    }
+
+    // call from the machine
+    static int placeThread(Object self) {
+        StackRepresentation s = new StackRepresentation(new Throwable().getStackTrace());
+        return get().placeThread(self, InternalInterface.getInternalInterface().getSelfId(), s);
+    }
+
     static void managedOperationQueue () {
         int self_id = InternalInterface.getInternalInterface().getSelfId();
         while(true) {
@@ -99,7 +114,11 @@ public class JITWrapper {
                     r = operations.poll();
                     if (r != null)
                         break;
-                    try { operations.wait(); } catch (InterruptedException e) {}
+                    try {
+                        operations.wait();
+                    } catch (InterruptedException e) {
+                        return;
+                    }
                 }
             }
             Object self = r.self.get();
@@ -107,10 +126,10 @@ public class JITWrapper {
             if(self != null) {
                 switch(r.type) {
                     case RemoteRead:
-                        get().recordRemoteRead(self, self_id, r.target_machine, r.info, s);
+                        get().recordRemoteRead(self, self_id, r.target_machine, (int)r.info, s);
                         break;
                     case RemoteWrite:
-                        get().recordRemoteWrite(self, self_id, r.target_machine, r.info, s);
+                        get().recordRemoteWrite(self, self_id, r.target_machine, (int)r.info, s);
                         break;
                     case RemoteRPC:
                         get().recordRemoteRPC(self, self_id, r.target_machine, s);

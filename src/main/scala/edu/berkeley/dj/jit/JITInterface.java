@@ -26,4 +26,14 @@ public interface JITInterface {
     void recordRemoteWrite(Object self, int from_machine, int to_machine, int field_id, StackRepresentation stack);
 
     void recordRemoteRPC(Object self, int from_machine, int to_machine, StackRepresentation stack);
+
+    // called during Thread.start from the machine that is starting the thread
+    // self is the runnable object that was passed to the thread to start
+    // a trivial implementation would just return from_machine
+    int placeThread(Object self, int from_machine, StackRepresentation stack);
+
+    // when something submits work into a work queue like system
+    // eg using .par on a scala collection
+    void scheduleQueuedWork(Object self, int from_machine, StackRepresentation stack);
 }
+

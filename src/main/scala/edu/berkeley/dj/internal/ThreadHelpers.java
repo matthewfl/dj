@@ -25,8 +25,16 @@ public class ThreadHelpers {
         return currentThread.get();
     }
 
+    // start a thread on the current machine
     static public void runAsync(Runnable r) {
         InternalInterface.getInternalInterface().startThread(r);
+    }
+
+    // place this thread somewhere on the cluster
+    static public void runAsyncCluster(Runnable r) {
+        int target_machine = JITWrapper.placeThread(r);
+        // if this is set to the local machine then this just calls runAsync
+        DistributedRunner.runOnRemote(target_machine, r);
     }
 
     static void newThreadCallback(Object r) {
