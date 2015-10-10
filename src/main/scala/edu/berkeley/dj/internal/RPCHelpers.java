@@ -96,7 +96,7 @@ public class RPCHelpers {
     }
 
     static ByteBuffer recvRemoteCall(ByteBuffer buf) {
-        t0ry {
+        try {
             byte[][] req = fromBB(buf);
 
             Object self = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(req[0]));

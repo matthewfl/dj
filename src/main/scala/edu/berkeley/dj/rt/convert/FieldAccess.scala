@@ -41,6 +41,10 @@ class FieldAccess(next : Transformer, val config: Config, val rewriter: Rewriter
     type operations and attempting to optimize these away
      */
 
+    /* Don't handle getstatic here since we replicate the static fields to all machines
+     * at all times
+     */
+
     //if(c == GETFIELD || c == GETSTATIC || c == PUTFIELD || c == PUTSTATIC) {
     if(c == PUTFIELD || c == GETFIELD || c == PUTSTATIC) {
       val index = it.u16bitAt(pos + 1)

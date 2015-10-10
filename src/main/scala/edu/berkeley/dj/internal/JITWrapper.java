@@ -139,7 +139,7 @@ public class JITWrapper {
                         throw new RuntimeException();
                 }
             }
-            InternalInterface.debug("got operation");
+            //InternalInterface.debug("got operation");
         }
     }
 

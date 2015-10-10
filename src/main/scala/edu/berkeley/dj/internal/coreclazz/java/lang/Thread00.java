@@ -812,7 +812,7 @@ public class Thread00 implements Runnable {
                 Thread00.this.run();
             }
         });
-    0}
+    }
 
     /**
      * If this thread was constructed using a separate
