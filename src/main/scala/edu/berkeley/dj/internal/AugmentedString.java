@@ -91,4 +91,8 @@ public class AugmentedString {
     public static void getChars(Object self, int a, int b, char[] arr, int c) {
         ((String)self).getChars(a,b,arr,c);
     }
+
+    public static char[] toCharArray(Object self) {
+        return ((String)self).toCharArray();
+    }
 }

@@ -64,6 +64,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     // some string stuff
     ("getChars", "(IILedu/berkeley/dj/internal/arrayclazz/Character_1;I)V", "java.lang.String") -> ("getChars", s"${config.internalPrefix}AugmentedString"),
+    ("toCharArray", "()Ledu/berkeley/dj/internal/arrayclazz/Character_1;", "java.lang.String") -> ("toCharArray", s"${config.internalPrefix}AugmentedString"),
 
     // array internal stuff
   // TODO: this method is the wrong one to replace since it is internal to the reflect class which we are not rewriting....
@@ -1295,7 +1296,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       case e: NotFoundException => {
         try {
           if(classname.startsWith(config.coreprefix)) {
-            val c = basePool get (classname + "00")
+            val c = basePool get (classname + "00DJ")
             c.setName(classname)
             c
           } else null
@@ -1304,7 +1305,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             if(classname.contains("$")) {
               // There is some dollar sign in the class name so try to change the containing class
               try {
-                val c = basePool.get(classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100\\$"))
+                val c = basePool.get(classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100DJ\\$"))
                 c.setName(classname)
                 c
               } catch {
@@ -1340,7 +1341,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
     MethodInfo.doPreverify = true
 
-    if(classname.startsWith(config.coreprefix) && classname.endsWith("00")) {
+    if(classname.startsWith(config.coreprefix) && classname.endsWith("00DJ")) {
       // we should not loading these classes with 00 suffix
       // something somewhere else in the rewriter must have gone wrong to cause us to load this
       throw new ClassNotFoundException(classname)

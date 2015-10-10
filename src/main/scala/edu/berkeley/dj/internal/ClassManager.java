@@ -1,8 +1,8 @@
 package edu.berkeley.dj.internal;
 
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
-import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.nio.ByteBuffer;
@@ -26,7 +26,7 @@ final public class ClassManager {
 
     int notifications_to_send = 0;
 
-    Thread00 monitor_thread = null;
+    Thread00DJ monitor_thread = null;
 
     // TODO: if we move this thread elsewhere then we still need to have the count
     // so I guess will have to make the master machien keep the count of the number of times the monitor has been
@@ -36,12 +36,12 @@ final public class ClassManager {
     // will need a week pointer to the object base
     ObjectBase managedObject;
 
-    ClassManager(Object00 o) {
+    ClassManager(Object00DJ o) {
         managedObject = (ObjectBase)o;
         distributedObjectId = UUID.randomUUID();
     }
 
-    ClassManager(Object00 o, UUID id, int owner) {
+    ClassManager(Object00DJ o, UUID id, int owner) {
         managedObject = (ObjectBase)o;
         distributedObjectId = id;
         owning_machine = owner;
@@ -355,7 +355,7 @@ final public class ClassManager {
                 //assert(notifications_to_send == 0);
                 managedObject.wait();
                 monitor_lock_count = cnt;
-                monitor_thread = Thread00.currentThread();
+                monitor_thread = Thread00DJ.currentThread();
             }
         } else {
             synchronized (managedObject) {
@@ -397,11 +397,11 @@ final public class ClassManager {
                 // first get the lock on the local object
                 while (true) {
                     synchronized (managedObject) {
-                        if(monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
+                        if(monitor_lock_count != 0 && monitor_thread != Thread00DJ.currentThread()) {
                             continue;
                         }
                         monitor_lock_count++;
-                        monitor_thread = Thread00.currentThread();
+                        monitor_thread = Thread00DJ.currentThread();
                         break;
                     }
                 }
@@ -410,11 +410,11 @@ final public class ClassManager {
                 // we are the master
                 while(true) {
                     synchronized (managedObject) {
-                        if (monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
+                        if (monitor_lock_count != 0 && monitor_thread != Thread00DJ.currentThread()) {
                             continue;
                         }
                         monitor_lock_count++;
-                        monitor_thread = Thread00.currentThread();
+                        monitor_thread = Thread00DJ.currentThread();
                         break;
                     }
                 }
@@ -427,7 +427,7 @@ final public class ClassManager {
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // communicate with the master
                 synchronized (managedObject) {
-                    assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
+                    assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
                     monitor_lock_count--;
                     if(monitor_lock_count == 0) {
                         monitor_thread = null;
@@ -437,7 +437,7 @@ final public class ClassManager {
                 }
             } else {
                 synchronized (managedObject) {
-                    assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
+                    assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
                     monitor_lock_count--;
                     if(monitor_lock_count == 0) {
                         monitor_thread = null;
@@ -450,7 +450,7 @@ final public class ClassManager {
 
     private void checkHasLock() {
         synchronized (managedObject) {
-            if(monitor_lock_count == 0 || monitor_thread != Thread00.currentThread())
+            if(monitor_lock_count == 0 || monitor_thread != Thread00DJ.currentThread())
                 throw new IllegalMonitorStateException();
         }
     }

@@ -1,6 +1,6 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
 
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,15 +13,15 @@ public class ThreadHelpers {
 
     private ThreadHelpers() {}
 
-    public static ThreadLocal<Thread00> currentThread = new ThreadLocal<>();
+    public static ThreadLocal<Thread00DJ> currentThread = new ThreadLocal<>();
 
-    public static DistributedVariable<HashMap<Long, Thread00>> allThreads = new DistributedVariable<>("DJ_allThreads", new HashMap<>());
+    public static DistributedVariable<HashMap<Long, Thread00DJ>> allThreads = new DistributedVariable<>("DJ_allThreads", new HashMap<>());
 
-    static public void setCurrentThread(Thread00 t) {
+    static public void setCurrentThread(Thread00DJ t) {
         currentThread.set(t);
     }
 
-    static public Thread00 getCurrentThread() {
+    static public Thread00DJ getCurrentThread() {
         return currentThread.get();
     }
 
@@ -72,7 +72,7 @@ public class ThreadHelpers {
     }
 
     static public void exitThread() {
-        Thread00.currentThread().__dj_exit();
+        Thread00DJ.currentThread().__dj_exit();
     }
 
     static public void sleep(long u) throws InterruptedException {
@@ -81,7 +81,7 @@ public class ThreadHelpers {
 
     static public void registerWorkerThread() {
         // this is just some task that is running on this now, so we just want to register some worker task
-        currentThread.set(new Thread00(0L));
+        currentThread.set(new Thread00DJ(0L));
     }
 
     static public void unregisterWorkerThread() {

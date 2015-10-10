@@ -14,7 +14,7 @@ import edu.berkeley.dj.internal.SerializeManager;
  * so that we can still reference original java.lang.Object when compiling, but the 2 suffix will
  * be removed when the class is loaded.
  */
-public interface Object00 {
+public interface Object00DJ {
 
     int __dj_getClassMode();
 
@@ -24,7 +24,7 @@ public interface Object00 {
 
     boolean equals(Object obj);
 
-    boolean equals(Object00 obj);
+    boolean equals(Object00DJ obj);
 
     /*
     void __dj_notify();

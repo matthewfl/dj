@@ -29,7 +29,7 @@ package edu.berkeley.dj.internal.coreclazz.sun.misc;
  */
 
 import edu.berkeley.dj.internal.RewriteAllBut;
-import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
 import sun.misc.OSEnvironment;
 import sun.misc.VM;
 import sun.misc.VMNotification;
@@ -37,7 +37,7 @@ import sun.misc.VMNotification;
 import java.util.Properties;
 
 @RewriteAllBut(nonModClasses = {"sun/misc/VM"})
-public class VM00 {
+public class VM00DJ {
 
     /* The following methods used to be native methods that instruct
      * the VM to selectively suspend certain threads in low-memory
@@ -380,21 +380,21 @@ public class VM00 {
     /**
      * Returns Thread.State for the given threadStatus
      */
-    public static Thread00.State toThreadState(int threadStatus) {
+    public static Thread00DJ.State toThreadState(int threadStatus) {
         if ((threadStatus & JVMTI_THREAD_STATE_RUNNABLE) != 0) {
-            return Thread00.State.RUNNABLE;
+            return Thread00DJ.State.RUNNABLE;
         } else if ((threadStatus & JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER) != 0) {
-            return Thread00.State.BLOCKED;
+            return Thread00DJ.State.BLOCKED;
         } else if ((threadStatus & JVMTI_THREAD_STATE_WAITING_INDEFINITELY) != 0) {
-            return Thread00.State.WAITING;
+            return Thread00DJ.State.WAITING;
         } else if ((threadStatus & JVMTI_THREAD_STATE_WAITING_WITH_TIMEOUT) != 0) {
-            return Thread00.State.TIMED_WAITING;
+            return Thread00DJ.State.TIMED_WAITING;
         } else if ((threadStatus & JVMTI_THREAD_STATE_TERMINATED) != 0) {
-            return Thread00.State.TERMINATED;
+            return Thread00DJ.State.TERMINATED;
         } else if ((threadStatus & JVMTI_THREAD_STATE_ALIVE) == 0) {
-            return Thread00.State.NEW;
+            return Thread00DJ.State.NEW;
         } else {
-            return Thread00.State.RUNNABLE;
+            return Thread00DJ.State.RUNNABLE;
         }
     }
 

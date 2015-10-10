@@ -61,8 +61,8 @@ import java.util.Arrays;
  * while we work on the children.
  */
 @RewriteAllBut(nonModClasses = {})
-public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
-    private final ThreadGroup00 parent;
+public class ThreadGroup00DJ implements Thread00DJ.UncaughtExceptionHandler {
+    private final ThreadGroup00DJ parent;
     String name;
     int maxPriority;
     boolean destroyed;
@@ -71,16 +71,16 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
 
     int nUnstartedThreads = 0;
     int nthreads;
-    Thread00 threads[];
+    Thread00DJ threads[];
 
     int ngroups;
-    ThreadGroup00 groups[];
+    ThreadGroup00DJ groups[];
 
     /**
      * Creates an empty Thread group that is not in any Thread group.
      * This method is used to create the system Thread group.
      */
-    ThreadGroup00() { // called from static init of Thread00
+    ThreadGroup00DJ() { // called from static init of Thread00
         this.name = "systemDJ-"+InternalInterface.getInternalInterface().getUUID();
         this.maxPriority = Thread.MAX_PRIORITY;
         this.parent = null;
@@ -104,8 +104,8 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @see     java.lang.ThreadGroup#checkAccess()
      * @since   JDK1.0
      */
-    public ThreadGroup00(String name) {
-        this(Thread00.currentThread().getThreadGroup(), name);
+    public ThreadGroup00DJ(String name) {
+        this(Thread00DJ.currentThread().getThreadGroup(), name);
     }
 
     /**
@@ -125,11 +125,11 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @see     java.lang.ThreadGroup#checkAccess()
      * @since   JDK1.0
      */
-    public ThreadGroup00(ThreadGroup00 parent, String name) {
+    public ThreadGroup00DJ(ThreadGroup00DJ parent, String name) {
         this(checkParentAccess(parent), parent, name);
     }
 
-    private ThreadGroup00(Void unused, ThreadGroup00 parent, String name) {
+    private ThreadGroup00DJ(Void unused, ThreadGroup00DJ parent, String name) {
         this.name = name;
         this.maxPriority = parent.maxPriority;
         this.daemon = parent.daemon;
@@ -143,7 +143,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @throws  SecurityException     if the current thread cannot create a
      *                                thread in the specified thread group.
      */
-    private static Void checkParentAccess(ThreadGroup00 parent) {
+    private static Void checkParentAccess(ThreadGroup00DJ parent) {
         parent.checkAccess();
         return null;
     }
@@ -174,7 +174,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @see        java.lang.RuntimePermission
      * @since   JDK1.0
      */
-    public final ThreadGroup00 getParent() {
+    public final ThreadGroup00DJ getParent() {
         if (parent != null)
             parent.checkAccess();
         return parent;
@@ -270,7 +270,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      */
     public final void setMaxPriority(int pri) {
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot;
+        ThreadGroup00DJ[] groupsSnapshot;
         synchronized (this) {
             checkAccess();
             if (pri < Thread.MIN_PRIORITY || pri > Thread.MAX_PRIORITY) {
@@ -299,7 +299,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      *          <code>false</code> otherwise.
      * @since   JDK1.0
      */
-    public final boolean parentOf(ThreadGroup00 g) {
+    public final boolean parentOf(ThreadGroup00DJ g) {
         for (; g != null ; g = g.parent) {
             if (g == this) {
                 return true;
@@ -351,7 +351,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
         // Snapshot sub-group data so we don't hold this lock
         // while our children are computing.
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot;
+        ThreadGroup00DJ[] groupsSnapshot;
         synchronized (this) {
             if (destroyed) {
                 return 0;
@@ -392,7 +392,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      *
      * @since   JDK1.0
      */
-    public int enumerate(Thread00 list[]) {
+    public int enumerate(Thread00DJ list[]) {
         checkAccess();
         return enumerate(list, 0, true);
     }
@@ -430,14 +430,14 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      *
      * @since   JDK1.0
      */
-    public int enumerate(Thread00 list[], boolean recurse) {
+    public int enumerate(Thread00DJ list[], boolean recurse) {
         checkAccess();
         return enumerate(list, 0, recurse);
     }
 
-    private int enumerate(Thread00 list[], int n, boolean recurse) {
+    private int enumerate(Thread00DJ list[], int n, boolean recurse) {
         int ngroupsSnapshot = 0;
-        ThreadGroup00[] groupsSnapshot = null;
+        ThreadGroup00DJ[] groupsSnapshot = null;
         synchronized (this) {
             if (destroyed) {
                 return 0;
@@ -485,7 +485,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      */
     public int activeGroupCount() {
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot;
+        ThreadGroup00DJ[] groupsSnapshot;
         synchronized (this) {
             if (destroyed) {
                 return 0;
@@ -512,7 +512,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * way as the invocation
      *
      * <blockquote>
-     * {@linkplain #enumerate(ThreadGroup00[], boolean) enumerate}{@code (list, true)}
+     * {@linkplain #enumerate(ThreadGroup00DJ[], boolean) enumerate}{@code (list, true)}
      * </blockquote>
      *
      * @param  list
@@ -526,7 +526,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      *
      * @since   JDK1.0
      */
-    public int enumerate(ThreadGroup00 list[]) {
+    public int enumerate(ThreadGroup00DJ list[]) {
         checkAccess();
         return enumerate(list, 0, true);
     }
@@ -564,14 +564,14 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      *
      * @since   JDK1.0
      */
-    public int enumerate(ThreadGroup00 list[], boolean recurse) {
+    public int enumerate(ThreadGroup00DJ list[], boolean recurse) {
         checkAccess();
         return enumerate(list, 0, recurse);
     }
 
-    private int enumerate(ThreadGroup00 list[], int n, boolean recurse) {
+    private int enumerate(ThreadGroup00DJ list[], int n, boolean recurse) {
         int ngroupsSnapshot = 0;
-        ThreadGroup00[] groupsSnapshot = null;
+        ThreadGroup00DJ[] groupsSnapshot = null;
         synchronized (this) {
             if (destroyed) {
                 return 0;
@@ -645,7 +645,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      */
     public final void interrupt() {
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot;
+        ThreadGroup00DJ[] groupsSnapshot;
         synchronized (this) {
             checkAccess();
             for (int i = 0 ; i < nthreads ; i++) {
@@ -699,9 +699,9 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
     @SuppressWarnings("deprecation")
     private boolean stopOrSuspend(boolean suspend) {
         boolean suicide = false;
-        Thread00 us = Thread00.currentThread();
+        Thread00DJ us = Thread00DJ.currentThread();
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot = null;
+        ThreadGroup00DJ[] groupsSnapshot = null;
         synchronized (this) {
             checkAccess();
             for (int i = 0 ; i < nthreads ; i++) {
@@ -749,7 +749,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
     @SuppressWarnings("deprecation")
     public final void resume() {
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot;
+        ThreadGroup00DJ[] groupsSnapshot;
         synchronized (this) {
             checkAccess();
             for (int i = 0 ; i < nthreads ; i++) {
@@ -784,7 +784,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      */
     public final void destroy() {
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot;
+        ThreadGroup00DJ[] groupsSnapshot;
         synchronized (this) {
             checkAccess();
             if (destroyed || (nthreads > 0)) {
@@ -817,13 +817,13 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @param g the specified Thread group to be added
      * @exception IllegalThreadStateException If the Thread group has been destroyed.
      */
-    private final void add(ThreadGroup00 g){
+    private final void add(ThreadGroup00DJ g){
         synchronized (this) {
             if (destroyed) {
                 throw new IllegalThreadStateException();
             }
             if (groups == null) {
-                groups = new ThreadGroup00[4];
+                groups = new ThreadGroup00DJ[4];
             } else if (ngroups == groups.length) {
                 groups = Arrays.copyOf(groups, ngroups * 2);
             }
@@ -840,7 +840,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @param g the Thread group to be removed
      * @return if this Thread has already been destroyed.
      */
-    private void remove(ThreadGroup00 g) {
+    private void remove(ThreadGroup00DJ g) {
         synchronized (this) {
             if (destroyed) {
                 return;
@@ -896,13 +896,13 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @throws  IllegalThreadStateException
      *          if the Thread group has been destroyed
      */
-    void add(Thread00 t) {
+    void add(Thread00DJ t) {
         synchronized (this) {
             if (destroyed) {
                 throw new IllegalThreadStateException();
             }
             if (threads == null) {
-                threads = new Thread00[4];
+                threads = new Thread00DJ[4];
             } else if (nthreads == threads.length) {
                 threads = Arrays.copyOf(threads, nthreads * 2);
             }
@@ -932,7 +932,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @param  t
      *         the Thread whose start method was invoked
      */
-    void threadStartFailed(Thread00 t) {
+    void threadStartFailed(Thread00DJ t) {
         synchronized(this) {
             remove(t);
             nUnstartedThreads++;
@@ -950,7 +950,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @param  t
      *         the Thread that has terminated
      */
-    void threadTerminated(Thread00 t) {
+    void threadTerminated(Thread00DJ t) {
         synchronized (this) {
             remove(t);
 
@@ -972,7 +972,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @param  t
      *         the Thread to be removed
      */
-    private void remove(Thread00 t) {
+    private void remove(Thread00DJ t) {
         synchronized (this) {
             if (destroyed) {
                 return;
@@ -1000,7 +1000,7 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
     }
     void list(PrintStream out, int indent) {
         int ngroupsSnapshot;
-        ThreadGroup00[] groupsSnapshot;
+        ThreadGroup00DJ[] groupsSnapshot;
         synchronized (this) {
             for (int j = 0 ; j < indent ; j++) {
                 out.print(" ");
@@ -1060,12 +1060,12 @@ public class ThreadGroup00 implements Thread00.UncaughtExceptionHandler {
      * @param   e   the uncaught exception.
      * @since   JDK1.0
      */
-    public void uncaughtException(Thread00 t, Throwable e) {
+    public void uncaughtException(Thread00DJ t, Throwable e) {
         if (parent != null) {
             parent.uncaughtException(t, e);
         } else {
-            Thread00.UncaughtExceptionHandler ueh =
-                    Thread00.getDefaultUncaughtExceptionHandler();
+            Thread00DJ.UncaughtExceptionHandler ueh =
+                    Thread00DJ.getDefaultUncaughtExceptionHandler();
             if (ueh != null) {
                 ueh.uncaughtException(t, e);
             } else if (!(e instanceof ThreadDeath)) {

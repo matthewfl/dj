@@ -1,7 +1,7 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
-import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
+import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00DJ;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.Serializable;
@@ -120,7 +120,7 @@ public class DistributedObjectHelper {
 
     }
 
-    static private HashMap<UUID, Object00> localDistributedObjects = new HashMap<>();
+    static private HashMap<UUID, Object00DJ> localDistributedObjects = new HashMap<>();
 
     // give the Object some uuid so that it will be distributed
     static public void makeDistributed(ObjectBase o) {
@@ -164,7 +164,7 @@ public class DistributedObjectHelper {
 
     static public Object getObject(DistributedObjectId id) {
         synchronized (localDistributedObjects) {
-            Object00 h = localDistributedObjects.get(id.identifier);
+            Object00DJ h = localDistributedObjects.get(id.identifier);
             if(h != null)
                 return h;
             // we do not have some proxy of this object locally so we need to construct some proxy for it
@@ -176,7 +176,7 @@ public class DistributedObjectHelper {
                     // shouldn't need the AugmentedClassLoader since the classname will already be augmented
                     // this will save a round trip communication with the master machine
                     Class<?> cls = Class.forName(new String(id.extradata));
-                    ObjectBase obj = (ObjectBase) Unsafe00.getUnsafe().allocateInstance(cls);
+                    ObjectBase obj = (ObjectBase) Unsafe00DJ.getUnsafe().allocateInstance(cls);
                     obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
                     obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
                             CONSTS.REMOTE_READS |
@@ -503,7 +503,7 @@ public class DistributedObjectHelper {
     }
 
     static public void updateObjectLocation(UUID id, int machine_location) {
-        Object00 h;
+        Object00DJ h;
         synchronized (localDistributedObjects) {
             h = localDistributedObjects.get(id);
         }
