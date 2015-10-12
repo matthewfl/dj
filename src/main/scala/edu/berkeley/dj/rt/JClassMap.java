@@ -82,6 +82,10 @@ public class JClassMap extends ClassMap {
             "java/lang/StrictMath"
     };
 
+//    final static private String[] = new String[] {
+//        ""
+//    };
+
     @Override
     public Object get(Object jvn) {
         try {
@@ -95,12 +99,25 @@ public class JClassMap extends ClassMap {
             }
             if(name.startsWith(prefix)) {
                 // remove the two suffix from the internal class names
+                boolean shouldBeRewritten = false;
+                for(String n : rewritePrefixes) {
+                    if(name.startsWith(prefix + n)) {
+                        shouldBeRewritten = true;
+                        break;
+                    }
+                }
+                if(!shouldBeRewritten) {
+                    // we need to strip the prefix from this class since we aren't suppose to have it
+                    nonTname = nonTname.substring(prefix.length());
+                    name = name.substring(prefix.length());
+                }
                 if (nonTname.endsWith("00DJ")) {
                     return nonTname.substring(0, nonTname.length() - 4) + suffix;
                 }
                 if(nonTname.contains("00DJ$")) {
                     return nonTname.replace("00DJ$", "$") + suffix;
                 }
+                // check the Replace name with self annotation
                 String nn = rewriter.forceClassRename(nonTname);
                 if(nn != null)
                     return nn + suffix;

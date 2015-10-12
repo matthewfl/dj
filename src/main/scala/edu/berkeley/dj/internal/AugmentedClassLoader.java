@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -10,6 +11,7 @@ import java.lang.reflect.Method;
  *
  * This class is used to replace methods such as forName on Class and loadClass on the classLoader
  */
+@RewriteAddArrayWrap
 @RewriteAllBut(nonModClasses = {})
 public class AugmentedClassLoader {
 
@@ -116,5 +118,12 @@ public class AugmentedClassLoader {
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
+    }
+
+
+
+    // this isn't really a class loader, more like the class itself
+    public static Field[] getDeclaredFields(Object self) {
+        return ((Class<?>)self).getDeclaredFields();
     }
 }

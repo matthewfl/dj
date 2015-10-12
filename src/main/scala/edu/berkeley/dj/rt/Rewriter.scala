@@ -60,7 +60,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader"),
     ("desiredAssertionStatus", "()Z", "java.lang.Class") -> ("desiredAssertionStatus", s"${config.internalPrefix}AugmentedClassLoader"),
     ("getComponentType", "()Ljava/lang/Class;", "java.lang.Class") -> ("getComponentType", s"${config.internalPrefix}AugmentedClassLoader"),
-
+    ("getDeclaredFields", "()Ledu/berkeley/dj/internal/arrayclazz/java/lang/reflect/Field_1;", "java.lang.Class") -> ("getDeclaredFields", s"${config.internalPrefix}AugmentedClassLoader"),
 
     // some string stuff
     ("getChars", "(IILedu/berkeley/dj/internal/arrayclazz/Character_1;I)V", "java.lang.String") -> ("getChars", s"${config.internalPrefix}AugmentedString"),
@@ -69,7 +69,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     // array internal stuff
   // TODO: this method is the wrong one to replace since it is internal to the reflect class which we are not rewriting....
     ("newInstance", "(Ljava/lang/Class;I)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers"),
-    ("newInstance", "(Ljava/lang/Class;Ledu/berkeley/dj/internal/arrayclazz/Integer_1;)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers")
+    ("newInstance", "(Ljava/lang/Class;Ledu/berkeley/dj/internal/arrayclazz/Integer_1;)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers"),
+
+  // throwable
+    ("printStackTrace", "(Ledu/berkeley/dj/internal/coreclazz/java/io/PrintStream;)V", "java.lang.Throwable") -> ("printStackTrace", s"${config.internalPrefix}ExceptionHelper")
+
     // rewrite the string init method since this is package private
     // this just gets the field inside the class and sets it to the char array
   )
@@ -1291,18 +1295,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private def findBaseClass(classname: String): CtClass = {
     try {
+      // try to just get the class normally from the pool
       basePool get classname
     } catch {
       case e: NotFoundException => {
         try {
-          if(classname.startsWith(config.coreprefix)) {
+          // if this class starts with our prefix edu.berkeley.dj.internal.coreclazz
+          // check if we can find a replaced version of that class
+          if (classname.startsWith(config.coreprefix)) {
             val c = basePool get (classname + "00DJ")
             c.setName(classname)
             c
           } else null
         } catch {
           case e: NotFoundException => {
-            if(classname.contains("$")) {
+            if (classname.contains("$")) {
               // There is some dollar sign in the class name so try to change the containing class
               try {
                 val c = basePool.get(classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100DJ\\$"))
@@ -1360,6 +1367,20 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       return ret
     }
 
+    val cls_int = try {
+      val c = basePool get (config.coreprefix + classname + "00DJ")
+      c.setName(classname)
+      c
+    } catch { case e: NotFoundException => null }
+
+    if(cls_int != null) {
+      // this class is being replaced from the coreclazz even through it isn't in a privleged namespace
+      // use the internal rewriting stuff
+      reassociateClass(cls_int)
+      addToCache(cls_int)
+      modifyInternalClass(cls_int)
+      return cls_int
+    }
 
     val cls = findBaseClass(classname)
     //println("create class name:" + classname)
