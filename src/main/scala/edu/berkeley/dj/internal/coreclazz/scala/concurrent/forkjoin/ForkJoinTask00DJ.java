@@ -1513,4 +1513,9 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
     private static sun.misc.Unsafe getUnsafe() {
         return (sun.misc.Unsafe)(Object)Unsafe00DJ.getUnsafe();
     }
+
+
+    void runTask() {
+        exec();
+    }
 }

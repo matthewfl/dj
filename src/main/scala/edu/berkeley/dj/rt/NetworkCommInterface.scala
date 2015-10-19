@@ -115,10 +115,10 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
           // set a byte array for the distributed map
           val buff = ByteBuffer.wrap(msg)
           val len = buff.getInt()
-          ??? // there was a bug here, idk if anything is using this
+          //??? // there was a bug here, idk if anything is using this
           val name = new String(msg, 4, len)
           val arr = new Array[Byte](msg.length - len - 4)
-          Array.copy(msg, 4, arr, 0, arr.length)
+          Array.copy(msg, 4 + len, arr, 0, arr.length)
           man.runningInterface.setDistributed(name, arr)
           Array[Byte]()
         }

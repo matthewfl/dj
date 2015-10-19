@@ -105,6 +105,11 @@ public class JITWrapper {
         return get().placeThread(self, InternalInterface.getInternalInterface().getSelfId(), s);
     }
 
+    static void queueScheduledWork(Object self) {
+        StackRepresentation s = new StackRepresentation(new Throwable().getStackTrace());
+        get().scheduleQueuedWork(self, InternalInterface.getInternalInterface().getSelfId(), s);
+    }
+
     static void managedOperationQueue () {
         int self_id = InternalInterface.getInternalInterface().getSelfId();
         while(true) {

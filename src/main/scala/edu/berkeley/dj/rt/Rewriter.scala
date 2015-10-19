@@ -62,6 +62,10 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("getComponentType", "()Ljava/lang/Class;", "java.lang.Class") -> ("getComponentType", s"${config.internalPrefix}AugmentedClassLoader"),
     ("getDeclaredFields", "()Ledu/berkeley/dj/internal/arrayclazz/java/lang/reflect/Field_1;", "java.lang.Class") -> ("getDeclaredFields", s"${config.internalPrefix}AugmentedClassLoader"),
 
+    // reflection stuff
+    // don't replace this method since it need to look at the call stack directly, and it is static so doesn't matter
+    ("getCallerClass", "()Ljava/lang/Class;", "edu.berkeley.dj.internal.coreclazz.sun.reflect.Reflection") -> ("getCallerClass", s"${config.internalPrefix}ReflectionHelper"),
+
     // some string stuff
     ("getChars", "(IILedu/berkeley/dj/internal/arrayclazz/Character_1;I)V", "java.lang.String") -> ("getChars", s"${config.internalPrefix}AugmentedString"),
     ("toCharArray", "()Ledu/berkeley/dj/internal/arrayclazz/Character_1;", "java.lang.String") -> ("toCharArray", s"${config.internalPrefix}AugmentedString"),

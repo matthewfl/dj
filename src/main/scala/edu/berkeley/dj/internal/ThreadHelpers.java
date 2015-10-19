@@ -31,10 +31,16 @@ public class ThreadHelpers {
     }
 
     // place this thread somewhere on the cluster
+    // since this is a thread create this should happen immediately
     static public void runAsyncCluster(Runnable r) {
         int target_machine = JITWrapper.placeThread(r);
         // if this is set to the local machine then this just calls runAsync
         DistributedRunner.runOnRemote(target_machine, r);
+    }
+
+    // a task that can be run when ever the cluster scheduler wants
+    static public void runTaskCluster(Runnable r) {
+        JITWrapper.queueScheduledWork(r);
     }
 
     static void newThreadCallback(Object r) {

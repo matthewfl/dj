@@ -9,10 +9,7 @@ package edu.berkeley.dj.internal.coreclazz.scala.concurrent.forkjoin;
  */
 
 import com.sun.corba.se.spi.orbutil.threadpool.WorkQueue;
-import edu.berkeley.dj.internal.InternalInterface;
-import edu.berkeley.dj.internal.RewriteAddAccessorMethods;
-import edu.berkeley.dj.internal.RewriteAllBut;
-import edu.berkeley.dj.internal.RewriteUseAccessorMethods;
+import edu.berkeley.dj.internal.*;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00DJ;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -1821,7 +1818,7 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
      *
      * @param task the task. Caller must ensure non-null.
      */
-//    final void externalPush(ForkJoinTask00DJ<?> task) {
+    final void externalPush(ForkJoinTask00DJ<?> task) {
 //        WorkQueue[] ws; WorkQueue q; Submitter z; int m; ForkJoinTask00DJ<?>[] a;
 //        if ((z = submitters.get()) != null && plock > 0 &&
 //                (ws = workQueues) != null && (m = (ws.length - 1)) >= 0 &&
@@ -1840,7 +1837,15 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
 //            q.qlock = 0;
 //        }
 //        fullExternalPush(task);
-//    }
+        // this is the internal system that is actually getting called when some task is getting submitted
+
+        ThreadHelpers.runTaskCluster(new Runnable() {
+            @Override
+            public void run() {
+                task.runTask();
+            }
+        });
+    }
 //
 //    /**
 //     * Full version of externalPush. This method is called, among
@@ -2876,22 +2881,22 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
                             Thread.UncaughtExceptionHandler handler,
                             boolean asyncMode) {
         InternalInterface.debug("creating fjp1 "+parallelism);
-        throw new NotImplementedException();
 //        checkPermission();
-//        if (factory == null)
-//            throw new NullPointerException();
-//        if (parallelism <= 0 || parallelism > MAX_CAP)
-//            throw new IllegalArgumentException();
-//        this.factory = factory;
-//        this.ueh = handler;
-//        this.config = parallelism | (asyncMode ? (FIFO_QUEUE << 16) : 0);
+        if (factory == null)
+            throw new NullPointerException();
+        if (parallelism <= 0 || parallelism > MAX_CAP)
+            throw new IllegalArgumentException();
+        this.factory = factory;
+        this.ueh = handler;
+        // don't see where asyncMode is really having any impact on how this behaves
+        this.config = parallelism | (asyncMode ? (FIFO_QUEUE << 16) : 0);
 //        long np = (long)(-parallelism); // offset ctl counts
 //        this.ctl = ((np << AC_SHIFT) & AC_MASK) | ((np << TC_SHIFT) & TC_MASK);
-//        int pn = nextPoolId();
+////        int pn = nextPoolId();
 //        StringBuilder sb = new StringBuilder("ForkJoinPool-");
 //        sb.append(Integer.toString(pn));
 //        sb.append("-worker-");
-//        this.workerNamePrefix = sb.toString();
+        this.workerNamePrefix = "ForkJoinPool-DJ-worker-";
     }
 
     /**
@@ -2948,10 +2953,8 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
     public <T> T invoke(ForkJoinTask00DJ<T> task) {
         if (task == null)
             throw new NullPointerException();
-//        externalPush(task);
-//        return task.join();
-//
-        throw new NotImplementedException();
+        externalPush(task);
+        return task.join();
     }
 
     /**
@@ -2965,8 +2968,7 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
     public void execute(ForkJoinTask00DJ<?> task) {
         if (task == null)
             throw new NullPointerException();
-//        externalPush(task);
-        throw new NotImplementedException();
+        externalPush(task);
     }
 
     // AbstractExecutorService methods
@@ -2979,13 +2981,12 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
     public void execute(Runnable task) {
         if (task == null)
             throw new NullPointerException();
-//        ForkJoinTask00DJ<?> job;
-//        if (task instanceof ForkJoinTask00DJ<?>) // avoid re-wrap
-//            job = (ForkJoinTask00DJ<?>) task;
-//        else
-//            job = new ForkJoinTask00DJ.AdaptedRunnableAction(task);
-//        externalPush(job);
-        throw new NotImplementedException();
+        ForkJoinTask00DJ<?> job;
+        if (task instanceof ForkJoinTask00DJ<?>) // avoid re-wrap
+            job = (ForkJoinTask00DJ<?>) task;
+        else
+            job = new ForkJoinTask00DJ.AdaptedRunnableAction(task);
+        externalPush(job);
     }
 
     /**
@@ -3000,9 +3001,8 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
     public <T> ForkJoinTask00DJ<T> submit(ForkJoinTask00DJ<T> task) {
         if (task == null)
             throw new NullPointerException();
-//        externalPush(task);
-        throw new NotImplementedException();
-//        return task;
+        externalPush(task);
+        return task;
     }
 
     /**

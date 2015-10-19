@@ -44,7 +44,10 @@ public class JITCommands {
     // when the system get some work submitted to something like a ForkJoinPool
     // it is the job of jit to schedule when the jobs should actually be run
     static public void runQueuedWork(Object self, int target) {
+        // should have a queue of work on a given machine
 
+        // if this is set to run on the local machine then it will just start a thread
+        DistributedRunner.runOnRemote(target, (Runnable)self);
     }
 
     static public Object lookupObject(byte[] identifier) {

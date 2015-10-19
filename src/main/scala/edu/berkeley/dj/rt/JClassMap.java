@@ -79,7 +79,10 @@ public class JClassMap extends ClassMap {
             "java/lang/reflect/", // let all the reflect stuff through??
 
             // function-ish interface to native methods for math calls
-            "java/lang/StrictMath"
+            "java/lang/StrictMath",
+
+            // the system explicitly looks for this decorator on the stack when reflecting to the caller
+            //"sun/reflect/CallerSensitive"
     };
 
 //    final static private String[] = new String[] {

@@ -46,6 +46,7 @@ public class SimpleJIT implements JITInterface {
 
     @Override
     public void scheduleQueuedWork(Object self, int from_machine, StackRepresentation stack) {
+        // if this system doesn't call runQueueWork at some point then the job will be lost
         JITCommands.runQueuedWork(self, from_machine);
     }
 }
