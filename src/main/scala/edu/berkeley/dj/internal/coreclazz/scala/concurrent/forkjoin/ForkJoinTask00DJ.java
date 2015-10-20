@@ -4,6 +4,7 @@ package edu.berkeley.dj.internal.coreclazz.scala.concurrent.forkjoin;
  * Created by matthewfl
  */
 
+import edu.berkeley.dj.internal.ObjectHelpers;
 import edu.berkeley.dj.internal.RewriteAddAccessorMethods;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import edu.berkeley.dj.internal.RewriteUseAccessorMethods;
@@ -229,13 +230,16 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
      * @return completion status on exit
      */
     private int setCompletion(int completion) {
-        synchronized (this) {
+        ObjectHelpers.monitorEnter(this);
+        try {
             int s = status;
-            if(s < 0) return s;
+            if (s < 0) return s;
             s |= completion;
-            if((s >>> 16) != 0)
-                notifyAll();
+            if ((s >>> 16) != 0)
+                ObjectHelpers.notifyAll(this);
             return completion;
+        } finally {
+            ObjectHelpers.monitorExit(this);
         }
 //        for (int s;;) {
 //            if ((s = status) < 0)
@@ -255,19 +259,20 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
      *
      * @return status on exit from this method
      */
-//    final int doExec() {
-//        int s; boolean completed;
-//        if ((s = status) >= 0) {
-//            try {
-//                completed = exec();
-//            } catch (Throwable rex) {
+    final int doExec() {
+        int s; boolean completed;
+        if ((s = status) >= 0) {
+            try {
+                completed = exec();
+            } catch (Throwable rex) {
+                throw new RuntimeException(rex);
 //                return setExceptionalCompletion(rex);
-//            }
-//            if (completed)
-//                s = setCompletion(NORMAL);
-//        }
-//        return s;
-//    }
+            }
+            if (completed)
+                s = setCompletion(NORMAL);
+        }
+        return s;
+    }
 
     /**
      * Tries to set SIGNAL status unless already completed. Used by
@@ -346,13 +351,24 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //                                tryUnpush(this) && (s = doExec()) < 0 ? s :
 //                                wt.pool.awaitJoin(w, this) :
 //                        externalAwaitDone();
-        synchronized (this) {
+        ObjectHelpers.monitorEnter(this);
+        try {
             if(status < 0) return status;
             // TODO: need to check if the task is currently running, and if not start it
             // not sure if want to do that since then the scheduler won't be able to manage when stuff run/placement
             // but then there should be some notification that a thread is blocked/waiting on some result
-            try { wait(); } catch (InterruptedException e) {}
+
+            if(runningThread == Thread.currentThread()) {
+                // we should run this task
+                return doExec();
+            }
+
+            try {
+                ObjectHelpers.wait(this);
+            } catch (InterruptedException e) {}
             return status;
+        } finally {
+            ObjectHelpers.monitorExit(this);
         }
     }
 
@@ -665,7 +681,9 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //        else
 //            ForkJoinPool00DJ.common.externalPush(this);
 //        return this;
-        throw new NotImplementedException();
+
+        ForkJoinPool00DJ.externalPushS(this);
+        return this;
     }
 
     /**
@@ -1175,7 +1193,8 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //        return (((t = Thread.currentThread()) instanceof ForkJoinWorkerThread00DJ) ?
 //                ((ForkJoinWorkerThread00DJ)t).workQueue.tryUnpush(this) :
 //                ForkJoinPool00DJ.tryExternalUnpush(this));
-        throw new NotImplementedException();
+        //throw new NotImplementedException();
+        return false; // do not support unfourk
     }
 
     /**
@@ -1531,8 +1550,11 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
     }
 
 
+    private Thread runningThread = null;
+
     void runTask() {
         exec();
+        runningThread = Thread.currentThread();
         setCompletion(NORMAL);
     }
 }

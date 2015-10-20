@@ -61,6 +61,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("desiredAssertionStatus", "()Z", "java.lang.Class") -> ("desiredAssertionStatus", s"${config.internalPrefix}AugmentedClassLoader"),
     ("getComponentType", "()Ljava/lang/Class;", "java.lang.Class") -> ("getComponentType", s"${config.internalPrefix}AugmentedClassLoader"),
     ("getDeclaredFields", "()Ledu/berkeley/dj/internal/arrayclazz/java/lang/reflect/Field_1;", "java.lang.Class") -> ("getDeclaredFields", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("getResourceAsStream", "(Ljava/lang/String;)Ledu/berkeley/dj/internal/coreclazz/java/io/InputStream;", "java.lang.Class") -> ("getResourceAsStream", s"${config.internalPrefix}AugmentedClassLoader"),
 
     // reflection stuff
     // don't replace this method since it need to look at the call stack directly, and it is static so doesn't matter

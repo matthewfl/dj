@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -125,5 +126,10 @@ public class AugmentedClassLoader {
     // this isn't really a class loader, more like the class itself
     public static Field[] getDeclaredFields(Object self) {
         return ((Class<?>)self).getDeclaredFields();
+    }
+
+    public static InputStream getResourceAsStream(Object self, String name) {
+        InternalInterface.debug("trying to get resource from jar: "+name);
+        return null; // signify that we don't have it
     }
 }

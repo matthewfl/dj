@@ -1839,6 +1839,11 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
 //        fullExternalPush(task);
         // this is the internal system that is actually getting called when some task is getting submitted
 
+        externalPushS(task);
+    }
+
+    // we are scheduling all these tasks globally, so we have this static method that will submit the jobs
+    static void externalPushS(ForkJoinTask00DJ<?> task) {
         ThreadHelpers.runTaskCluster(new Runnable() {
             @Override
             public void run() {

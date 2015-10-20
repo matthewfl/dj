@@ -153,7 +153,7 @@ public class InternalInterface {
 
 }
 
-class InternalInterfaceWrap extends  InternalInterface {
+final class InternalInterfaceWrap extends InternalInterface {
     // because we are not fully loading the classes from the runtime in
     // it appears that we can't directly call the methods etc,
     // so keep it as an object and use invoke instead
