@@ -1375,7 +1375,18 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       val c = basePool get (config.coreprefix + classname + "00DJ")
       c.setName(classname)
       c
-    } catch { case e: NotFoundException => null }
+    } catch {
+      case e: NotFoundException =>
+        if (classname.contains("$")) {
+          try {
+            val c = basePool.get(config.coreprefix + classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100DJ\\$"))
+            c.setName(classname)
+            c
+          } catch {
+            case e: NotFoundException => null
+          }
+        } else null
+    }
 
     if(cls_int != null) {
       // this class is being replaced from the coreclazz even through it isn't in a privleged namespace

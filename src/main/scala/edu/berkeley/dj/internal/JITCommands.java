@@ -5,6 +5,7 @@ package edu.berkeley.dj.internal;
  *
  * Commands that the JIT can issue to the system to control what is going on
  */
+@RewriteAllBut(nonModClasses = {})
 public class JITCommands {
 
     static public int getObjectLocation(Object self) {

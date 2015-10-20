@@ -110,6 +110,14 @@ public class JITWrapper {
         get().scheduleQueuedWork(self, InternalInterface.getInternalInterface().getSelfId(), s);
     }
 
+    // TODO:
+    // notify that thread (self) is block on some object (on)
+    // eg (on) is a thread that isn't scheduled but (self) is now waiting for it to run
+    //
+    // This is a notification that giving (on) time to run should unblock (self)
+    static void notifyBlockedThread(Object self, Object on) {
+    }
+
     static void managedOperationQueue () {
         int self_id = InternalInterface.getInternalInterface().getSelfId();
         while(true) {

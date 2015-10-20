@@ -228,7 +228,15 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
      * @param completion one of NORMAL, CANCELLED, EXCEPTIONAL
      * @return completion status on exit
      */
-//    private int setCompletion(int completion) {
+    private int setCompletion(int completion) {
+        synchronized (this) {
+            int s = status;
+            if(s < 0) return s;
+            s |= completion;
+            if((s >>> 16) != 0)
+                notifyAll();
+            return completion;
+        }
 //        for (int s;;) {
 //            if ((s = status) < 0)
 //                return s;
@@ -238,7 +246,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //                return completion;
 //            }
 //        }
-//    }
+    }
 
     /**
      * Primary execution method for stolen tasks. Unless done, calls
@@ -330,7 +338,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
      *
      * @return status upon completion
      */
-//    private int doJoin() {
+    private int doJoin() {
 //        int s; Thread t; ForkJoinWorkerThread00DJ wt; ForkJoinPool00DJ.WorkQueue w;
 //        return (s = status) < 0 ? s :
 //                ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread00DJ) ?
@@ -338,7 +346,15 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //                                tryUnpush(this) && (s = doExec()) < 0 ? s :
 //                                wt.pool.awaitJoin(w, this) :
 //                        externalAwaitDone();
-//    }
+        synchronized (this) {
+            if(status < 0) return status;
+            // TODO: need to check if the task is currently running, and if not start it
+            // not sure if want to do that since then the scheduler won't be able to manage when stuff run/placement
+            // but then there should be some notification that a thread is blocked/waiting on some result
+            try { wait(); } catch (InterruptedException e) {}
+            return status;
+        }
+    }
 
     /**
      * Implementation for invoke, quietlyInvoke.
@@ -618,12 +634,12 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
     /**
      * Throws exception, if any, associated with the given status.
      */
-//    private void reportException(int s) {
-//        if (s == CANCELLED)
-//            throw new CancellationException();
-//        if (s == EXCEPTIONAL)
-//            rethrow(getThrowableException());
-//    }
+    private void reportException(int s) {
+        if (s == CANCELLED)
+            throw new CancellationException();
+        if (s == EXCEPTIONAL)
+            throw new NotImplementedException();  //rethrow(getThrowableException());
+    }
 
     // public methods
 
@@ -664,11 +680,11 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
      * @return the computed result
      */
     public final V join() {
-//        int s;
-//        if ((s = doJoin() & DONE_MASK) != NORMAL)
-//            reportException(s);
-//        return getRawResult();
-        throw new NotImplementedException();
+        int s;
+        if ((s = doJoin() & DONE_MASK) != NORMAL)
+            reportException(s);
+        return getRawResult();
+        //throw new NotImplementedException();
     }
 
     /**
@@ -1517,5 +1533,6 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 
     void runTask() {
         exec();
+        setCompletion(NORMAL);
     }
 }
