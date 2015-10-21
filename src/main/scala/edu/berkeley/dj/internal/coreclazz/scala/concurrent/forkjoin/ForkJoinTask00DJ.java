@@ -4,10 +4,7 @@ package edu.berkeley.dj.internal.coreclazz.scala.concurrent.forkjoin;
  * Created by matthewfl
  */
 
-import edu.berkeley.dj.internal.ObjectHelpers;
-import edu.berkeley.dj.internal.RewriteAddAccessorMethods;
-import edu.berkeley.dj.internal.RewriteAllBut;
-import edu.berkeley.dj.internal.RewriteUseAccessorMethods;
+import edu.berkeley.dj.internal.*;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00DJ;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -263,13 +260,25 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
         int s; boolean completed;
         if ((s = status) >= 0) {
             try {
+                InternalInterface.debug(7);
                 completed = exec();
+                if(getRawResult() == null)
+                    InternalInterface.debug(8);
+                InternalInterface.debug(0);
             } catch (Throwable rex) {
-                throw new RuntimeException(rex);
+                throw new RuntimeException(rex); // something bad happened
 //                return setExceptionalCompletion(rex);
             }
-            if (completed)
+            if (completed) {
                 s = setCompletion(NORMAL);
+                ObjectHelpers.monitorEnter(this);
+                try {
+                    // notify any waiting threads that this is complete
+                    ObjectHelpers.notifyAll(this);
+                } finally {
+                    ObjectHelpers.monitorExit(this);
+                }
+            }
         }
         return s;
     }
@@ -358,13 +367,14 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
             // not sure if want to do that since then the scheduler won't be able to manage when stuff run/placement
             // but then there should be some notification that a thread is blocked/waiting on some result
 
-            if(runningThread == Thread.currentThread()) {
+            if(runningThread == ThreadHelpers.getThreadUID()) {
                 // we should run this task
                 return doExec();
             }
 
             try {
                 ObjectHelpers.wait(this);
+                InternalInterface.debug(1);
             } catch (InterruptedException e) {}
             return status;
         } finally {
@@ -682,6 +692,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //            ForkJoinPool00DJ.common.externalPush(this);
 //        return this;
 
+        InternalInterface.debug(2);
         ForkJoinPool00DJ.externalPushS(this);
         return this;
     }
@@ -701,6 +712,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
         int s;
         if ((s = doJoin() & DONE_MASK) != NORMAL)
             reportException(s);
+        InternalInterface.debug(4);
         return getRawResult();
         //throw new NotImplementedException();
     }
@@ -1549,12 +1561,12 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
         return (sun.misc.Unsafe)(Object)Unsafe00DJ.getUnsafe();
     }
 
-
-    private Thread runningThread = null;
+    // a uid for the thread that should be schedule to run this task
+    private Object runningThread = null;
 
     void runTask() {
         exec();
-        runningThread = Thread.currentThread();
+        runningThread = ThreadHelpers.getThreadUID();
         setCompletion(NORMAL);
     }
 }

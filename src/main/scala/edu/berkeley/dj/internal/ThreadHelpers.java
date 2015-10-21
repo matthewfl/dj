@@ -2,18 +2,22 @@ package edu.berkeley.dj.internal;
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/lang/Thread", "java/lang/ThreadLocal"})
+@RewriteAllBut(nonModClasses = {"java/lang/Thread", "java/lang/ThreadLocal", "java/lang/ref/WeakReference"})
 public class ThreadHelpers {
 
     private ThreadHelpers() {}
 
     public static ThreadLocal<Thread00DJ> currentThread = new ThreadLocal<>();
+
+    // the object that was passed to new ThreadCallback
+    public static ThreadLocal<WeakReference<Object>> currentThreadCallback = new ThreadLocal<>();
 
     public static DistributedVariable<HashMap<Long, Thread00DJ>> allThreads = new DistributedVariable<>("DJ_allThreads", new HashMap<>());
 
@@ -45,7 +49,17 @@ public class ThreadHelpers {
 
     static void newThreadCallback(Object r) {
         // The thread's run method is responsible for setting the current running thread
+        currentThreadCallback.set(new WeakReference<>(r));
         ((Runnable)r).run();
+        currentThreadCallback.set(null);
+    }
+
+    public static Object getThreadUID() {
+        return currentThreadCallback;
+    }
+
+    public static Object getThreadCallback() {
+        return currentThreadCallback.get();
     }
 
 

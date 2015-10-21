@@ -74,6 +74,12 @@ public class InternalInterface {
         System.out.println("Internal interface debug: "+s);
     }
 
+    public static void debug(int i) {
+        debug("called into debug method with: "+i);
+        int j  = 1 + 1;
+        //(new Throwable()).printStackTrace();
+    }
+
     public boolean lock(String name) {
         throw new InterfaceException();
     }
