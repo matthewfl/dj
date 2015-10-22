@@ -6,7 +6,7 @@ package testcase
 class MapReduceTest {
 
   def run: Unit = {
-    (0 until 1000).par.map(v => {
+    (0 until 50).par.map(v => {
       System.out.println(s"getting the map operation for $v")
       (v % 30, v)
     }).groupBy(_._1).map(vs => {

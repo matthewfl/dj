@@ -17,6 +17,7 @@ import scala.collection.mutable
  * Created by matthewfl
  */
 private[rt] class Rewriter (private val manager : MasterManager) {
+
   def config = manager.config
 
   def basePool = manager.pool
@@ -27,7 +28,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
-  private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
+  //private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
 
   private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
@@ -1052,7 +1053,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
     }
 
-    val intercls = if(!makeInterface) {
+    //val intercls =
+    if(!makeInterface) {
       // add the interface of the type that this class is going to implement
       val i = runningPool.get(config.arrayprefix + baseType + "_" + cnt)
       cls.addInterface(i)
@@ -1061,7 +1063,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       if(!isPrimitive)
         addInterfaces(i)
       i
-    } else null
+    } else {
+      // add all the classes that this implements and inherits from
+      if(!isPrimitive && baseType != "java.lang.Object") {
+        val btype = runningPool.get(baseType)
+        val stype = btype.getSuperclass
+        if(stype.getName != "java.lang.Object") {
+          cls.addInterface(runningPool.get(config.arrayprefix + stype.getName + "_"+cnt))
+        }
+        for(i <- btype.getInterfaces) {
+          val n = i.getName
+          if(n != s"${config.coreprefix}java.lang.Object")
+            cls.addInterface(runningPool.get(config.arrayprefix + n + "_" + cnt))
+        }
+      }
+    }
 
     if(isPrimitive)
       allInheritedTypes += wrapType
