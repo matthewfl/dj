@@ -4,7 +4,6 @@ import java.nio._
 import java.util.concurrent.TimeoutException
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -58,9 +57,12 @@ class RunningInterface (private val config: Config, private val manager: Manager
   def startThread(obj: Object) = {
     // TODO: change this to use a threadpool that is specific to this application
     // atm this is using the implict threadpool from scala
-    Future {
+    manager.threadPool.submit {
       callIn(1, obj)
     }
+    /*Future {
+      callIn(1, obj)
+    }*/
     /*
     val thread = new Thread() {
       override def run() = {

@@ -370,6 +370,11 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
             if(runningThread == ThreadHelpers.getThreadUID()) {
                 // we should run this task
                 return doExec();
+            } else if(!submittedToRQ) {
+                // allow the JIT to place this runner
+                // should also track that this thread is waiting on this result
+                ForkJoinPool00DJ.externalPushS(this);
+                InternalInterface.debug(10);
             }
 
             try {
@@ -1563,6 +1568,8 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 
     // a uid for the thread that should be schedule to run this task
     private Object runningThread = null;
+
+    boolean submittedToRQ = false;
 
     void runTask() {
         exec();

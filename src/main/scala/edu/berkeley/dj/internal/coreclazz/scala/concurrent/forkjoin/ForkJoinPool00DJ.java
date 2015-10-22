@@ -1844,6 +1844,7 @@ public class ForkJoinPool00DJ extends AbstractExecutorService {
 
     // we are scheduling all these tasks globally, so we have this static method that will submit the jobs
     static void externalPushS(ForkJoinTask00DJ<?> task) {
+        task.submittedToRQ = true;
         ThreadHelpers.runTaskCluster(new Runnable() {
             @Override
             public void run() {

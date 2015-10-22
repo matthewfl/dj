@@ -29,7 +29,8 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       }
       case 103 => {
         // run a command on this machine as send by a remote machine
-        Future {
+        //Future
+        man.threadPool.submit {
           man.runningInterface.callIn(3, from, msg)
         }
       }
@@ -83,7 +84,7 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         case 1 => {
           // load a class from the parent class loader
           if (man.isMaster) {
-              val cname = new String(msg)
+            val cname = new String(msg)
             Future.successful(man.asInstanceOf[MasterManager].loader.getClassBytes(cname))
           } else {
             Future.failed(new RuntimeException("This is not the master machine"))

@@ -17,6 +17,7 @@ import scala.concurrent.duration._
  */
 
 sealed private[rt] trait Manager {
+
   def config: Config
 
   //def runningPool : javassist.ClassPool
@@ -36,6 +37,7 @@ sealed private[rt] trait Manager {
 
   def loader: LoaderProxy
 
+  private[rt] val threadPool = new ThreadPool
 
 }
 
