@@ -24,6 +24,8 @@ final public class ClassManager {
 
     int owning_machine = -1; // signify self
 
+    public int getOwner() { return owning_machine; }
+
     int notifications_to_send = 0;
 
     Thread00DJ monitor_thread = null;

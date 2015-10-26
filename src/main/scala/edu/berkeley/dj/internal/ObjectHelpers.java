@@ -104,6 +104,7 @@ public class ObjectHelpers {
                 unsafe.monitorEnter(ob);
             }
         } else {
+            // this is going to break if someone tries and synchronizes on something like Class<?> or String between machines
             unsafe.monitorEnter(o);
         }
     }

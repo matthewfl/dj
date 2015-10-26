@@ -258,13 +258,16 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
      */
     final int doExec() {
         int s; boolean completed;
+        ObjectBase ob = (ObjectBase)(Object)this;
+        if(ob.__dj_class_manager != null && ob.__dj_class_manager.getOwner() != -1)
+            InternalInterface.debug(1);
         if ((s = status) >= 0) {
             try {
-                InternalInterface.debug(7);
+                //InternalInterface.debug(7);
                 completed = exec();
-                if(getRawResult() == null)
-                    InternalInterface.debug(8);
-                InternalInterface.debug(0);
+//                if(getRawResult() == null)
+//                    InternalInterface.debug(8);
+//                InternalInterface.debug(0);
             } catch (Throwable rex) {
                 throw new RuntimeException(rex); // something bad happened
 //                return setExceptionalCompletion(rex);
@@ -273,6 +276,8 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
                 s = setCompletion(NORMAL);
                 ObjectHelpers.monitorEnter(this);
                 try {
+                    if(ob.__dj_class_manager != null && ob.__dj_class_manager.getOwner() != -1)
+                        InternalInterface.debug(2);
                     // notify any waiting threads that this is complete
                     ObjectHelpers.notifyAll(this);
                 } finally {
@@ -374,12 +379,12 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
                 // allow the JIT to place this runner
                 // should also track that this thread is waiting on this result
                 ForkJoinPool00DJ.externalPushS(this);
-                InternalInterface.debug(10);
+//                InternalInterface.debug(10);
             }
 
             try {
                 ObjectHelpers.wait(this);
-                InternalInterface.debug(1);
+//                InternalInterface.debug(1);
             } catch (InterruptedException e) {}
             return status;
         } finally {
@@ -697,7 +702,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //            ForkJoinPool00DJ.common.externalPush(this);
 //        return this;
 
-        InternalInterface.debug(2);
+//        InternalInterface.debug(2);
         ForkJoinPool00DJ.externalPushS(this);
         return this;
     }
@@ -717,7 +722,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
         int s;
         if ((s = doJoin() & DONE_MASK) != NORMAL)
             reportException(s);
-        InternalInterface.debug(4);
+//        InternalInterface.debug(4);
         return getRawResult();
         //throw new NotImplementedException();
     }

@@ -230,18 +230,44 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private val fieldCount = new mutable.HashMap[String,Int]()
 
-  private def getFieldCount(classname: String) = {
+  // maybe use the source pool to determine the number of fields that a class has
+  private def getFieldCount(classname: String): Int = {
     if(classname == "edu.berkeley.dj.internal.ObjectBase")
-      10
+      baseFieldCount
     else {
       if(fieldCount.contains(classname)) {
-        fieldCount.getOrElse(classname, baseFieldCount)
+        fieldCount.get(classname).get
       } else {
-        runningPool.get(classname)
-        fieldCount.getOrElse(classname, baseFieldCount)
+        val c = runningPool.get(classname)
+        if(!fieldCount.contains(classname)) {
+          // there must be some circular defintion for this class where it is importing itself
+          //if(classname.startsWith(config.coreprefix)) {
+            // we can compute the number of fields that this class should have
+            val supC = getFieldCount(c.getSuperclass.getName)
+            val selfC = c.getDeclaredFields.length
+            fieldCount.put(classname, supC + selfC)
+            return supC + selfC
+          //} else ???
+        }
+        fieldCount.get(classname).get
       }
     }
   }
+
+//  private def getFieldCount2(classname: String): Int = {
+//    if(classname == "edu.berkeley.dj.internal.ObjectBase" || classname == "java.lang.Object")
+//      baseFieldCount
+//    else {
+//      if(fieldCount.contains(classname)) {
+//        fieldCount.get(classname).get
+//      } else {
+//        val cls = basePool.get(classname)
+//        val r = cls.getDeclaredFields.length + getFieldCount2(cls.getSuperclass.getName)
+//        fieldCount.update(classname, r)
+//        r
+//      }
+//    }
+//  }
 
   private def addAccessorMethods(cls: CtClass): Unit = {
     // an interface in java can not have variables
@@ -264,6 +290,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val accessWrites = new mutable.HashMap[String,StringBuilder]()
     val accessReads = new mutable.HashMap[String,StringBuilder]()
 
+    //runningPool.get(cls.getSuperclass.getName) // make sure that the super class is loaded so that we know the field count
     var nextFieldId = getFieldCount(cls.getSuperclass.getName)
 
     for(b <- CtClass.primitiveTypes.toSeq :+ null) {
@@ -385,7 +412,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         }
       }
     }
-    fieldCount.put(cls.getName, nextFieldId)
+    if(fieldCount.contains(cls.getName)) {
+      assert(fieldCount.get(cls.getName).get == nextFieldId)
+    } else {
+      fieldCount.put(cls.getName, nextFieldId)
+    }
 
     try {
       // create the accessor methods
