@@ -7,6 +7,7 @@ import javassist.bytecode.analysis.{Frame, Analyzer}
 import javassist.bytecode.{BadBytecode, Descriptor, MethodInfo}
 
 import edu.berkeley.dj.internal._
+import edu.berkeley.dj.internal.coreclazz.RewriteLocalFieldOnly
 import edu.berkeley.dj.rt.convert.{CodeConverter, _}
 import edu.berkeley.dj.utils.Memo
 
@@ -361,9 +362,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           field.getType.asInstanceOf[CtPrimitiveType].getDescriptor.toString
         } else "A"
 
+        val isLocalOnly = field.getAnnotation(classOf[RewriteLocalFieldOnly]) != null
+
         if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
-          val write_method =
-            s"""
+          val (write_method, read_method) = if(!isLocalOnly) {
+            (// write method
+              s"""
                   static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
                     //edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
                     if((self.${cls_mode} & 0x02) != 0) {
@@ -372,9 +376,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                       self.``${name}`` = val;
                     }
                   }
-                  """
-          val read_method =
-            s"""
+                  """,
+              // read method
+              s"""
                static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
                  //edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
                  if((self.${cls_mode} & 0x01) != 0) {
@@ -384,6 +388,22 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                  }
                }
                   """
+              )
+          } else {
+            (// write method
+              s"""
+                  static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
+                    self.``${name}`` = val;
+                  }
+             """,
+              // read method
+              s"""
+                 static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
+                   return self.``${name}``;
+                 }
+               """)
+          }
+
           try {
             //println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
             //println(write_method)

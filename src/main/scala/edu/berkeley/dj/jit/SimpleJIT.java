@@ -26,16 +26,19 @@ public class SimpleJIT implements JITInterface {
         // don't want to deal with the
         if(this == self)
             return;
-        InternalInterface.debug("got remote read notification");
+        //InternalInterface.debug("got remote read notification");
     }
 
     @Override
     public void recordRemoteWrite(Object self, int from_machine, int to_machine, int field_id, StackRepresentation stack) {
-
+        if(this == self)
+            return;
     }
 
     @Override
     public void recordRemoteRPC(Object self, int from_machine, int to_machine, StackRepresentation stack) {
+        if(this == self)
+            return;
 
     }
 

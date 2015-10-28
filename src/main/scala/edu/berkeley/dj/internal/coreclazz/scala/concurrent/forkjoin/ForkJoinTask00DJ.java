@@ -5,6 +5,7 @@ package edu.berkeley.dj.internal.coreclazz.scala.concurrent.forkjoin;
  */
 
 import edu.berkeley.dj.internal.*;
+import edu.berkeley.dj.internal.coreclazz.RewriteLocalFieldOnly;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00DJ;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -1572,6 +1573,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
     }
 
     // a uid for the thread that should be schedule to run this task
+    @RewriteLocalFieldOnly
     private Object runningThread = null;
 
     boolean submittedToRQ = false;
