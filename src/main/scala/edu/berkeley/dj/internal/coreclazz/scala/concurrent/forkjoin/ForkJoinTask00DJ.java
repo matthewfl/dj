@@ -368,21 +368,30 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //                        externalAwaitDone();
         ObjectHelpers.monitorEnter(this);
         try {
-            if(status < 0) return status;
+            selfState |= 0x8;
+            if(status < 0) {
+                int s = status;
+                //ObjectHelpers.monitorExit(this);
+                return s;
+            }
             // TODO: need to check if the task is currently running, and if not start it
             // not sure if want to do that since then the scheduler won't be able to manage when stuff run/placement
             // but then there should be some notification that a thread is blocked/waiting on some result
 
             if(runningThread == ThreadHelpers.getThreadUID()) {
                 // we should run this task
+                selfState |= 0x10;
+                //ObjectHelpers.monitorExit(this);
                 return doExec();
             } else if(!submittedToRQ) {
                 // allow the JIT to place this runner
                 // should also track that this thread is waiting on this result
+                selfState |= 0x40;
                 ForkJoinPool00DJ.externalPushS(this);
 //                InternalInterface.debug(10);
             }
 
+            selfState |= 0x20;
             try {
                 ObjectHelpers.wait(this);
 //                InternalInterface.debug(1);
@@ -1578,9 +1587,14 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 
     boolean submittedToRQ = false;
 
+    int selfState = 0;
+
     void runTask() {
-        exec();
+        selfState |= 0x1;
         runningThread = ThreadHelpers.getThreadUID();
-        setCompletion(NORMAL);
+        selfState |= 0x2;
+        exec();
+        selfState |= 0x4;
+        //setCompletion(NORMAL);
     }
 }

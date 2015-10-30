@@ -55,7 +55,7 @@ public class ThreadHelpers {
     }
 
     public static Object getThreadUID() {
-        return currentThreadCallback;
+        return currentThreadCallback.get();
     }
 
     public static Object getThreadCallback() {
