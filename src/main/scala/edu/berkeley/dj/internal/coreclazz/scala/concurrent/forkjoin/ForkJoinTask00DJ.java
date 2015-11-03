@@ -389,6 +389,8 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
                 selfState |= 0x40;
                 ForkJoinPool00DJ.externalPushS(this);
 //                InternalInterface.debug(10);
+            } else {
+                InternalInterface.debug(1);
             }
 
             selfState |= 0x20;
@@ -713,6 +715,7 @@ public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 //        return this;
 
 //        InternalInterface.debug(2);
+        selfState |= 0x80;
         ForkJoinPool00DJ.externalPushS(this);
         return this;
     }

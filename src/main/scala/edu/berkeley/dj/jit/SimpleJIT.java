@@ -24,9 +24,13 @@ public class SimpleJIT implements JITInterface {
     public void recordRemoteRead(Object self, int from_machine, int to_machine, int field_id, StackRepresentation stack) {
         // we will get notifications if this class ends up performing a remote read and write as well
         // don't want to deal with the
+
+        // since this is getting called on the machine that doesn't own the object
+        // there isn't a lot of information that can be gathered from
+
         if(this == self)
             return;
-        //InternalInterface.debug("got remote read notification");
+        InternalInterface.debug("got remote read notification");
     }
 
     @Override
