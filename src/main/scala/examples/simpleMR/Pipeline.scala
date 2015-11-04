@@ -1,6 +1,6 @@
 package examples.simpleMR
 
-import edu.berkeley.dj.internal.{JITCommands, InternalInterface, ThreadHelpers}
+import edu.berkeley.dj.internal.{DistributedRunner, InternalInterface, JITCommands, ThreadHelpers}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -30,6 +30,7 @@ class InputPipe[T] (val data: Iterator[T]) extends Pipeline[T] {
     new MappedPipe[U](this, (pipe: MappedPipe[U]) => {
       for (d <- data) {
         scheduled += 1
+        // don't have a preference where we run this so just let the "JIT" decided I guess
         ThreadHelpers.runTaskCluster(new Runnable {
           override def run(): Unit = {
             func(d, (k: String, v: U) => pipe._recv(k,v))
@@ -54,9 +55,12 @@ class MappedPipe[T] (val previous: Pipeline[_], private val prev_run: (MappedPip
 
   private val data = new mutable.HashMap[String, ListBuffer[T]]()
 
-  override def _recv(k: String, v: T) : Unit = {
+  override def _recv(k: String, v : T) : Unit = {
     // TODO: may race here
     data.getOrElseUpdate(k, new ListBuffer[T] ) += v
+    val hosts = InternalInterface.getInternalInterface.getAllHosts
+    val t = hosts(v.hashCode() % hosts.length)
+    JITCommands.moveObject(v, t)
   }
 
   private var scheduled: Int = 0
@@ -74,11 +78,13 @@ class MappedPipe[T] (val previous: Pipeline[_], private val prev_run: (MappedPip
         scheduled += 1
         val t = hosts(d._1.hashCode % hosts.length) // target machine
         // relocate the objects
-        for(i <- d._2) {
-          JITCommands.moveObject(i, t)
-        }
+        //for(i <- d._2) {
+        //  JITCommands.moveObject(i, t)
+        //}
         JITCommands.moveObject(d._2, t)
-        ThreadHelpers.runTaskCluster(new Runnable {
+        //ThreadHelpers.runTaskCluster(new Runnable {
+        // we have explicitly place all this data on machine t, so make sure that we run on that machine
+        DistributedRunner.runOnRemote(t, new Runnable {
           override def run(): Unit = {
             func(d._1, d._2, (k: String, v: U) => pipe._recv(k, v))
             MappedPipe.this.synchronized {

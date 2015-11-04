@@ -740,6 +740,49 @@ public class DistributedObjectHelper {
         }
     }
 
+    static public void moveObject(ObjectBase obj, int to) {
+        DistributedObjectId id = getDistributedId(obj);
+        if(obj.__dj_class_manager.owning_machine != -1) {
+            // we don't own this object, send a message to the owning machine to move it
+            byte[] ida = id.toArr();
+            ByteBuffer b = ByteBuffer.allocate(ida.length + 4);
+            b.putInt(to);
+            b.put(ida);
+            InternalInterface.getInternalInterface().sendMoveObject(b, obj.__dj_class_manager.owning_machine);
+        } else {
+            // first compute the size
+
+            throw new NotImplementedException();
+        }
+    }
+
+    static public void recvMoveReq(ByteBuffer req) {
+        int to = req.getInt();
+        DistributedObjectId id = new DistributedObjectId(req);
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null) {
+            // there is something wrong since we should have owned this object??
+            throw new RuntimeException();
+        } else {
+            moveObject(h, to);
+        }
+    }
+
+    static public void recvMovedObject(ByteBuffer buf) {
+        // calling on the recving machine for make the
+        UUID id = new UUID(buf.getLong(), buf.getLong());
+        ObjectBase h;
+        synchronized (localDistributedObjects) {
+            h = (ObjectBase)localDistributedObjects.get(id);
+        }
+        if(h == null) {
+            // we have to construct a new instance of this object
+        }
+    }
+
 
 
 }

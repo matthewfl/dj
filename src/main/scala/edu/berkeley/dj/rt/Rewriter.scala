@@ -212,7 +212,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     if (!isInterface && canRewrite) {
       addAccessorMethods(cls)
-      addSeralizeMethods(cls)
+      addSerializeMethods(cls)
     }
     // TODO: need to handle interfaces that can have methods on them
   }
@@ -459,7 +459,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   }
 
-  private def addSeralizeMethods(cls: CtClass) = {
+  private def addSerializeMethods(cls: CtClass) = {
     // TODO:
     var serialize_obj_method =
       """
@@ -471,6 +471,44 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
             super.__dj_deserialize_obj(man);
       """
+    var prim_size = 0
+    var num_objs = 0
+    for(f <- cls.getDeclaredFields) {
+      if(f.getType.isPrimitive) {
+        prim_size += f.getType.asInstanceOf[CtPrimitiveType].getDataSize
+      } else {
+        num_objs += 1
+      }
+    }
+    serialize_obj_method +=   s"man.register_size(${prim_size}, ${num_objs});\n"
+    deserialize_obj_method += s"man.register_size(${prim_size}, ${num_objs});\n"
+    for(f <- cls.getDeclaredFields) {
+      if(f.getType.isPrimitive) {
+        val p = f.getType.asInstanceOf[CtPrimitiveType]
+        serialize_obj_method +=   s"man.put_value_${p.getDescriptor} ( this.${f.getName} );\n"
+        deserialize_obj_method += s"this.${f.getName} = man.get_value_${p.getDescriptor} ();\n"
+      }
+    }
+    for(f <- cls.getDeclaredFields) {
+      if(!f.getType.isPrimitive) {
+        serialize_obj_method +=   s"man.put_object( this.${f.getName} );\n"
+        deserialize_obj_method += s"this.${f.getName} = (${getUsableName(f.getType)}) man.get_object( this.${f.getName} ); \n"
+      }
+    }
+
+    serialize_obj_method += "}"
+    deserialize_obj_method += "}"
+
+    try {
+      cls.addMethod(CtMethod.make(serialize_obj_method, cls))
+      cls.addMethod(CtMethod.make(deserialize_obj_method, cls))
+    } catch {
+      case e: Throwable => {
+        println(e)
+        throw e
+      }
+    }
+
   }
 
   def modifyStaticInit(cls: CtClass, mana: MethodAnalysis): Unit = {

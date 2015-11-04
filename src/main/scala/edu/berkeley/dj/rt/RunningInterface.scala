@@ -227,5 +227,10 @@ class RunningInterface (private val config: Config, private val manager: Manager
     block(manager.networkInterface.sendWrpl(machine, 31, req))
   }
 
+  def sendMoveObject(req: ByteBuffer, machine: Int) = {
+    // send msg to owning machine to move object
+    manager.networkInterface.send(machine, 111, req)
+  }
+
 
 }

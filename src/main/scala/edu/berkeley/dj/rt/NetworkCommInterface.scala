@@ -71,6 +71,10 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         // reload a class
         man.loader.reloadClass(new String(msg))
       }
+      case 111 => {
+        // request to move an object
+        man.runningInterface.callIn(14, ByteBuffer.wrap(msg))
+      }
     }
   } catch {
     case e: Throwable => {

@@ -174,7 +174,7 @@ public class ObjectBase implements Object00DJ {
     }*/
 
     public void __dj_serialize_obj(SerializeManager man) {
-
+        man.put_object_head(DistributedObjectHelper.getDistributedId(this));
     }
 
     public void __dj_deserialize_obj(SerializeManager man) {
