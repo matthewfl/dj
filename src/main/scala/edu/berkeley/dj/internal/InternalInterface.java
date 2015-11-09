@@ -147,6 +147,8 @@ public class InternalInterface {
 
     public void sendMoveObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
 
+    public void sendSerializedObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -340,8 +342,17 @@ final class InternalInterfaceWrap extends InternalInterface {
 
     @Override
     public void sendMoveObject(ByteBuffer req, int machine) {
+        // send a request to move some object
         invoke("sendMoveObject", new Class[]{ByteBuffer.class, int.class}, req, machine);
     }
+
+    @Override
+    public void sendSerializedObject(ByteBuffer req, int machine) {
+        // send the serialized object information to another machine
+        // either for moving or caching an object
+        invoke("sendSerializedObject", new Class[]{ByteBuffer.class, int.class}, req, machine);
+    }
+
 
 
 
@@ -399,6 +410,9 @@ final class InternalInterfaceWrap extends InternalInterface {
                 return RPCHelpers.recvRemoteCall((ByteBuffer)args[0]);
             case 14:
                 DistributedObjectHelper.recvMoveReq((ByteBuffer)args[0]);
+                return null;
+            case 15:
+                DistributedObjectHelper.recvMovedObject((ByteBuffer)args[0]);
                 return null;
         }
         return null;

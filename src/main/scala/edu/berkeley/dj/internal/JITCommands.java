@@ -24,7 +24,7 @@ public class JITCommands {
 
     // move the ownership of some object to a target machine
     static public void moveObject(Object self, int target) {
-
+        DistributedObjectHelper.moveObject((ObjectBase)self, target);
     }
 
     // make a read only cache of some object on target machine

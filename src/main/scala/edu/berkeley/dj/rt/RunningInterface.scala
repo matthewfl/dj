@@ -232,5 +232,9 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(machine, 111, req)
   }
 
+  def sendSerializedObject(req: ByteBuffer, machine: Int): Unit = {
+    manager.networkInterface.send(machine, 112, req)
+  }
+
 
 }

@@ -35,6 +35,10 @@ final public class ClassManager {
     // aquired
     int monitor_lock_count = 0;
 
+    // machines that have cached copies of this object
+    // need to be updated on writes
+    int[] cached_copies = null;
+
     // will need a week pointer to the object base
     ObjectBase managedObject;
 
@@ -457,6 +461,76 @@ final public class ClassManager {
         }
     }
 
+
+    // serialization methods
+
+    int getSerializedSize() {
+        // return the number of bytes that will be required for this object
+        // TODO:
+        return 200;
+    }
+
+
+    void dj_serialize_obj(SerializeManager man, SerializeManager.SerializationAction act) {
+        // only call in the case that the object is getting moved
+
+        // notifications to send is local
+        // the monitor thread is also local
+
+        if(cached_copies == null) {
+            man.put_value_I(0);
+        } else {
+            man.put_value_I(cached_copies.length);
+            for(int i = 0; i < cached_copies.length; i++) {
+                man.put_value_I(cached_copies[i]);
+            }
+        }
+
+        int selfId = InternalInterface.getInternalInterface().getSelfId();
+
+        if(waitingMachines == null) {
+            man.put_value_I(0);
+        } else {
+            man.put_value_I(waitingMachines.length);
+            for(int i = 0; i < waitingMachines.length; i++) {
+                if(waitingMachines[i] == -1) {
+                    man.put_value_I(selfId);
+                } else {
+                    man.put_value_I(waitingMachines[i]);
+                }
+            }
+        }
+
+
+    }
+
+    void dj_deserialize_obj(SerializeManager man, SerializeManager.SerializationAction act) {
+        int cached_length = man.get_value_I();
+        if(cached_length == 0){
+            cached_copies = null;
+        } else {
+            cached_copies = new int[cached_length];
+            for(int i = 0; i < cached_length; i++) {
+                cached_copies[i] = man.get_value_I();
+            }
+        }
+
+        int selfId = InternalInterface.getInternalInterface().getSelfId();
+
+        int waiting_length = man.get_value_I();
+        if(waiting_length == 0) {
+            waitingMachines = null;
+        } else {
+            waitingMachines = new int[waiting_length];
+            for(int i = 0; i < waiting_length; i++) {
+                int val = man.get_value_I();
+                if(val == selfId)
+                    waitingMachines[i] = -1;
+                else
+                    waitingMachines[i] = val;
+            }
+        }
+    }
 
 
     // there should be some seralization methods added to the class

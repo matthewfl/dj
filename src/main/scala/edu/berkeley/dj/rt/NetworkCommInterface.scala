@@ -75,6 +75,10 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         // request to move an object
         man.runningInterface.callIn(14, ByteBuffer.wrap(msg))
       }
+      case 112 => {
+        // recv a serialized object either for caching or moving
+        man.runningInterface.callIn(15, ByteBuffer.wrap(msg))
+      }
     }
   } catch {
     case e: Throwable => {

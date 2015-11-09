@@ -27,7 +27,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   def classMode = manager.classMode
 
-  private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
+//  private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
   //private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
 
@@ -190,7 +190,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     //rewriteUsedClasses(cls)
     // TODO: actually determine if this class is movable before adding the move interface
 
-    cls.addInterface(moveInterface)
+    //cls.addInterface(moveInterface)
     val codeConverter = new CodeConverter
 
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
@@ -355,7 +355,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           // todo:? should the system check if a class is inited and then raise some error in case of a final field
           // or just assume that the final field nature will already be check by other systems during compilation
           // someone could always just use reflection to set final fields, so it isn't like it is imossible
-          //field.setModifiers(modifiers & ~Modifier.FINAL)
+          field.setModifiers(modifiers & ~Modifier.FINAL)
         }
 
         val redirect_method_type = if(field.getType.isPrimitive) {
@@ -491,7 +491,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
     for(f <- cls.getDeclaredFields) {
       if(!f.getType.isPrimitive) {
-        serialize_obj_method +=   s"man.put_object( this.${f.getName} );\n"
+        serialize_obj_method +=   s"this.${f.getName} = (${getUsableName(f.getType)}) man.put_object( this.${f.getName} );\n"
         deserialize_obj_method += s"this.${f.getName} = (${getUsableName(f.getType)}) man.get_object( this.${f.getName} ); \n"
       }
     }

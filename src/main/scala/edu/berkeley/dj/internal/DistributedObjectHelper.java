@@ -84,6 +84,8 @@ public class DistributedObjectHelper {
             return toBB().array();
         }
 
+        public boolean isFinalObj() { return lastKnownHost == -2; }
+
         public DistributedObjectId(byte[] arr) {
             ByteBuffer b = ByteBuffer.wrap(arr);
             lastKnownHost = b.getInt();
@@ -120,7 +122,16 @@ public class DistributedObjectHelper {
 
     }
 
+
+    // TODO: support gc of this, use a weak reference in the case that we are not the owning machine
     static private HashMap<UUID, Object00DJ> localDistributedObjects = new HashMap<>();
+
+    static private ObjectBase getLocalObject(UUID id) {
+        synchronized (localDistributedObjects) {
+            // TODO: check if it is a weak reference and get the actual object that it points to instead
+            return (ObjectBase)localDistributedObjects.get(id);
+        }
+    }
 
     // give the Object some uuid so that it will be distributed
     static public void makeDistributed(ObjectBase o) {
@@ -169,7 +180,7 @@ public class DistributedObjectHelper {
                 return h;
             // we do not have some proxy of this object locally so we need to construct some proxy for it
             try {
-                if(id.lastKnownHost == -2) {
+                if(id.isFinalObj() /* lastKnownHost == -2 */) {
                     // this is some final object, and we just need to reconstruct it
                     return constructFinalObject(ByteBuffer.wrap(id.extradata));
                 } else {
@@ -750,9 +761,16 @@ public class DistributedObjectHelper {
             b.put(ida);
             InternalInterface.getInternalInterface().sendMoveObject(b, obj.__dj_class_manager.owning_machine);
         } else {
-            // first compute the size
-
-            throw new NotImplementedException();
+            // serialize the object, and then send it to the new machine
+            ByteBuffer so = SerializeManager.serialize(obj, new SerializeManager.SerializationController() {
+                @Override
+                public SerializeManager.SerializationAction getAction(Object o) {
+                    return SerializeManager.SerializationAction.MOVE_OBJ_MASTER;
+                    //return null;
+                }
+            }, 1, to);
+            InternalInterface.getInternalInterface().sendSerializedObject(so, to);
+            //throw new NotImplementedException();
         }
     }
 
@@ -773,14 +791,15 @@ public class DistributedObjectHelper {
 
     static public void recvMovedObject(ByteBuffer buf) {
         // calling on the recving machine for make the
-        UUID id = new UUID(buf.getLong(), buf.getLong());
-        ObjectBase h;
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
-        if(h == null) {
-            // we have to construct a new instance of this object
-        }
+        SerializeManager.deserialize(buf);
+//        UUID id = new UUID(buf.getLong(), buf.getLong());
+//        ObjectBase h;
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
+//        if(h == null) {
+//            // we have to construct a new instance of this object
+//        }
     }
 
 
