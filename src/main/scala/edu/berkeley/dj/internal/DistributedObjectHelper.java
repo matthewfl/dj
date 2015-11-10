@@ -753,6 +753,10 @@ public class DistributedObjectHelper {
 
     static public void moveObject(ObjectBase obj, int to) {
         DistributedObjectId id = getDistributedId(obj);
+        if(obj.__dj_class_manager.owning_machine == to) {
+            // object is already on desired machine
+            return;
+        }
         if(obj.__dj_class_manager.owning_machine != -1) {
             // we don't own this object, send a message to the owning machine to move it
             byte[] ida = id.toArr();
@@ -761,6 +765,10 @@ public class DistributedObjectHelper {
             b.put(ida);
             InternalInterface.getInternalInterface().sendMoveObject(b, obj.__dj_class_manager.owning_machine);
         } else {
+            if(to == InternalInterface.getInternalInterface().getSelfId()) {
+                // already on desired machine
+                return;
+            }
             // serialize the object, and then send it to the new machine
             ByteBuffer so = SerializeManager.serialize(obj, new SerializeManager.SerializationController() {
                 @Override

@@ -106,6 +106,10 @@ public class SerializeManager {
 
         s.run(ob);
         InternalInterface.debug("buff size:"+buff.position());
+        ByteBuffer ret = ByteBuffer.allocate(buff.position());
+        ret.put(buff.array(), 0, buff.position());
+        return ret;
+
         //return buff;
     }
 
@@ -149,7 +153,7 @@ class Deserialization extends SerializeManager {
 
     Deserialization(ByteBuffer b) {
         buff = b;
-        depth_left = b.getInt();
+        //depth_left = b.getInt();
     }
 
     void run() {
