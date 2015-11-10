@@ -37,7 +37,7 @@ object RealMain {
         |\t-fjar\tFat Jar that contains the whole program
         |\t-cp\tClass path for the program, seperated with `:`
         |\t-cluster_code\tShared secert for starting a cluster, must be >10 letters
-        |\t-cluster_mode\tCommunication method used by the cluster, currently hazelcast
+        |\t-cluster_conn\tCommunication method used by the cluster, currently hazelcast
         |\t-Ddj.cluster_seed=\tComma seperated list of ips to use for seeding cluster node
         |\t-mode\t[master|client]
         |\t-djit\tClassname to load for the distributed JIT

@@ -1,6 +1,7 @@
 package edu.berkeley.dj.internal;
 
 import scala.Array;
+import scala.NotImplementedError;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -252,6 +253,7 @@ class Serialization extends SerializeManager {
         buff = b;
         depth_left = depth;
         this.controller = controller;
+        this.target_machine = target_machine;
     }
 
     void run(ObjectBase base) {
@@ -275,7 +277,7 @@ class Serialization extends SerializeManager {
                     if(o.__dj_class_manager.cached_copies == null) {
                         o.__dj_class_manager.cached_copies = new int[] { InternalInterface.getInternalInterface().getSelfId() };
                     } else {
-
+                        throw new NotImplementedError();
                     }
                     o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES;
                     o.__dj_class_manager.dj_serialize_obj(this, act);

@@ -3,7 +3,8 @@ package edu.berkeley.dj.rt
 import java.nio.ByteBuffer
 import java.util.UUID
 
-import edu.berkeley.dj.rt.network.{NetworkCommunication, NetworkRecever}
+import edu.berkeley.dj.internal.NetworkForwardRequest
+import edu.berkeley.dj.rt.network.{RedirectRequestToAlternateMachine, NetworkCommunication, NetworkRecever}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -81,6 +82,9 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       }
     }
   } catch {
+    case e: NetworkForwardRequest => {
+      throw new RedirectRequestToAlternateMachine(e.to)
+    }
     case e: Throwable => {
       System.err.println(s"There was an error with command: $action\n$e")
       e.printStackTrace(System.err)
@@ -175,6 +179,9 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         }
       }
     } catch {
+      case e: NetworkForwardRequest => {
+        throw new RedirectRequestToAlternateMachine(e.to)
+      }
       case e: Throwable => {
         System.err.println(s"There was an error with command $action\n$e")
         e.printStackTrace(System.err)

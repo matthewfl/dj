@@ -534,7 +534,12 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0) {
             // need to redirect the request elsewhere
-            throw new NotImplementedException();
+
+            // TODO: update the location from the machine that made the request
+            // already exists the code for recving the update
+
+            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+//            throw new NotImplementedException();
         }
         ByteBuffer ret;
         switch(op) {

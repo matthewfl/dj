@@ -44,7 +44,7 @@ object SimpleSerializationTest {
     // the object should have been moved by now
     val ob = o.asInstanceOf[Object].asInstanceOf[ObjectBase]
 
-    println("owner: "+ob.__dj_class_manager.getOwner)
+    println("owner: "+ob.__dj_class_manager.getOwner+" target: "+target)
     println("gg val: "+o.gg)
 
 
