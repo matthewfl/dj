@@ -52,7 +52,7 @@ class DummyComm(recever: NetworkRecever,
               }
               case e: Throwable => { ret.failure(e) }
             })
-            f.onComplete(ret.complete)
+            //f.onComplete(ret.complete)
 
           } catch { case e: NetworkForwardRequest => {
             sendWrpl(e.to, action, msg).onComplete(ret.complete)

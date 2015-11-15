@@ -70,7 +70,7 @@ def start_remote():
 def start():
     env.dj_hosts = ','.join([h.split('@')[-1] for h in env.hosts])
     client_r = execute(start_client, hosts=env.hosts)
-    time.sleep(5)
+    time.sleep(7)
     local("tmux new -d -s dj-session-master 'java -Xmx2g -Ddj.cluster_seed={hosts} -jar ../target/scala-2.11/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp ../target/scala-2.11/{target} -maincls {main_cls} -debug_clazz_bytecode /tmp/djcls/ 2>&1 >> /tmp/dj-log-master' > /dev/null".format(
         target=target,
         code=code,

@@ -523,7 +523,7 @@ public class DistributedObjectHelper {
         h.__dj_getManager().owning_machine = machine_location;
     }
 
-    static public ByteBuffer readField(int op, ByteBuffer req) {
+    static public ByteBuffer readField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
         int fid = req.getInt();
         ObjectBase h;
@@ -541,6 +541,7 @@ public class DistributedObjectHelper {
             throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
 //            throw new NotImplementedException();
         }
+        JITWrapper.recordReceiveRemoteRead(h, fid, from);
         ByteBuffer ret;
         switch(op) {
             case 10:
@@ -586,7 +587,7 @@ public class DistributedObjectHelper {
         }
     }
 
-    static public void writeField(int op, ByteBuffer req) {
+    static public void writeField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
         int fid = req.getInt();
         ObjectBase h;
@@ -599,6 +600,7 @@ public class DistributedObjectHelper {
             // need to redirect the request elsewhere
             throw new NotImplementedException();
         }
+        JITWrapper.recordReceiveRemoteWrite(h, fid, from);
         switch(op) {
             case 20:
                 h.__dj_writeFieldID_Z(fid, req.get() == 1);

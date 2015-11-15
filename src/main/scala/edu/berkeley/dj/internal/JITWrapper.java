@@ -51,7 +51,9 @@ public class JITWrapper {
     public enum OperationType {
         RemoteRead,
         RemoteWrite,
-        RemoteRPC
+        RemoteRPC,
+        ReceiveRemoteRead,
+        ReceiveRemoteWrite,
     }
 
     public static class RecordedOperation {
@@ -65,7 +67,11 @@ public class JITWrapper {
         RecordedOperation(OperationType type, Object self, Throwable stack, Object info, int target_machine) {
             this.type = type;
             this.self = new WeakReference<>(self);
-            this.stack = stack.getStackTrace();
+            if(stack != null) {
+                this.stack = stack.getStackTrace();
+            } else {
+                this.stack = null;
+            }
             this.info = info;
             this.target_machine = target_machine;
         }
@@ -89,6 +95,25 @@ public class JITWrapper {
             }
         }
     }
+
+    static void recordReceiveRemoteRead(Object self, int fid, int source_machine) {
+        RecordedOperation r = new RecordedOperation(OperationType.ReceiveRemoteRead, self, null, fid, source_machine);
+        synchronized (operations) {
+            if(operations.offer(r)) {
+                operations.notify();
+            }
+        }
+    }
+
+    static void recordReceiveRemoteWrite(Object self, int fid, int source_machine) {
+        RecordedOperation r = new RecordedOperation(OperationType.ReceiveRemoteWrite, self, null, fid, source_machine);
+        synchronized (operations) {
+            if(operations.offer(r)) {
+                operations.notify();
+            }
+        }
+    }
+
 
     static void recordRemoteRPC(Object self, String method, int target_machine) {
         RecordedOperation r = new RecordedOperation(OperationType.RemoteRPC, self, new Throwable(), method, target_machine);
@@ -135,7 +160,10 @@ public class JITWrapper {
                 }
             }
             Object self = r.self.get();
-            StackRepresentation s = new StackRepresentation(r.stack);
+
+            StackRepresentation s = null;
+            if(r.stack != null)
+                s = new StackRepresentation(r.stack);
             if(self != null) {
                 switch(r.type) {
                     case RemoteRead:
@@ -146,6 +174,12 @@ public class JITWrapper {
                         break;
                     case RemoteRPC:
                         get().recordRemoteRPC(self, self_id, r.target_machine, s);
+                        break;
+                    case ReceiveRemoteRead:
+                        get().recordReceiveRemoteRead(self, r.target_machine, self_id, (int)r.info);
+                        break;
+                    case ReceiveRemoteWrite:
+                        get().recordReceiveRemoteWrite(self, r.target_machine, self_id, (int)r.info);
                         break;
                     default:
                         System.err.println("Got unknown type");

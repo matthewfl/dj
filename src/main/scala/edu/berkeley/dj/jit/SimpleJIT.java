@@ -57,5 +57,17 @@ public class SimpleJIT implements JITInterface {
         JITCommands.runQueuedWork(self, gg++ % 2); //from_machine);
     }
 
+    @Override
+    public void recordReceiveRemoteRead(Object self, int from_machine, int to_machine, int field_id) {
+
+    }
+
+    @Override
+    public void recordReceiveRemoteWrite(Object self, int from_machine, int to_machine, int field_id) {
+
+    }
+
+
+
     int gg = 0;
 }

@@ -35,4 +35,7 @@ class MRJit extends JITInterface{
     JITCommands.runQueuedWork(self, from_machine)
   }
 
+  override def recordReceiveRemoteRead(self: AnyRef, from_machine: Int, to_machine: Int, field_id: Int) = {}
+
+  override def recordReceiveRemoteWrite(self: AnyRef, from_machine: Int, to_machine: Int, field_id: Int) = {}
 }

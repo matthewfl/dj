@@ -27,6 +27,16 @@ public interface JITInterface {
 
     void recordRemoteRPC(Object self, int from_machine, int to_machine, StackRepresentation stack);
 
+
+    // these are recorded on the machine that currently owns the object self,
+    // this will some policies easier to implement such as always move an object to the
+    // machine that performed the last read
+    void recordReceiveRemoteRead(Object self, int from_machine, int to_machine, int field_id);
+
+    void recordReceiveRemoteWrite(Object self, int from_machine, int to_machine, int field_id);
+
+
+
     // called during Thread.start from the machine that is starting the thread
     // self is the runnable object that was passed to the thread to start
     // a trivial implementation would just return from_machine

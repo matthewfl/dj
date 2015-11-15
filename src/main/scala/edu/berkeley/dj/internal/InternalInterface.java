@@ -385,10 +385,10 @@ final class InternalInterfaceWrap extends InternalInterface {
                 return null;
             case 5:
                 // reading of fields
-                return DistributedObjectHelper.readField((int)args[0], (ByteBuffer)args[1]);
+                return DistributedObjectHelper.readField((int)args[0], (int)args[1], (ByteBuffer)args[2]);
             case 6:
                 // writing of fields
-                DistributedObjectHelper.writeField((int) args[0], (ByteBuffer) args[1]);
+                DistributedObjectHelper.writeField((int) args[0], (int)args[1], (ByteBuffer) args[2]);
                 return null;
             case 7:
                 DistributedObjectHelper.waitingFrom((int)args[0], (ByteBuffer)args[1]);
