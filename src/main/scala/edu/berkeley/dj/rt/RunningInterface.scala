@@ -4,7 +4,6 @@ import java.nio._
 import java.util.concurrent.TimeoutException
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -58,9 +57,12 @@ class RunningInterface (private val config: Config, private val manager: Manager
   def startThread(obj: Object) = {
     // TODO: change this to use a threadpool that is specific to this application
     // atm this is using the implict threadpool from scala
-    Future {
+    manager.threadPool.submit {
       callIn(1, obj)
     }
+    /*Future {
+      callIn(1, obj)
+    }*/
     /*
     val thread = new Thread() {
       override def run() = {
@@ -223,6 +225,15 @@ class RunningInterface (private val config: Config, private val manager: Manager
   def redirectMethod(req: ByteBuffer, machine: Int) = {
     // TODO: need to make sure that the timer doesn't expire on these rpc calls
     block(manager.networkInterface.sendWrpl(machine, 31, req))
+  }
+
+  def sendMoveObject(req: ByteBuffer, machine: Int) = {
+    // send msg to owning machine to move object
+    manager.networkInterface.send(machine, 111, req)
+  }
+
+  def sendSerializedObject(req: ByteBuffer, machine: Int): Unit = {
+    manager.networkInterface.send(machine, 112, req)
   }
 
 

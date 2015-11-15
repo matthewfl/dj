@@ -9,3 +9,9 @@ A modified version of [Javassist](http://www.csg.ci.i.u-tokyo.ac.jp/~chiba/javas
 
 Some core classes from the jdkv8 have been copied and modified into the edu.berkeley.dj.internal.coreclazz folder, these are licensed under gplv2.
 
+
+
+## Examples
+
+In the src/examples/simpleMR directory, there is an example of how one could build a map reduce framework on top
+of the DJ Primitives.

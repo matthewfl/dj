@@ -87,6 +87,9 @@ public class RPCHelpers {
 
         ByteBuffer buf = fromArrays(sendreq);
 
+        // send notification to JIT
+        JITWrapper.recordRemoteRPC(self, name, target_machine);
+
         ByteBuffer ret = InternalInterface.getInternalInterface().redirectMethod(buf, target_machine);
 
         return ret;

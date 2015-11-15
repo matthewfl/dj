@@ -74,6 +74,12 @@ public class InternalInterface {
         System.out.println("Internal interface debug: "+s);
     }
 
+    public static void debug(int i) {
+        debug("called into debug method with: "+i);
+        int j  = 1 + 1;
+        //(new Throwable()).printStackTrace();
+    }
+
     public boolean lock(String name) {
         throw new InterfaceException();
     }
@@ -139,6 +145,10 @@ public class InternalInterface {
 
     public ByteBuffer redirectMethod(ByteBuffer req, int machine) { throw new InterfaceException(); }
 
+    public void sendMoveObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
+
+    public void sendSerializedObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -153,7 +163,7 @@ public class InternalInterface {
 
 }
 
-class InternalInterfaceWrap extends  InternalInterface {
+final class InternalInterfaceWrap extends InternalInterface {
     // because we are not fully loading the classes from the runtime in
     // it appears that we can't directly call the methods etc,
     // so keep it as an object and use invoke instead
@@ -330,6 +340,19 @@ class InternalInterfaceWrap extends  InternalInterface {
         return (ByteBuffer)invoke("redirectMethod", new Class[]{ByteBuffer.class,int.class}, req, machine);
     }
 
+    @Override
+    public void sendMoveObject(ByteBuffer req, int machine) {
+        // send a request to move some object
+        invoke("sendMoveObject", new Class[]{ByteBuffer.class, int.class}, req, machine);
+    }
+
+    @Override
+    public void sendSerializedObject(ByteBuffer req, int machine) {
+        // send the serialized object information to another machine
+        // either for moving or caching an object
+        invoke("sendSerializedObject", new Class[]{ByteBuffer.class, int.class}, req, machine);
+    }
+
 
 
 
@@ -349,6 +372,7 @@ class InternalInterfaceWrap extends  InternalInterface {
                 return null;
             case 2:
                 // callback for the existence of a new client
+                JITWrapper.registerNewClient((int)args[0]);
                 return null;
             case 3:
                 // callin to run a task on this machine as sent by another machine
@@ -361,10 +385,10 @@ class InternalInterfaceWrap extends  InternalInterface {
                 return null;
             case 5:
                 // reading of fields
-                return DistributedObjectHelper.readField((int)args[0], (ByteBuffer)args[1]);
+                return DistributedObjectHelper.readField((int)args[0], (int)args[1], (ByteBuffer)args[2]);
             case 6:
                 // writing of fields
-                DistributedObjectHelper.writeField((int) args[0], (ByteBuffer) args[1]);
+                DistributedObjectHelper.writeField((int) args[0], (int)args[1], (ByteBuffer) args[2]);
                 return null;
             case 7:
                 DistributedObjectHelper.waitingFrom((int)args[0], (ByteBuffer)args[1]);
@@ -384,6 +408,12 @@ class InternalInterfaceWrap extends  InternalInterface {
                 return null;
             case 13:
                 return RPCHelpers.recvRemoteCall((ByteBuffer)args[0]);
+            case 14:
+                DistributedObjectHelper.recvMoveReq((ByteBuffer)args[0]);
+                return null;
+            case 15:
+                DistributedObjectHelper.recvMovedObject((ByteBuffer)args[0]);
+                return null;
         }
         return null;
     }

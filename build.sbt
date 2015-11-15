@@ -14,6 +14,8 @@ javacOptions += "-g"
 
 scalacOptions += "-target:jvm-1.8"
 
+scalacOptions += "-g:vars"
+
 //libraryDependencies += "org.javassist" % "javassist" % "3.19.0-GA"
 // need to add the jdk jar or include it to build the hotswapper, not sure if will want that
 

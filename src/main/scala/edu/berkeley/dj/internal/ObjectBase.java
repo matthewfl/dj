@@ -1,6 +1,6 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
 
 /**
  * Created by matthewfl
@@ -9,10 +9,10 @@ import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
  * it will have to override methods such as lock or wait to make them work in a distribuited fashion
  */
 @RewriteClassRef(
-        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object00",
+        oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ",
         newName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object"
 )
-public class ObjectBase implements Object00 {
+public class ObjectBase implements Object00DJ {
 
     public int __dj_class_mode = 0;
 
@@ -57,13 +57,13 @@ public class ObjectBase implements Object00 {
         // objects then it will come out to be the same proxied object
         // on a given machine
         try {
-            return this.equals((Object00)obj);
+            return this.equals((Object00DJ)obj);
         } catch (ClassCastException e) {
             return false;
         }
     }
 
-    public boolean equals(Object00 obj) {
+    public boolean equals(Object00DJ obj) {
         return this == obj;
     }
 
@@ -174,7 +174,7 @@ public class ObjectBase implements Object00 {
     }*/
 
     public void __dj_serialize_obj(SerializeManager man) {
-
+        man.put_object_head(DistributedObjectHelper.getDistributedId(this));
     }
 
     public void __dj_deserialize_obj(SerializeManager man) {

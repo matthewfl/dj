@@ -1,5 +1,7 @@
 package edu.berkeley.dj.rt.network
 
+import edu.berkeley.dj.internal.NetworkForwardRequest
+
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Promise, Future}
@@ -20,7 +22,12 @@ class DummyComm(recever: NetworkRecever,
 
   override def send(to: Int, action: Int, msg: Array[Byte]): Unit = {
     DummyHost.comms.get((appId, to)) match {
-      case Some(h) => Future { h.recv(selfid, action, msg) }
+      case Some(h) => Future {
+        try { h.recv(selfid, action, msg) }
+        catch { case e: NetworkForwardRequest => {
+          send(e.to, action, msg)
+        }}
+      }
       case None => throw new RuntimeException("host not found: "+to)
     }
   }
@@ -32,7 +39,24 @@ class DummyComm(recever: NetworkRecever,
         // doing it this way disconnects the calls between these two operations
         // so they can happen concurrently
         Future {
-          h.recvWrpl(selfid, action, msg).onComplete(ret.complete)
+          try {
+            val f = h.recvWrpl(selfid, action, msg)
+            f.onSuccess({
+              case e => ret.success(e)
+            })
+            f.onFailure({
+              // not sure if want to support passing back the redirect through the future?
+              case e: NetworkForwardRequest => {
+                ???
+                //sendWrpl(e.to, action, msg).onComplete(ret.complete)
+              }
+              case e: Throwable => { ret.failure(e) }
+            })
+            //f.onComplete(ret.complete)
+
+          } catch { case e: NetworkForwardRequest => {
+            sendWrpl(e.to, action, msg).onComplete(ret.complete)
+          }}
         }
         ret.future
       }

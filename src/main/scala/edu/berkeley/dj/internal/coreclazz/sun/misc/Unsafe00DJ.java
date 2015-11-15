@@ -56,7 +56,7 @@ import java.security.ProtectionDomain;
  */
 
 @RewriteAllBut(nonModClasses = {"sun/misc/Unsafe"})
-public final class Unsafe00 implements BridgeGetNative {
+public final class Unsafe00DJ implements BridgeGetNative {
 
     /*private static native void registerNatives();
     static {
@@ -87,11 +87,11 @@ public final class Unsafe00 implements BridgeGetNative {
     private Unsafe2() {}
 */
 
-    private Unsafe00() {
+    private Unsafe00DJ() {
         //trueUnsafe = InternalInterface.getInternalInterface().getUnsafe();
     }
 
-    private static final Unsafe00 theUnsafe = new Unsafe00();
+    private static final Unsafe00DJ theUnsafe = new Unsafe00DJ();
 
     /**
      * Provides the caller with the capability of performing unsafe
@@ -124,7 +124,7 @@ public final class Unsafe00 implements BridgeGetNative {
      *             access to the system properties.
      */
     @CallerSensitive
-    public static Unsafe00 getUnsafe() {
+    public static Unsafe00DJ getUnsafe() {
         // TODO: should check that this matches to some system class
         /*Class<?> caller = Reflection.getCallerClass();
         if (!VM.isSystemDomainLoader(caller.getClassLoader()))

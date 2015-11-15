@@ -3,7 +3,8 @@ package edu.berkeley.dj.rt
 import java.nio.ByteBuffer
 import java.util.UUID
 
-import edu.berkeley.dj.rt.network.{NetworkCommunication, NetworkRecever}
+import edu.berkeley.dj.internal.NetworkForwardRequest
+import edu.berkeley.dj.rt.network.{RedirectRequestToAlternateMachine, NetworkCommunication, NetworkRecever}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,7 +30,8 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       }
       case 103 => {
         // run a command on this machine as send by a remote machine
-        Future {
+        //Future
+        man.threadPool.submit {
           man.runningInterface.callIn(3, from, msg)
         }
       }
@@ -70,8 +72,19 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         // reload a class
         man.loader.reloadClass(new String(msg))
       }
+      case 111 => {
+        // request to move an object
+        man.runningInterface.callIn(14, ByteBuffer.wrap(msg))
+      }
+      case 112 => {
+        // recv a serialized object either for caching or moving
+        man.runningInterface.callIn(15, ByteBuffer.wrap(msg))
+      }
     }
   } catch {
+    case e: NetworkForwardRequest => {
+      throw new RedirectRequestToAlternateMachine(e.to)
+    }
     case e: Throwable => {
       System.err.println(s"There was an error with command: $action\n$e")
       e.printStackTrace(System.err)
@@ -83,7 +96,7 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         case 1 => {
           // load a class from the parent class loader
           if (man.isMaster) {
-              val cname = new String(msg)
+            val cname = new String(msg)
             Future.successful(man.asInstanceOf[MasterManager].loader.getClassBytes(cname))
           } else {
             Future.failed(new RuntimeException("This is not the master machine"))
@@ -115,10 +128,10 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
           // set a byte array for the distributed map
           val buff = ByteBuffer.wrap(msg)
           val len = buff.getInt()
-          ??? // there was a bug here, idk if anything is using this
+          //??? // there was a bug here, idk if anything is using this
           val name = new String(msg, 4, len)
           val arr = new Array[Byte](msg.length - len - 4)
-          Array.copy(msg, 4, arr, 0, arr.length)
+          Array.copy(msg, 4 + len, arr, 0, arr.length)
           man.runningInterface.setDistributed(name, arr)
           Array[Byte]()
         }
@@ -149,10 +162,10 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         }
         case 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 => {
           // reading something that is local on this machine
-          man.runningInterface.callIn(5, action, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
+          man.runningInterface.callIn(5, action, from, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
         }
         case 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 => {
-          man.runningInterface.callIn(6, action, ByteBuffer.wrap(msg))
+          man.runningInterface.callIn(6, action, from, ByteBuffer.wrap(msg))
           Array[Byte]()
         }
         case 30 => {
@@ -166,6 +179,9 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         }
       }
     } catch {
+      case e: NetworkForwardRequest => {
+        throw new RedirectRequestToAlternateMachine(e.to)
+      }
       case e: Throwable => {
         System.err.println(s"There was an error with command $action\n$e")
         e.printStackTrace(System.err)

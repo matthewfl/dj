@@ -6,7 +6,8 @@ package edu.berkeley.dj.rt
 case class Config (val uuid: String="DJ"+java.util.UUID.randomUUID.toString.replace("-",""),
                    val debug_clazz_bytecode: String = null,
                    val cluster_code: String = "dj-default",
-                   val cluster_conn_mode: String = "dummy") {
+                   val cluster_conn_mode: String = "dummy",
+                   val distributed_jit: String = "edu.berkeley.dj.jit.SimpleJIT") {
 
   def fieldPrefix = "__dj_" //+ uuid
 

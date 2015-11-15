@@ -1,37 +1,65 @@
 package edu.berkeley.dj.internal;
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/lang/Thread", "java/lang/ThreadLocal"})
+@RewriteAllBut(nonModClasses = {"java/lang/Thread", "java/lang/ThreadLocal", "java/lang/ref/WeakReference"})
 public class ThreadHelpers {
 
     private ThreadHelpers() {}
 
-    public static ThreadLocal<Thread00> currentThread = new ThreadLocal<>();
+    public static ThreadLocal<Thread00DJ> currentThread = new ThreadLocal<>();
 
-    public static DistributedVariable<HashMap<Long, Thread00>> allThreads = new DistributedVariable<>("DJ_allThreads", new HashMap<>());
+    // the object that was passed to new ThreadCallback
+    public static ThreadLocal<WeakReference<Object>> currentThreadCallback = new ThreadLocal<>();
 
-    static public void setCurrentThread(Thread00 t) {
+    public static DistributedVariable<HashMap<Long, Thread00DJ>> allThreads = new DistributedVariable<>("DJ_allThreads", new HashMap<>());
+
+    static public void setCurrentThread(Thread00DJ t) {
         currentThread.set(t);
     }
 
-    static public Thread00 getCurrentThread() {
+    static public Thread00DJ getCurrentThread() {
         return currentThread.get();
     }
 
+    // start a thread on the current machine
     static public void runAsync(Runnable r) {
         InternalInterface.getInternalInterface().startThread(r);
     }
 
+    // place this thread somewhere on the cluster
+    // since this is a thread create this should happen immediately
+    static public void runAsyncCluster(Runnable r) {
+        int target_machine = JITWrapper.placeThread(r);
+        // if this is set to the local machine then this just calls runAsync
+        DistributedRunner.runOnRemote(target_machine, r);
+    }
+
+    // a task that can be run when ever the cluster scheduler wants
+    static public void runTaskCluster(Runnable r) {
+        JITWrapper.queueScheduledWork(r);
+    }
+
     static void newThreadCallback(Object r) {
         // The thread's run method is responsible for setting the current running thread
+        currentThreadCallback.set(new WeakReference<>(r));
         ((Runnable)r).run();
+        currentThreadCallback.set(null);
+    }
+
+    public static Object getThreadUID() {
+        return currentThreadCallback.get();
+    }
+
+    public static Object getThreadCallback() {
+        return currentThreadCallback.get();
     }
 
 
@@ -64,7 +92,7 @@ public class ThreadHelpers {
     }
 
     static public void exitThread() {
-        Thread00.currentThread().__dj_exit();
+        Thread00DJ.currentThread().__dj_exit();
     }
 
     static public void sleep(long u) throws InterruptedException {
@@ -73,7 +101,7 @@ public class ThreadHelpers {
 
     static public void registerWorkerThread() {
         // this is just some task that is running on this now, so we just want to register some worker task
-        currentThread.set(new Thread00(0L));
+        currentThread.set(new Thread00DJ(0L));
     }
 
     static public void unregisterWorkerThread() {

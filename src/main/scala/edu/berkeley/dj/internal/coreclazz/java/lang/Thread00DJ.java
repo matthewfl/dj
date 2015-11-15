@@ -1,7 +1,7 @@
 package edu.berkeley.dj.internal.coreclazz.java.lang;
 
 import edu.berkeley.dj.internal.*;
-import edu.berkeley.dj.internal.coreclazz.sun.misc.VM00;
+import edu.berkeley.dj.internal.coreclazz.sun.misc.VM00DJ;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -26,7 +26,7 @@ import java.util.concurrent.locks.LockSupport;
 
 @ReplaceSelfWithCls(name="edu.berkeley.dj.internal.coreclazz.sun.nio.ch.Interruptible")
 interface DJInterruptible {
-    void interrupt(Thread00 t);
+    void interrupt(Thread00DJ t);
 }
 
 /*
@@ -152,7 +152,7 @@ interface DJInterruptible {
  */
 @RewriteAllBut(nonModClasses = {})
 @RewriteAddAccessorMethods
-public class Thread00 implements Runnable {
+public class Thread00DJ implements Runnable {
     /* Make sure registerNatives is the first thing <clinit> does. */
     /*private static native void registerNatives();
     static {
@@ -161,13 +161,13 @@ public class Thread00 implements Runnable {
 
 
     // create the main base thread
-    public Thread00(long i) {
+    public Thread00DJ(long i) {
         if(i == 1) {
             name = "DJ main Thread".toCharArray();
             priority = NORM_PRIORITY;
-            group = new ThreadGroup00();  // root thread group
+            group = new ThreadGroup00DJ();  // root thread group
             daemon = false;
-            contextClassLoader = Thread00.class.getClassLoader();
+            contextClassLoader = Thread00DJ.class.getClassLoader();
             inheritedAccessControlContext = null;//AccessController00.getContext();
             target = null;
             stackSize = 1000; // TODO: manage stack size
@@ -182,7 +182,7 @@ public class Thread00 implements Runnable {
             // TODO: get the thread group for the worker threads
             group = null;
 
-            contextClassLoader = Thread00.class.getClassLoader();
+            contextClassLoader = Thread00DJ.class.getClassLoader();
             inheritedAccessControlContext = null;
             target = null;
             stackSize = 1000;
@@ -195,7 +195,7 @@ public class Thread00 implements Runnable {
         if(InternalInterface.isMaster()) {
             // we only want to have one instance of the main thread so we use isMaster
             // to only run this code once
-            Thread00 mainThread = new Thread00(1L);
+            Thread00DJ mainThread = new Thread00DJ(1L);
             ThreadHelpers.setCurrentThread(mainThread);
             ThreadHelpers.allThreads.get().put(mainThread.getId(), mainThread);
         }
@@ -203,7 +203,7 @@ public class Thread00 implements Runnable {
 
     private volatile char  name[];
     private int            priority;
-    private Thread00       threadQ;
+    private Thread00DJ threadQ;
     private long           eetop;
 
     /* Whether or not to single_step this thread. */
@@ -219,7 +219,7 @@ public class Thread00 implements Runnable {
     private Runnable target;
 
     /* The group of this thread */
-    private ThreadGroup00 group;
+    private ThreadGroup00DJ group;
 
     /* The context ClassLoader for this thread */
     private ClassLoader contextClassLoader;
@@ -235,13 +235,13 @@ public class Thread00 implements Runnable {
 
     /* ThreadLocal values pertaining to this thread. This map is maintained
      * by the ThreadLocal class. */
-    ThreadLocal00.ThreadLocalMap threadLocals = null;
+    ThreadLocal00DJ.ThreadLocalMap threadLocals = null;
 
     /*
      * InheritableThreadLocal values pertaining to this thread. This map is
      * maintained by the InheritableThreadLocal class.
      */
-    ThreadLocal00.ThreadLocalMap inheritableThreadLocals = null;
+    ThreadLocal00DJ.ThreadLocalMap inheritableThreadLocals = null;
 
     /*
      * The requested stack size for this thread, or 0 if the creator did
@@ -319,7 +319,7 @@ public class Thread00 implements Runnable {
      *
      * @return  the currently executing thread.
      */
-    public static Thread00 currentThread() {
+    public static Thread00DJ currentThread() {
         return ThreadHelpers.getCurrentThread();
         //long id = InternalInterface.getInternalInterface().threadId();
         //throw new NotImplementedException();
@@ -349,7 +349,7 @@ public class Thread00 implements Runnable {
 
     /**
      * Causes the currently executing thread to sleep (temporarily cease
-     * execution) for the specified number of milliseconds, subject to
+     * execution) for the specified number of milliseconds, subject tostar
      * the precision and accuracy of system timers and schedulers. The thread
      * does not lose ownership of any monitors.
      *
@@ -412,9 +412,9 @@ public class Thread00 implements Runnable {
 
     /**
      * Initializes a Thread with the current AccessControlContext.
-     * @see #init(ThreadGroup00,Runnable,String,long,AccessControlContext)
+     * @see #init(ThreadGroup00DJ,Runnable,String,long,AccessControlContext)
      */
-    private void init(ThreadGroup00 g, Runnable target, String name,
+    private void init(ThreadGroup00DJ g, Runnable target, String name,
                       long stackSize) {
         init(g, target, name, stackSize, null);
     }
@@ -430,7 +430,7 @@ public class Thread00 implements Runnable {
      * @param acc the AccessControlContext to inherit, or
      *            AccessController.getContext() if null
      */
-    private void init(ThreadGroup00 g, Runnable target, String name,
+    private void init(ThreadGroup00DJ g, Runnable target, String name,
                       long stackSize, AccessControlContext acc) {
         if (name == null) {
             throw new NullPointerException("name cannot be null");
@@ -438,7 +438,7 @@ public class Thread00 implements Runnable {
 
         this.name = name.toCharArray();
 
-        Thread00 parent = currentThread();
+        Thread00DJ parent = currentThread();
         SecurityManager security = System.getSecurityManager();
         if (g == null) {
             /* Determine if it's an applet or not */
@@ -447,7 +447,7 @@ public class Thread00 implements Runnable {
                what to do. */
             if (security != null) {
                 // TODO: security manager
-                g = (ThreadGroup00)(Object)security.getThreadGroup();
+                g = (ThreadGroup00DJ)(Object)security.getThreadGroup();
             }
 
             /* If the security doesn't have a strong opinion of the matter
@@ -490,7 +490,7 @@ public class Thread00 implements Runnable {
         setPriority(priority);
         if (parent.inheritableThreadLocals != null)
             this.inheritableThreadLocals =
-                    ThreadLocal00.createInheritedMap(parent.inheritableThreadLocals);
+                    ThreadLocal00DJ.createInheritedMap(parent.inheritableThreadLocals);
         /* Stash the specified stack size in case the VM cares */
         this.stackSize = stackSize;
 
@@ -512,18 +512,18 @@ public class Thread00 implements Runnable {
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00DJ,Runnable,String) Thread}
      * {@code (null, null, gname)}, where {@code gname} is a newly generated
      * name. Automatically generated names are of the form
      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
      */
-    public Thread00() {
+    public Thread00DJ() {
         init(null, null, "Thread-" + nextThreadNum(), 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00DJ,Runnable,String) Thread}
      * {@code (null, target, gname)}, where {@code gname} is a newly generated
      * name. Automatically generated names are of the form
      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
@@ -533,7 +533,7 @@ public class Thread00 implements Runnable {
      *         is started. If {@code null}, this classes {@code run} method does
      *         nothing.
      */
-    public Thread00(Runnable target) {
+    public Thread00DJ(Runnable target) {
         init(null, target, "Thread-" + nextThreadNum(), 0);
     }
 
@@ -541,13 +541,13 @@ public class Thread00 implements Runnable {
      * Creates a new Thread that inherits the given AccessControlContext.
      * This is not a public constructor.
      */
-    Thread00(Runnable target, AccessControlContext acc) {
+    Thread00DJ(Runnable target, AccessControlContext acc) {
         init(null, target, "Thread-" + nextThreadNum(), 0, acc);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00DJ,Runnable,String) Thread}
      * {@code (group, target, gname)} ,where {@code gname} is a newly generated
      * name. Automatically generated names are of the form
      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
@@ -568,25 +568,25 @@ public class Thread00 implements Runnable {
      *          if the current thread cannot create a thread in the specified
      *          thread group
      */
-    public Thread00(ThreadGroup00 group, Runnable target) {
+    public Thread00DJ(ThreadGroup00DJ group, Runnable target) {
         init(group, target, "Thread-" + nextThreadNum(), 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00DJ,Runnable,String) Thread}
      * {@code (null, null, name)}.
      *
      * @param   name
      *          the name of the new thread
      */
-    public Thread00(String name) {
+    public Thread00DJ(String name) {
         init(null, null, name, 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00DJ,Runnable,String) Thread}
      * {@code (group, null, name)}.
      *
      * @param  group
@@ -604,13 +604,13 @@ public class Thread00 implements Runnable {
      *          if the current thread cannot create a thread in the specified
      *          thread group
      */
-    public Thread00(ThreadGroup00 group, String name) {
+    public Thread00DJ(ThreadGroup00DJ group, String name) {
         init(group, null, name, 0);
     }
 
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
-     * effect as {@linkplain #Thread(ThreadGroup00,Runnable,String) Thread}
+     * effect as {@linkplain #Thread(ThreadGroup00DJ,Runnable,String) Thread}
      * {@code (null, target, name)}.
      *
      * @param  target
@@ -620,7 +620,7 @@ public class Thread00 implements Runnable {
      * @param  name
      *         the name of the new thread
      */
-    public Thread00(Runnable target, String name) {
+    public Thread00DJ(Runnable target, String name) {
         init(null, target, name, 0);
     }
 
@@ -630,7 +630,7 @@ public class Thread00 implements Runnable {
      * and belongs to the thread group referred to by {@code group}.
      *
      * <p>If there is a security manager, its
-     * {@link SecurityManager#checkAccess(ThreadGroup00) checkAccess}
+     * {@link SecurityManager#checkAccess(ThreadGroup00DJ) checkAccess}
      * method is invoked with the ThreadGroup as its argument.
      *
      * <p>In addition, its {@code checkPermission} method is invoked with
@@ -668,7 +668,7 @@ public class Thread00 implements Runnable {
      *          if the current thread cannot create a thread in the specified
      *          thread group or cannot override the context class loader methods.
      */
-    public Thread00(ThreadGroup00 group, Runnable target, String name) {
+    public Thread00DJ(ThreadGroup00DJ group, Runnable target, String name) {
         init(group, target, name, 0);
     }
 
@@ -679,7 +679,7 @@ public class Thread00 implements Runnable {
      * the specified <i>stack size</i>.
      *
      * <p>This constructor is identical to {@link
-     * #Thread(ThreadGroup00,Runnable,String)} with the exception of the fact
+     * #Thread(ThreadGroup00DJ,Runnable,String)} with the exception of the fact
      * that it allows the thread stack size to be specified.  The stack size
      * is the approximate number of bytes of address space that the virtual
      * machine is to allocate for this thread's stack.  <b>The effect of the
@@ -746,8 +746,8 @@ public class Thread00 implements Runnable {
      *
      * @since 1.4
      */
-    public Thread00(ThreadGroup00 group, Runnable target, String name,
-                  long stackSize) {
+    public Thread00DJ(ThreadGroup00DJ group, Runnable target, String name,
+                      long stackSize) {
         init(group, target, name, stackSize);
     }
 
@@ -803,16 +803,15 @@ public class Thread00 implements Runnable {
 
     private void start0() {
         currentAlive = true;
-        ThreadHelpers.runAsync(new Runnable() {
+        ThreadHelpers.runAsyncCluster(new Runnable() {
             @Override
             public void run() {
-                if (!Thread00.this.isDaemon())
+                if (!Thread00DJ.this.isDaemon())
                     ThreadHelpers.incNonDaemon();
-                ThreadHelpers.setCurrentThread(Thread00.this);
-                Thread00.this.run();
+                ThreadHelpers.setCurrentThread(Thread00DJ.this);
+                Thread00DJ.this.run();
             }
         });
-        //throw new NotImplementedException();
     }
 
     /**
@@ -825,7 +824,7 @@ public class Thread00 implements Runnable {
      *
      * @see     #start()
      * @see     #stop()
-     * @see     #Thread(ThreadGroup00, Runnable, String)
+     * @see     #Thread(ThreadGroup00DJ, Runnable, String)
      */
     @Override
     public void run() {
@@ -903,7 +902,7 @@ public class Thread00 implements Runnable {
      * @see        #run()
      * @see        #start()
      * @see        ThreadDeath
-     * @see        ThreadGroup00#uncaughtException(Thread,Throwable)
+     * @see        ThreadGroup00DJ#uncaughtException(Thread,Throwable)
      * @see        SecurityManager#checkAccess(Thread)
      * @see        SecurityManager#checkPermission
      * @deprecated This method is inherently unsafe.  Stopping a thread with
@@ -930,7 +929,7 @@ public class Thread00 implements Runnable {
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             checkAccess();
-            if (this != Thread00.currentThread()) {
+            if (this != Thread00DJ.currentThread()) {
                 security.checkPermission(SecurityConstants.STOP_THREAD_PERMISSION);
             }
         }
@@ -1003,7 +1002,7 @@ public class Thread00 implements Runnable {
      * @spec JSR-51
      */
     public void interrupt() {
-        if (this != Thread00.currentThread())
+        if (this != Thread00DJ.currentThread())
             checkAccess();
 
         synchronized (blockerLock) {
@@ -1176,10 +1175,10 @@ public class Thread00 implements Runnable {
      * @see        #getThreadGroup()
      * @see        #MAX_PRIORITY
      * @see        #MIN_PRIORITY
-     * @see        ThreadGroup00#getMaxPriority()
+     * @see        ThreadGroup00DJ#getMaxPriority()
      */
     public final void setPriority(int newPriority) {
-        ThreadGroup00 g;
+        ThreadGroup00DJ g;
         checkAccess();
         if (newPriority > MAX_PRIORITY || newPriority < MIN_PRIORITY) {
             throw new IllegalArgumentException();
@@ -1242,7 +1241,7 @@ public class Thread00 implements Runnable {
      *
      * @return  this thread's thread group.
      */
-    public final ThreadGroup00 getThreadGroup() {
+    public final ThreadGroup00DJ getThreadGroup() {
         return group;
     }
 
@@ -1292,7 +1291,7 @@ public class Thread00 implements Runnable {
      *          if {@link java.lang.ThreadGroup#checkAccess} determines that
      *          the current thread cannot access its thread group
      */
-    public static int enumerate(Thread00 tarray[]) {
+    public static int enumerate(Thread00DJ tarray[]) {
         return currentThread().getThreadGroup().enumerate(tarray);
     }
 
@@ -1499,7 +1498,7 @@ public class Thread00 implements Runnable {
      * @return  a string representation of this thread.
      */
     public String toString() {
-        ThreadGroup00 group = getThreadGroup();
+        ThreadGroup00DJ group = getThreadGroup();
         if (group != null) {
             return "Thread[" + getName() + "," + getPriority() + "," +
                     group.getName() + "]";
@@ -1638,7 +1637,7 @@ public class Thread00 implements Runnable {
      * @since 1.5
      */
     public StackTraceElement[] getStackTrace() {
-        if (this != Thread00.currentThread()) {
+        if (this != Thread00DJ.currentThread()) {
             // check for getStackTrace permission
             SecurityManager security = System.getSecurityManager();
             if (security != null) {
@@ -1650,7 +1649,7 @@ public class Thread00 implements Runnable {
             if (!isAlive()) {
                 return EMPTY_STACK_TRACE;
             }
-            StackTraceElement[][] stackTraceArray = dumpThreads(new Thread00[] {this});
+            StackTraceElement[][] stackTraceArray = dumpThreads(new Thread00DJ[] {this});
             StackTraceElement[] stackTrace = stackTraceArray[0];
             // a thread that was alive during the previous isAlive call may have
             // since terminated, therefore not having a stacktrace.
@@ -1699,7 +1698,7 @@ public class Thread00 implements Runnable {
      *
      * @since 1.5
      */
-    public static Map<Thread00, StackTraceElement[]> getAllStackTraces() {
+    public static Map<Thread00DJ, StackTraceElement[]> getAllStackTraces() {
         // check for getStackTrace permission
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
@@ -1710,9 +1709,9 @@ public class Thread00 implements Runnable {
         }
 
         // Get a snapshot of the list of all threads
-        Thread00[] threads = getThreads();
+        Thread00DJ[] threads = getThreads();
         StackTraceElement[][] traces = dumpThreads(threads);
-        Map<Thread00, StackTraceElement[]> m = new HashMap<>(threads.length);
+        Map<Thread00DJ, StackTraceElement[]> m = new HashMap<>(threads.length);
         for (int i = 0; i < threads.length; i++) {
             StackTraceElement[] stackTrace = traces[i];
             if (stackTrace != null) {
@@ -1793,10 +1792,10 @@ public class Thread00 implements Runnable {
         return result.booleanValue();
     }
 
-    private static StackTraceElement[][] dumpThreads(Thread00[] threads) {
+    private static StackTraceElement[][] dumpThreads(Thread00DJ[] threads) {
         throw new NotImplementedException();
     }
-    private static Thread00[] getThreads() {
+    private static Thread00DJ[] getThreads() {
         // TODO: get a list of all the current threads
         throw new NotImplementedException();
     }
@@ -1923,7 +1922,7 @@ public class Thread00 implements Runnable {
      */
     public State getState() {
         // get current thread state
-        return VM00.toThreadState(threadStatus);
+        return VM00DJ.toThreadState(threadStatus);
     }
 
     // Added in JSR-166
@@ -1947,7 +1946,7 @@ public class Thread00 implements Runnable {
      *
      * @see #setDefaultUncaughtExceptionHandler
      * @see #setUncaughtExceptionHandler
-     * @see ThreadGroup00#uncaughtException
+     * @see ThreadGroup00DJ#uncaughtException
      * @since 1.5
      */
     @FunctionalInterface
@@ -1960,7 +1959,7 @@ public class Thread00 implements Runnable {
          * @param t the thread
          * @param e the exception
          */
-        void uncaughtException(Thread00 t, Throwable e);
+        void uncaughtException(Thread00DJ t, Throwable e);
     }
 
     // null unless explicitly set
@@ -1975,7 +1974,7 @@ public class Thread00 implements Runnable {
      * for that thread.
      *
      * <p>Uncaught exception handling is controlled first by the thread, then
-     * by the thread's {@link ThreadGroup00} object and finally by the default
+     * by the thread's {@link ThreadGroup00DJ} object and finally by the default
      * uncaught exception handler. If the thread does not have an explicit
      * uncaught exception handler set, and the thread's thread group
      * (including parent thread groups)  does not specialize its
@@ -2000,7 +1999,7 @@ public class Thread00 implements Runnable {
      *
      * @see #setUncaughtExceptionHandler
      * @see #getUncaughtExceptionHandler
-     * @see ThreadGroup00#uncaughtException
+     * @see ThreadGroup00DJ#uncaughtException
      * @since 1.5
      */
     public static void setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
@@ -2052,7 +2051,7 @@ public class Thread00 implements Runnable {
      * @throws  SecurityException  if the current thread is not allowed to
      *          modify this thread.
      * @see #setDefaultUncaughtExceptionHandler
-     * @see ThreadGroup00#uncaughtException
+     * @see ThreadGroup00DJ#uncaughtException
      * @since 1.5
      */
     public void setUncaughtExceptionHandler(UncaughtExceptionHandler eh) {

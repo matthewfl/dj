@@ -1,8 +1,8 @@
 package edu.berkeley.dj.internal;
 
 
-import edu.berkeley.dj.internal.coreclazz.java.lang.Object00;
-import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.nio.ByteBuffer;
@@ -24,24 +24,30 @@ final public class ClassManager {
 
     int owning_machine = -1; // signify self
 
+    public int getOwner() { return owning_machine; }
+
     int notifications_to_send = 0;
 
-    Thread00 monitor_thread = null;
+    Thread00DJ monitor_thread = null;
 
     // TODO: if we move this thread elsewhere then we still need to have the count
     // so I guess will have to make the master machien keep the count of the number of times the monitor has been
     // aquired
     int monitor_lock_count = 0;
 
+    // machines that have cached copies of this object
+    // need to be updated on writes
+    int[] cached_copies = null;
+
     // will need a week pointer to the object base
     ObjectBase managedObject;
 
-    ClassManager(Object00 o) {
+    ClassManager(Object00DJ o) {
         managedObject = (ObjectBase)o;
         distributedObjectId = UUID.randomUUID();
     }
 
-    ClassManager(Object00 o, UUID id, int owner) {
+    ClassManager(Object00DJ o, UUID id, int owner) {
         managedObject = (ObjectBase)o;
         distributedObjectId = id;
         owning_machine = owner;
@@ -58,63 +64,63 @@ final public class ClassManager {
             b.put((byte)1);
         else
             b.put((byte)0);
-        requestWrite(b, 20);
+        requestWrite(b, 20, id);
     }
 
     public void writeField_C(int id, char v) {
         ByteBuffer b = requestRemote(id, 4);
         b.putChar(v);
-        requestWrite(b, 21);
+        requestWrite(b, 21, id);
     }
 
     public void writeField_B(int id, byte v) {
         ByteBuffer b = requestRemote(id, 1);
         b.put(v);
-        requestWrite(b, 22);
+        requestWrite(b, 22, id);
     }
 
     public void writeField_S(int id, short v) {
         ByteBuffer b = requestRemote(id, 2);
         b.putShort(v);
-        requestWrite(b, 23);
+        requestWrite(b, 23, id);
     }
 
     public void writeField_I(int id, int v) {
         ByteBuffer b = requestRemote(id, 4);
         b.putInt(v);
-        requestWrite(b, 24);
+        requestWrite(b, 24, id);
     }
 
     public void writeField_J(int id, long v) {
         ByteBuffer b = requestRemote(id, 8);
         b.putLong(v);
-        requestWrite(b, 25);
+        requestWrite(b, 25, id);
     }
 
     public void writeField_F(int id, float v) {
         ByteBuffer b = requestRemote(id, 4);
         b.putFloat(v);
-        requestWrite(b, 26);
+        requestWrite(b, 26, id);
     }
 
     public void writeField_D(int id, double v) {
         ByteBuffer b = requestRemote(id, 8);
         b.putDouble(v);
-        requestWrite(b, 27);
+        requestWrite(b, 27, id);
     }
 
     public void writeField_A(int id, Object v) {
-        if(v instanceof ObjectBase) {
-            ObjectBase ob = (ObjectBase) v;
-            byte[] did = DistributedObjectHelper.getDistributedId(ob).toArr();
+        //if(v instanceof ObjectBase) {
+        //  ObjectBase ob = (ObjectBase) v;
+            byte[] did = DistributedObjectHelper.getDistributedId(v).toArr();
             ByteBuffer b = requestRemote(id, did.length);
             b.put(did);
-            requestWrite(b, 28);
-        } else {
-            // TODO: have some sort of proxy object that we can then pass
-            // to wrap the object that we can't move
-            throw new NotImplementedException();
-        }
+            requestWrite(b, 28, id);
+//        } else {
+//            // TODO: have some sort of proxy object that we can then pass
+//            // to wrap the object that we can't move
+//            throw new NotImplementedException();
+//        }
     }
 
     public boolean readField_Z(int id) {
@@ -157,6 +163,7 @@ final public class ClassManager {
 
     private ByteBuffer requestRead(int fid, int op) {
         ByteBuffer bb = requestRemote(fid, 0);
+        JITWrapper.recordRemoteRead(managedObject, fid, owning_machine);
         return InternalInterface.getInternalInterface().readField(bb, op, owning_machine);
     }
 
@@ -168,7 +175,8 @@ final public class ClassManager {
         return bb;
     }
 
-    private void requestWrite(ByteBuffer bb, int op) {
+    private void requestWrite(ByteBuffer bb, int op, int fid) {
+        JITWrapper.recordRemoteWrite(managedObject, fid, owning_machine);
         InternalInterface.getInternalInterface().writeField(bb, op, owning_machine);
     }
 
@@ -353,7 +361,7 @@ final public class ClassManager {
                 //assert(notifications_to_send == 0);
                 managedObject.wait();
                 monitor_lock_count = cnt;
-                monitor_thread = Thread00.currentThread();
+                monitor_thread = Thread00DJ.currentThread();
             }
         } else {
             synchronized (managedObject) {
@@ -395,11 +403,11 @@ final public class ClassManager {
                 // first get the lock on the local object
                 while (true) {
                     synchronized (managedObject) {
-                        if(monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
+                        if(monitor_lock_count != 0 && monitor_thread != Thread00DJ.currentThread()) {
                             continue;
                         }
                         monitor_lock_count++;
-                        monitor_thread = Thread00.currentThread();
+                        monitor_thread = Thread00DJ.currentThread();
                         break;
                     }
                 }
@@ -408,11 +416,11 @@ final public class ClassManager {
                 // we are the master
                 while(true) {
                     synchronized (managedObject) {
-                        if (monitor_lock_count != 0 && monitor_thread != Thread00.currentThread()) {
+                        if (monitor_lock_count != 0 && monitor_thread != Thread00DJ.currentThread()) {
                             continue;
                         }
                         monitor_lock_count++;
-                        monitor_thread = Thread00.currentThread();
+                        monitor_thread = Thread00DJ.currentThread();
                         break;
                     }
                 }
@@ -425,7 +433,7 @@ final public class ClassManager {
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // communicate with the master
                 synchronized (managedObject) {
-                    assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
+                    assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
                     monitor_lock_count--;
                     if(monitor_lock_count == 0) {
                         monitor_thread = null;
@@ -435,7 +443,7 @@ final public class ClassManager {
                 }
             } else {
                 synchronized (managedObject) {
-                    assert(monitor_lock_count > 0 && monitor_thread == Thread00.currentThread());
+                    assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
                     monitor_lock_count--;
                     if(monitor_lock_count == 0) {
                         monitor_thread = null;
@@ -448,11 +456,81 @@ final public class ClassManager {
 
     private void checkHasLock() {
         synchronized (managedObject) {
-            if(monitor_lock_count == 0 || monitor_thread != Thread00.currentThread())
+            if(monitor_lock_count == 0 || monitor_thread != Thread00DJ.currentThread())
                 throw new IllegalMonitorStateException();
         }
     }
 
+
+    // serialization methods
+
+    int getSerializedSize() {
+        // return the number of bytes that will be required for this object
+        // TODO:
+        return 200;
+    }
+
+
+    void dj_serialize_obj(SerializeManager man, SerializeManager.SerializationAction act) {
+        // only call in the case that the object is getting moved
+
+        // notifications to send is local
+        // the monitor thread is also local
+
+        if(cached_copies == null) {
+            man.put_value_I(0);
+        } else {
+            man.put_value_I(cached_copies.length);
+            for(int i = 0; i < cached_copies.length; i++) {
+                man.put_value_I(cached_copies[i]);
+            }
+        }
+
+        int selfId = InternalInterface.getInternalInterface().getSelfId();
+
+        if(waitingMachines == null) {
+            man.put_value_I(0);
+        } else {
+            man.put_value_I(waitingMachines.length);
+            for(int i = 0; i < waitingMachines.length; i++) {
+                if(waitingMachines[i] == -1) {
+                    man.put_value_I(selfId);
+                } else {
+                    man.put_value_I(waitingMachines[i]);
+                }
+            }
+        }
+
+
+    }
+
+    void dj_deserialize_obj(SerializeManager man, SerializeManager.SerializationAction act) {
+        int cached_length = man.get_value_I();
+        if(cached_length == 0){
+            cached_copies = null;
+        } else {
+            cached_copies = new int[cached_length];
+            for(int i = 0; i < cached_length; i++) {
+                cached_copies[i] = man.get_value_I();
+            }
+        }
+
+        int selfId = InternalInterface.getInternalInterface().getSelfId();
+
+        int waiting_length = man.get_value_I();
+        if(waiting_length == 0) {
+            waitingMachines = null;
+        } else {
+            waitingMachines = new int[waiting_length];
+            for(int i = 0; i < waiting_length; i++) {
+                int val = man.get_value_I();
+                if(val == selfId)
+                    waitingMachines[i] = -1;
+                else
+                    waitingMachines[i] = val;
+            }
+        }
+    }
 
 
     // there should be some seralization methods added to the class

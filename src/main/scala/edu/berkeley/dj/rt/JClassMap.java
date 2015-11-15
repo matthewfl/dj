@@ -79,8 +79,15 @@ public class JClassMap extends ClassMap {
             "java/lang/reflect/", // let all the reflect stuff through??
 
             // function-ish interface to native methods for math calls
-            "java/lang/StrictMath"
+            "java/lang/StrictMath",
+
+            // the system explicitly looks for this decorator on the stack when reflecting to the caller
+            //"sun/reflect/CallerSensitive"
     };
+
+//    final static private String[] = new String[] {
+//        ""
+//    };
 
     @Override
     public Object get(Object jvn) {
@@ -95,12 +102,25 @@ public class JClassMap extends ClassMap {
             }
             if(name.startsWith(prefix)) {
                 // remove the two suffix from the internal class names
-                if (nonTname.endsWith("00")) {
-                    return nonTname.substring(0, nonTname.length() - 2) + suffix;
+                boolean shouldBeRewritten = false;
+                for(String n : rewritePrefixes) {
+                    if(name.startsWith(prefix + n)) {
+                        shouldBeRewritten = true;
+                        break;
+                    }
                 }
-                if(nonTname.contains("00$")) {
-                    return nonTname.replace("00$", "$") + suffix;
+                if(!shouldBeRewritten) {
+                    // we need to strip the prefix from this class since we aren't suppose to have it
+                    nonTname = nonTname.substring(prefix.length());
+                    name = name.substring(prefix.length());
                 }
+                if (nonTname.endsWith("00DJ")) {
+                    return nonTname.substring(0, nonTname.length() - 4) + suffix;
+                }
+                if(nonTname.contains("00DJ$")) {
+                    return nonTname.replace("00DJ$", "$") + suffix;
+                }
+                // check the Replace name with self annotation
                 String nn = rewriter.forceClassRename(nonTname);
                 if(nn != null)
                     return nn + suffix;

@@ -4,6 +4,7 @@ import java.io.Serializable
 
 import com.hazelcast.config.{MulticastConfig, TcpIpConfig, ListenerConfig, Config}
 import com.hazelcast.core._
+import edu.berkeley.dj.internal.NetworkForwardRequest
 import edu.berkeley.dj.rt.network.HazelcastComm.{sendReply, sendMessage}
 import edu.berkeley.dj.rt.network.HazelcastHost.{DJModConfig, startProgram}
 import edu.berkeley.dj.utils.Memo
@@ -74,20 +75,29 @@ class HazelcastComm(recever: NetworkRecever,
   lazy val getSelfId: Int = host.instance.getCluster.getLocalMember.getIntAttribute(app_id_key)
 
   private[network] def processMsg(from: Int, action: Int, msg: Array[Byte], replyId: Long) = {
-    if(replyId == 0) {
-      // there is no reply required
-      recv(from, action, msg)
-    } else {
+    try {
+      if(replyId == 0) {
+        // there is no reply required
+        recv(from, action, msg)
+      } else {
       // there is some expected reply
       val fut = recvWrpl(from, action, msg)
-      fut.onComplete(f => {
-        val send = f match {
-          case Success(m) => new sendReply(appId, getSelfId, replyId, msg=m, error=null)
-          case Failure(e) => new sendReply(appId, getSelfId, replyId, msg=null, error=e)
-        }
+        fut.onComplete(f => {
+          val send = f match {
+            case Success(m) => new sendReply(appId, getSelfId, replyId, msg = m, error = null)
+              // TODO: ? should failure check the exception if instance of forward request?
+            case Failure(e) => new sendReply(appId, getSelfId, replyId, msg = null, error = e)
+          }
+          val exec = host.instance.getExecutorService("send-msg")
+          exec.executeOnMember(send, app_id_map(from))
+        })
+      }
+    } catch {
+      case e: NetworkForwardRequest => {
+        val tom = app_id_map(e.to)
         val exec = host.instance.getExecutorService("send-msg")
-        exec.executeOnMember(send, app_id_map(from))
-      })
+        exec.executeOnMember(new sendMessage(appId, from, action, replyId, msg), tom)
+      }
     }
   }
 
@@ -128,7 +138,9 @@ class HazelcastHost(private val gcode: String,
 
   hconfig.getNetworkConfig.getJoin.setTcpIpConfig(new TcpIpConfig {
     // TODO: take this configuration from the command line
-    addMember("10.7.0.5,10.7.0.1,10.7.0.17")
+    // hack, just take this from the system get property
+    val seed = System.getProperty("dj.cluster_seed", "10.7.0.5,10.7.0.1,10.7.0.17")
+    addMember(seed)
     setEnabled(true)
   })
   hconfig.getNetworkConfig.getJoin.setMulticastConfig(new MulticastConfig {

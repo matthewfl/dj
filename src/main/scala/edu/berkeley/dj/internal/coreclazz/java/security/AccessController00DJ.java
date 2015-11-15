@@ -294,12 +294,12 @@ interface DJPrivilegedExceptionAction<T> {
         "java/security/PrivilegedAction",
         "java/security/PrivilegedExceptionAction"
 })
-public final class AccessController00 {
+public final class AccessController00DJ {
 
     /**
      * Don't allow anyone to instantiate an AccessController
      */
-    private AccessController00() { }
+    private AccessController00DJ() { }
 
     /**
      * Performs the specified {@code PrivilegedAction} with privileges

@@ -7,6 +7,7 @@ import javassist.bytecode.analysis.{Frame, Analyzer}
 import javassist.bytecode.{BadBytecode, Descriptor, MethodInfo}
 
 import edu.berkeley.dj.internal._
+import edu.berkeley.dj.internal.coreclazz.RewriteLocalFieldOnly
 import edu.berkeley.dj.rt.convert.{CodeConverter, _}
 import edu.berkeley.dj.utils.Memo
 
@@ -17,6 +18,7 @@ import scala.collection.mutable
  * Created by matthewfl
  */
 private[rt] class Rewriter (private val manager : MasterManager) {
+
   def config = manager.config
 
   def basePool = manager.pool
@@ -25,9 +27,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   def classMode = manager.classMode
 
-  private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
+//  private lazy val moveInterface = runningPool.get("edu.berkeley.dj.internal.Movable")
 
-  private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
+  //private lazy val proxyInterface = runningPool.get("edu.berkeley.dj.internal.Proxied")
 
   private lazy val objectBase = runningPool.get("edu.berkeley.dj.internal.ObjectBase")
 
@@ -60,15 +62,25 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;", "java.lang.Class") -> ("getPrimitiveClass", s"${config.internalPrefix}AugmentedClassLoader"),
     ("desiredAssertionStatus", "()Z", "java.lang.Class") -> ("desiredAssertionStatus", s"${config.internalPrefix}AugmentedClassLoader"),
     ("getComponentType", "()Ljava/lang/Class;", "java.lang.Class") -> ("getComponentType", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("getDeclaredFields", "()Ledu/berkeley/dj/internal/arrayclazz/java/lang/reflect/Field_1;", "java.lang.Class") -> ("getDeclaredFields", s"${config.internalPrefix}AugmentedClassLoader"),
+    ("getResourceAsStream", "(Ljava/lang/String;)Ledu/berkeley/dj/internal/coreclazz/java/io/InputStream;", "java.lang.Class") -> ("getResourceAsStream", s"${config.internalPrefix}AugmentedClassLoader"),
 
+    // reflection stuff
+    // don't replace this method since it need to look at the call stack directly, and it is static so doesn't matter
+    ("getCallerClass", "()Ljava/lang/Class;", "edu.berkeley.dj.internal.coreclazz.sun.reflect.Reflection") -> ("getCallerClass", s"${config.internalPrefix}ReflectionHelper"),
 
     // some string stuff
     ("getChars", "(IILedu/berkeley/dj/internal/arrayclazz/Character_1;I)V", "java.lang.String") -> ("getChars", s"${config.internalPrefix}AugmentedString"),
+    ("toCharArray", "()Ledu/berkeley/dj/internal/arrayclazz/Character_1;", "java.lang.String") -> ("toCharArray", s"${config.internalPrefix}AugmentedString"),
 
     // array internal stuff
   // TODO: this method is the wrong one to replace since it is internal to the reflect class which we are not rewriting....
     ("newInstance", "(Ljava/lang/Class;I)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers"),
-    ("newInstance", "(Ljava/lang/Class;Ledu/berkeley/dj/internal/arrayclazz/Integer_1;)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers")
+    ("newInstance", "(Ljava/lang/Class;Ledu/berkeley/dj/internal/arrayclazz/Integer_1;)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers"),
+
+  // throwable
+    ("printStackTrace", "(Ledu/berkeley/dj/internal/coreclazz/java/io/PrintStream;)V", "java.lang.Throwable") -> ("printStackTrace", s"${config.internalPrefix}ExceptionHelper")
+
     // rewrite the string init method since this is package private
     // this just gets the field inside the class and sets it to the char array
   )
@@ -178,7 +190,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     //rewriteUsedClasses(cls)
     // TODO: actually determine if this class is movable before adding the move interface
 
-    cls.addInterface(moveInterface)
+    //cls.addInterface(moveInterface)
     val codeConverter = new CodeConverter
 
     codeConverter.addTransform(new FunctionCalls(codeConverter.prevTransforms, rewriteMethodCalls))
@@ -200,7 +212,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
     if (!isInterface && canRewrite) {
       addAccessorMethods(cls)
-      addSeralizeMethods(cls)
+      addSerializeMethods(cls)
     }
     // TODO: need to handle interfaces that can have methods on them
   }
@@ -219,18 +231,44 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private val fieldCount = new mutable.HashMap[String,Int]()
 
-  private def getFieldCount(classname: String) = {
+  // maybe use the source pool to determine the number of fields that a class has
+  private def getFieldCount(classname: String): Int = {
     if(classname == "edu.berkeley.dj.internal.ObjectBase")
-      10
+      baseFieldCount
     else {
       if(fieldCount.contains(classname)) {
-        fieldCount.getOrElse(classname, baseFieldCount)
+        fieldCount.get(classname).get
       } else {
-        runningPool.get(classname)
-        fieldCount.getOrElse(classname, baseFieldCount)
+        val c = runningPool.get(classname)
+        if(!fieldCount.contains(classname)) {
+          // there must be some circular defintion for this class where it is importing itself
+          //if(classname.startsWith(config.coreprefix)) {
+            // we can compute the number of fields that this class should have
+            val supC = getFieldCount(c.getSuperclass.getName)
+            val selfC = c.getDeclaredFields.length
+            fieldCount.put(classname, supC + selfC)
+            return supC + selfC
+          //} else ???
+        }
+        fieldCount.get(classname).get
       }
     }
   }
+
+//  private def getFieldCount2(classname: String): Int = {
+//    if(classname == "edu.berkeley.dj.internal.ObjectBase" || classname == "java.lang.Object")
+//      baseFieldCount
+//    else {
+//      if(fieldCount.contains(classname)) {
+//        fieldCount.get(classname).get
+//      } else {
+//        val cls = basePool.get(classname)
+//        val r = cls.getDeclaredFields.length + getFieldCount2(cls.getSuperclass.getName)
+//        fieldCount.update(classname, r)
+//        r
+//      }
+//    }
+//  }
 
   private def addAccessorMethods(cls: CtClass): Unit = {
     // an interface in java can not have variables
@@ -253,6 +291,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val accessWrites = new mutable.HashMap[String,StringBuilder]()
     val accessReads = new mutable.HashMap[String,StringBuilder]()
 
+    //runningPool.get(cls.getSuperclass.getName) // make sure that the super class is loaded so that we know the field count
     var nextFieldId = getFieldCount(cls.getSuperclass.getName)
 
     for(b <- CtClass.primitiveTypes.toSeq :+ null) {
@@ -316,16 +355,19 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           // todo:? should the system check if a class is inited and then raise some error in case of a final field
           // or just assume that the final field nature will already be check by other systems during compilation
           // someone could always just use reflection to set final fields, so it isn't like it is imossible
-          //field.setModifiers(modifiers & ~Modifier.FINAL)
+          field.setModifiers(modifiers & ~Modifier.FINAL)
         }
 
         val redirect_method_type = if(field.getType.isPrimitive) {
           field.getType.asInstanceOf[CtPrimitiveType].getDescriptor.toString
         } else "A"
 
+        val isLocalOnly = field.getAnnotation(classOf[RewriteLocalFieldOnly]) != null
+
         if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
-          val write_method =
-            s"""
+          val (write_method, read_method) = if(!isLocalOnly) {
+            (// write method
+              s"""
                   static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
                     //edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
                     if((self.${cls_mode} & 0x02) != 0) {
@@ -334,9 +376,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                       self.``${name}`` = val;
                     }
                   }
-                  """
-          val read_method =
-            s"""
+                  """,
+              // read method
+              s"""
                static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
                  //edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
                  if((self.${cls_mode} & 0x01) != 0) {
@@ -346,6 +388,22 @@ private[rt] class Rewriter (private val manager : MasterManager) {
                  }
                }
                   """
+              )
+          } else {
+            (// write method
+              s"""
+                  static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
+                    self.``${name}`` = val;
+                  }
+             """,
+              // read method
+              s"""
+                 static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
+                   return self.``${name}``;
+                 }
+               """)
+          }
+
           try {
             //println("\t\tadding method for: " + name + " to " + cls.getName + " type " + typ_name)
             //println(write_method)
@@ -374,7 +432,11 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         }
       }
     }
-    fieldCount.put(cls.getName, nextFieldId)
+    if(fieldCount.contains(cls.getName)) {
+      assert(fieldCount.get(cls.getName).get == nextFieldId)
+    } else {
+      fieldCount.put(cls.getName, nextFieldId)
+    }
 
     try {
       // create the accessor methods
@@ -397,7 +459,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   }
 
-  private def addSeralizeMethods(cls: CtClass) = {
+  private def addSerializeMethods(cls: CtClass) = {
     // TODO:
     var serialize_obj_method =
       """
@@ -409,6 +471,44 @@ private[rt] class Rewriter (private val manager : MasterManager) {
             public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
             super.__dj_deserialize_obj(man);
       """
+    var prim_size = 0
+    var num_objs = 0
+    for(f <- cls.getDeclaredFields) {
+      if(f.getType.isPrimitive) {
+        prim_size += f.getType.asInstanceOf[CtPrimitiveType].getDataSize
+      } else {
+        num_objs += 1
+      }
+    }
+    serialize_obj_method +=   s"man.register_size(${prim_size}, ${num_objs});\n"
+    deserialize_obj_method += s"man.register_size(${prim_size}, ${num_objs});\n"
+    for(f <- cls.getDeclaredFields) {
+      if(f.getType.isPrimitive) {
+        val p = f.getType.asInstanceOf[CtPrimitiveType]
+        serialize_obj_method +=   s"man.put_value_${p.getDescriptor} ( this.${f.getName} );\n"
+        deserialize_obj_method += s"this.${f.getName} = man.get_value_${p.getDescriptor} ();\n"
+      }
+    }
+    for(f <- cls.getDeclaredFields) {
+      if(!f.getType.isPrimitive) {
+        serialize_obj_method +=   s"this.${f.getName} = (${getUsableName(f.getType)}) man.put_object( this.${f.getName} );\n"
+        deserialize_obj_method += s"this.${f.getName} = (${getUsableName(f.getType)}) man.get_object( this.${f.getName} ); \n"
+      }
+    }
+
+    serialize_obj_method += "}"
+    deserialize_obj_method += "}"
+
+    try {
+      cls.addMethod(CtMethod.make(serialize_obj_method, cls))
+      cls.addMethod(CtMethod.make(deserialize_obj_method, cls))
+    } catch {
+      case e: Throwable => {
+        println(e)
+        throw e
+      }
+    }
+
   }
 
   def modifyStaticInit(cls: CtClass, mana: MethodAnalysis): Unit = {
@@ -457,7 +557,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     val mode = manager.classMode.getMode(cls.getName)
 
     // TODO: remove fcking hack
-    // this causes something internally to get cached, without it it crashses
+    // this causes something internally to get cached, without it this crashes
     cls.toString
 
     for(mth <- cls.getDeclaredMethods) {
@@ -687,7 +787,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           case _: RewriteUseAccessorMethods => {
             rewriteUseAccessor = true
           }
-          case sp: SetSuperclass => {
+          case sp: RewriteSetSuperclass => {
             // force the super class to be something else
             if(clsa == cls)
               cls.setSuperclass(cls.getClassPool.get(sp.superclass()))
@@ -1042,7 +1142,8 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       }
     }
 
-    val intercls = if(!makeInterface) {
+    //val intercls =
+    if(!makeInterface) {
       // add the interface of the type that this class is going to implement
       val i = runningPool.get(config.arrayprefix + baseType + "_" + cnt)
       cls.addInterface(i)
@@ -1051,7 +1152,21 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       if(!isPrimitive)
         addInterfaces(i)
       i
-    } else null
+    } else {
+      // add all the classes that this implements and inherits from
+      if(!isPrimitive && baseType != "java.lang.Object") {
+        val btype = runningPool.get(baseType)
+        val stype = btype.getSuperclass
+        if(stype.getName != "java.lang.Object") {
+          cls.addInterface(runningPool.get(config.arrayprefix + stype.getName + "_"+cnt))
+        }
+        for(i <- btype.getInterfaces) {
+          val n = i.getName
+          if(n != s"${config.coreprefix}java.lang.Object")
+            cls.addInterface(runningPool.get(config.arrayprefix + n + "_" + cnt))
+        }
+      }
+    }
 
     if(isPrimitive)
       allInheritedTypes += wrapType
@@ -1290,21 +1405,24 @@ private[rt] class Rewriter (private val manager : MasterManager) {
 
   private def findBaseClass(classname: String): CtClass = {
     try {
+      // try to just get the class normally from the pool
       basePool get classname
     } catch {
       case e: NotFoundException => {
         try {
-          if(classname.startsWith(config.coreprefix)) {
-            val c = basePool get (classname + "00")
+          // if this class starts with our prefix edu.berkeley.dj.internal.coreclazz
+          // check if we can find a replaced version of that class
+          if (classname.startsWith(config.coreprefix)) {
+            val c = basePool get (classname + "00DJ")
             c.setName(classname)
             c
           } else null
         } catch {
           case e: NotFoundException => {
-            if(classname.contains("$")) {
+            if (classname.contains("$")) {
               // There is some dollar sign in the class name so try to change the containing class
               try {
-                val c = basePool.get(classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100\\$"))
+                val c = basePool.get(classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100DJ\\$"))
                 c.setName(classname)
                 c
               } catch {
@@ -1340,7 +1458,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
   def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
     MethodInfo.doPreverify = true
 
-    if(classname.startsWith(config.coreprefix) && classname.endsWith("00")) {
+    if(classname.startsWith(config.coreprefix) && classname.endsWith("00DJ")) {
       // we should not loading these classes with 00 suffix
       // something somewhere else in the rewriter must have gone wrong to cause us to load this
       throw new ClassNotFoundException(classname)
@@ -1359,6 +1477,31 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       return ret
     }
 
+    val cls_int = try {
+      val c = basePool get (config.coreprefix + classname + "00DJ")
+      c.setName(classname)
+      c
+    } catch {
+      case e: NotFoundException =>
+        if (classname.contains("$")) {
+          try {
+            val c = basePool.get(config.coreprefix + classname.replaceAll("(\\.[^\\.\\$]+)\\$", "$100DJ\\$"))
+            c.setName(classname)
+            c
+          } catch {
+            case e: NotFoundException => null
+          }
+        } else null
+    }
+
+    if(cls_int != null) {
+      // this class is being replaced from the coreclazz even through it isn't in a privleged namespace
+      // use the internal rewriting stuff
+      reassociateClass(cls_int)
+      addToCache(cls_int)
+      modifyInternalClass(cls_int)
+      return cls_int
+    }
 
     val cls = findBaseClass(classname)
     //println("create class name:" + classname)

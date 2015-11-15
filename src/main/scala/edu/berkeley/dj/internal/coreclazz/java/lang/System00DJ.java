@@ -12,9 +12,9 @@ import java.util.Properties;
  */
 @RewriteAllBut(nonModClasses = {"java/lang/System"})
 @RewriteAddAccessorMethods
-public class System00 {
+public class System00DJ {
 
-    private System00() {}
+    private System00DJ() {}
 
     public final static PrintStream out = new PrintStream(new OutputStream(){
         @Override

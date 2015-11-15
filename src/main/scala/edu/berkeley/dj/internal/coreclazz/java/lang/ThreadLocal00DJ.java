@@ -80,7 +80,7 @@ import java.util.function.Supplier;
  */
 @RewriteAllBut(nonModClasses = {"java/lang/ThreadLocal"})
 @RewriteAddAccessorMethods
-public class ThreadLocal00<T> {
+public class ThreadLocal00DJ<T> {
     /**
      * ThreadLocals rely on per-thread linear-probe hash maps attached
      * to each thread (Thread.threadLocals and
@@ -146,7 +146,7 @@ public class ThreadLocal00<T> {
      * @throws NullPointerException if the specified supplier is null
      * @since 1.8
      */
-    public static <S> ThreadLocal00<S> withInitial(Supplier<? extends S> supplier) {
+    public static <S> ThreadLocal00DJ<S> withInitial(Supplier<? extends S> supplier) {
         return new SuppliedThreadLocal<>(supplier);
     }
 
@@ -154,7 +154,7 @@ public class ThreadLocal00<T> {
      * Creates a thread local variable.
      * @see #withInitial(java.util.function.Supplier)
      */
-    public ThreadLocal00() {
+    public ThreadLocal00DJ() {
     }
 
     /**
@@ -166,7 +166,7 @@ public class ThreadLocal00<T> {
      * @return the current thread's value of this thread-local
      */
     public T get() {
-        Thread00 t = Thread00.currentThread();
+        Thread00DJ t = Thread00DJ.currentThread();
         ThreadLocalMap map = getMap(t);
         if (map != null) {
             ThreadLocalMap.Entry e = map.getEntry(this);
@@ -187,7 +187,7 @@ public class ThreadLocal00<T> {
      */
     private T setInitialValue() {
         T value = initialValue();
-        Thread00 t = Thread00.currentThread();
+        Thread00DJ t = Thread00DJ.currentThread();
         ThreadLocalMap map = getMap(t);
         if (map != null)
             map.set(this, value);
@@ -206,7 +206,7 @@ public class ThreadLocal00<T> {
      *        this thread-local.
      */
     public void set(T value) {
-        Thread00 t = Thread00.currentThread();
+        Thread00DJ t = Thread00DJ.currentThread();
         ThreadLocalMap map = getMap(t);
         if (map != null)
             map.set(this, value);
@@ -226,7 +226,7 @@ public class ThreadLocal00<T> {
      * @since 1.5
      */
     public void remove() {
-        ThreadLocalMap m = getMap(Thread00.currentThread());
+        ThreadLocalMap m = getMap(Thread00DJ.currentThread());
         if (m != null)
             m.remove(this);
     }
@@ -238,7 +238,7 @@ public class ThreadLocal00<T> {
      * @param  t the current thread
      * @return the map
      */
-    ThreadLocalMap getMap(Thread00 t) {
+    ThreadLocalMap getMap(Thread00DJ t) {
         return t.threadLocals;
     }
 
@@ -249,7 +249,7 @@ public class ThreadLocal00<T> {
      * @param t the current thread
      * @param firstValue value for the initial entry of the map
      */
-    void createMap(Thread00 t, T firstValue) {
+    void createMap(Thread00DJ t, T firstValue) {
         t.threadLocals = new ThreadLocalMap(this, firstValue);
     }
 
@@ -280,7 +280,7 @@ public class ThreadLocal00<T> {
      * An extension of ThreadLocal that obtains its initial value from
      * the specified {@code Supplier}.
      */
-    static final class SuppliedThreadLocal<T> extends ThreadLocal00<T> {
+    static final class SuppliedThreadLocal<T> extends ThreadLocal00DJ<T> {
 
         private final Supplier<? extends T> supplier;
 
@@ -314,11 +314,11 @@ public class ThreadLocal00<T> {
          * entry can be expunged from table.  Such entries are referred to
          * as "stale entries" in the code that follows.
          */
-        static class Entry extends WeakReference<ThreadLocal00<?>> {
+        static class Entry extends WeakReference<ThreadLocal00DJ<?>> {
             /** The value associated with this ThreadLocal. */
             Object value;
 
-            Entry(ThreadLocal00<?> k, Object v) {
+            Entry(ThreadLocal00DJ<?> k, Object v) {
                 super(k);
                 value = v;
             }
@@ -371,7 +371,7 @@ public class ThreadLocal00<T> {
          * ThreadLocalMaps are constructed lazily, so we only create
          * one when we have at least one entry to put in it.
          */
-        ThreadLocalMap(ThreadLocal00<?> firstKey, Object firstValue) {
+        ThreadLocalMap(ThreadLocal00DJ<?> firstKey, Object firstValue) {
             table = new Entry[INITIAL_CAPACITY];
             int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
             table[i] = new Entry(firstKey, firstValue);
@@ -395,7 +395,7 @@ public class ThreadLocal00<T> {
                 Entry e = parentTable[j];
                 if (e != null) {
                     @SuppressWarnings("unchecked")
-                    ThreadLocal00<Object> key = (ThreadLocal00<Object>) e.get();
+                    ThreadLocal00DJ<Object> key = (ThreadLocal00DJ<Object>) e.get();
                     if (key != null) {
                         Object value = key.childValue(e.value);
                         Entry c = new Entry(key, value);
@@ -419,7 +419,7 @@ public class ThreadLocal00<T> {
          * @param  key the thread local object
          * @return the entry associated with key, or null if no such
          */
-        private Entry getEntry(ThreadLocal00<?> key) {
+        private Entry getEntry(ThreadLocal00DJ<?> key) {
             int i = key.threadLocalHashCode & (table.length - 1);
             Entry e = table[i];
             if (e != null && e.get() == key)
@@ -437,12 +437,12 @@ public class ThreadLocal00<T> {
          * @param  e the entry at table[i]
          * @return the entry associated with key, or null if no such
          */
-        private Entry getEntryAfterMiss(ThreadLocal00<?> key, int i, Entry e) {
+        private Entry getEntryAfterMiss(ThreadLocal00DJ<?> key, int i, Entry e) {
             Entry[] tab = table;
             int len = tab.length;
 
             while (e != null) {
-                ThreadLocal00<?> k = e.get();
+                ThreadLocal00DJ<?> k = e.get();
                 if (k == key)
                     return e;
                 if (k == null)
@@ -460,7 +460,7 @@ public class ThreadLocal00<T> {
          * @param key the thread local object
          * @param value the value to be set
          */
-        private void set(ThreadLocal00<?> key, Object value) {
+        private void set(ThreadLocal00DJ<?> key, Object value) {
 
             // We don't use a fast path as with get() because it is at
             // least as common to use set() to create new entries as
@@ -474,7 +474,7 @@ public class ThreadLocal00<T> {
             for (Entry e = tab[i];
                  e != null;
                  e = tab[i = nextIndex(i, len)]) {
-                ThreadLocal00<?> k = e.get();
+                ThreadLocal00DJ<?> k = e.get();
 
                 if (k == key) {
                     e.value = value;
@@ -496,7 +496,7 @@ public class ThreadLocal00<T> {
         /**
          * Remove the entry for key.
          */
-        private void remove(ThreadLocal00<?> key) {
+        private void remove(ThreadLocal00DJ<?> key) {
             Entry[] tab = table;
             int len = tab.length;
             int i = key.threadLocalHashCode & (len-1);
@@ -526,7 +526,7 @@ public class ThreadLocal00<T> {
          * @param  staleSlot index of the first stale entry encountered while
          *         searching for key.
          */
-        private void replaceStaleEntry(ThreadLocal00<?> key, Object value,
+        private void replaceStaleEntry(ThreadLocal00DJ<?> key, Object value,
                                        int staleSlot) {
             Entry[] tab = table;
             int len = tab.length;
@@ -548,7 +548,7 @@ public class ThreadLocal00<T> {
             for (int i = nextIndex(staleSlot, len);
                  (e = tab[i]) != null;
                  i = nextIndex(i, len)) {
-                ThreadLocal00<?> k = e.get();
+                ThreadLocal00DJ<?> k = e.get();
 
                 // If we find key, then we need to swap it
                 // with the stale entry to maintain hash table order.
@@ -610,7 +610,7 @@ public class ThreadLocal00<T> {
             for (i = nextIndex(staleSlot, len);
                  (e = tab[i]) != null;
                  i = nextIndex(i, len)) {
-                ThreadLocal00<?> k = e.get();
+                ThreadLocal00DJ<?> k = e.get();
                 if (k == null) {
                     e.value = null;
                     tab[i] = null;
@@ -697,7 +697,7 @@ public class ThreadLocal00<T> {
             for (int j = 0; j < oldLen; ++j) {
                 Entry e = oldTab[j];
                 if (e != null) {
-                    ThreadLocal00<?> k = e.get();
+                    ThreadLocal00DJ<?> k = e.get();
                     if (k == null) {
                         e.value = null; // Help the GC
                     } else {

@@ -17,6 +17,7 @@ import scala.concurrent.duration._
  */
 
 sealed private[rt] trait Manager {
+
   def config: Config
 
   //def runningPool : javassist.ClassPool
@@ -36,6 +37,7 @@ sealed private[rt] trait Manager {
 
   def loader: LoaderProxy
 
+  private[rt] val threadPool = new ThreadPool
 
 }
 
@@ -95,7 +97,7 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
     // HACK: some complication with using getDeclaredMethod from scala
     val premain = cls.getDeclaredMethods.filter(_.getName == "premain")(0)
     try {
-      premain.invoke(null, runningInterface.asInstanceOf[java.lang.Object], mainClass, args)
+      premain.invoke(null, runningInterface.asInstanceOf[java.lang.Object], config.distributed_jit, mainClass, args)
     } catch {
       case e: InvocationTargetException => {
         val en = e.getTargetException.getClass.getName
