@@ -9,7 +9,7 @@ import scala.collection.mutable
 /**
  * Created by matthewfl
  */
-class ClassPoolProxy (private val manager: MasterManager, private val rewriter : Rewriter) extends javassist.ClassPool(false) {
+class ClassPoolProxy (private val manager: MasterManager, private val rewriter : RewriterInterface) extends javassist.ClassPool(false) {
 
   childFirstLookup = false
 

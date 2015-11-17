@@ -236,5 +236,12 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(machine, 112, req)
   }
 
+  def createIOObject(clsname: String, argsTyp: Array[String], args: Array[Object]): Int = {
+    manager.io.constructClass(clsname, argsTyp, args)
+  }
+
+  def callIOMethod(objectId: Int, methodName: String, argsTyp: Array[String], args: Array[Object]): Any = {
+    manager.io.callMethod(objectId, methodName, argsTyp, args)
+  }
 
 }

@@ -17,7 +17,14 @@ import scala.collection.mutable
 /**
  * Created by matthewfl
  */
-private[rt] class Rewriter (private val manager : MasterManager) {
+
+private[rt] trait RewriterInterface {
+
+  def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass
+
+}
+
+private[rt] class Rewriter (private val manager : MasterManager) extends RewriterInterface {
 
   def config = manager.config
 
@@ -1427,12 +1434,18 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           throw new DJIOException(s"DJIO class '${source_cls.getName}' has bad target argument for target argument")
         }
         val args = paramsTypes.zipWithIndex.map(a => s"${getUsableName(a._1)} arg${a._2}").mkString(", ")
+        val argsTyp = paramsTypes.map(s => "\""+s.getName+"\"").mkString(", ")
+        val argsTypStr = if(paramsTypes.length > 0) {
+          s"new String [] { $argsTyp }"
+        } else {
+          s"new String[0]"
+        }
         val con_code = s"""
                            public ${cls.getSimpleName} (${args}) {
                              super();
                              this.__dj_class_mode |= 0x80; // IS_IO_WRAPPER
                              this.__dj_io_owning_machine = arg${targetArgPos - 1} ;
-                             this.__dj_io_object_id = ${config.internalPrefix}IOHelper.constructLocalIO(this.__dj_io_owning_machine, "${source_cls.getName}", $$args);
+                             this.__dj_io_object_id = ${config.internalPrefix}IOHelper.constructLocalIO(this.__dj_io_owning_machine, "${source_cls.getName}", $argsTypStr ,  $$args);
                            }
                            """
         cls.addConstructor(CtNewConstructor.make(con_code, cls))
@@ -1442,12 +1455,19 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     for(mth <- source_cls.getDeclaredMethods) {
       if(Modifier.isPublic(mth.getModifiers)) {
         // we need to create a proxy to this method
-        val args = mth.getParameterTypes.zipWithIndex.map(a => s"${getUsableName(a._1)} arg${a._2}").mkString(", ")
+        val params = mth.getParameterTypes
+        val args = params.zipWithIndex.map(a => s"${getUsableName(a._1)} arg${a._2}").mkString(", ")
+        val argsTyp = params.map(s => "\""+s.getName+"\"").mkString(", ")
+        val argsTypStr = if(params.length > 0) {
+          s"new String [] { $argsTyp }"
+        } else {
+          "new String[0]"
+        }
         val (returnPrefix, returnSuffix) = if(mth.getReturnType == CtClass.voidType) {
           ("", "") // void do nothing
         } else {
           if(mth.getReturnType.isPrimitive) {
-            ("return (()(", s")).${mth.getName}Value()")
+            (s"return ((${mth.getReturnType.asInstanceOf[CtPrimitiveType].getWrapperName})(", s")).${mth.getReturnType.getName}Value()")
           } else {
             (s"return (${getUsableName(mth.getReturnType)})(", ")")
           }
@@ -1455,7 +1475,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
         val mth_code =
           s"""
              public ${getUsableName(mth.getReturnType)} ${mth.getName} (${args}) {
-               ${returnPrefix} ${config.internalPrefix}IOHelper.callMethod(this.__dj_io_owning_machine, this.__dj_io_object_id, "${mth.getName}", $$args) ${returnSuffix} ;
+               ${returnPrefix} ${config.internalPrefix}IOHelper.callMethod(this.__dj_io_owning_machine, this.__dj_io_object_id, "${mth.getName}", $argsTypStr , $$args) ${returnSuffix} ;
              }
            """
         cls.addMethod(CtMethod.make(mth_code, cls))
@@ -1531,8 +1551,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-
-  def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
+  override def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
     MethodInfo.doPreverify = true
 
     if(classname.startsWith(config.coreprefix) && classname.endsWith("00DJ")) {

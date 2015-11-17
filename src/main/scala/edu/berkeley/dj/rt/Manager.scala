@@ -39,6 +39,8 @@ sealed private[rt] trait Manager {
 
   private[rt] val threadPool = new ThreadPool
 
+  private[rt] val io = new IOManager(this)
+
 }
 
 /**
@@ -63,6 +65,8 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
 
   val rewriter = new Rewriter(this)
 
+  val ioRewriter = new IORewriter(this)
+
   override def classRename(name: String): String = {
     rewriter.jclassmap.get(name).asInstanceOf[String]
   }
@@ -71,6 +75,11 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
 
   val loader = new LoaderProxy(this, runningPool)
   //val loader = new Loader(runningPool)
+
+  val ioRunningPool = new ClassPoolProxy(this, ioRewriter)
+
+  val ioLoader = new LoaderProxy(this, ioRunningPool, debug_prefix = "-io/")
+  io.loadInterface(ioLoader)
 
   val protectionDomain = new ProtectionDomain(null, null, loader, null)
   loader.setDomain(protectionDomain)

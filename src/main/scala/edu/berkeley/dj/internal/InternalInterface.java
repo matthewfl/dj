@@ -149,6 +149,10 @@ public class InternalInterface {
 
     public void sendSerializedObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
 
+    public int createIOObject(String clsname, String[] argsTyp, Object[] args) { throw new InterfaceException(); }
+
+    public Object callIOMethod(int objectId, String methodName, String[] argsTyp, Object[] args) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -351,6 +355,16 @@ final class InternalInterfaceWrap extends InternalInterface {
         // send the serialized object information to another machine
         // either for moving or caching an object
         invoke("sendSerializedObject", new Class[]{ByteBuffer.class, int.class}, req, machine);
+    }
+
+    @Override
+    public int createIOObject(String clsname, String[] argsTyp, Object[] args) {
+        return (int) invoke("createIOObject", new Class[]{String.class, String[].class, Object[].class}, clsname, argsTyp, args);
+    }
+
+    @Override
+    public Object callIOMethod(int objectId, String methodName, String[] argsTyp, Object[] args) {
+        return invoke("callIOMethod", new Class[]{int.class, String.class, String[].class, Object[].class}, objectId, methodName, argsTyp, args);
     }
 
 
