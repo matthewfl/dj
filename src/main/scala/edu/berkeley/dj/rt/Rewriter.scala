@@ -1378,6 +1378,9 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
        """
       cls.addMethod(CtMethod.make(static_constructor, cls))
 
+
+      // TODO: serialization methods
+
       /*val get_helper =
         s"""
            public static ${wrapType} helper_get(${inter_name} inst, int i) {
@@ -1426,6 +1429,8 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       if(Modifier.isPublic(con.getModifiers)) {
         val ann = con.getAnnotation(classOf[DJIOTargetMachineArgPosition])
         if(ann == null) {
+          // TODO: should allow this constructor but simply just
+          // prevent it from being called inside the distributed program
           throw new DJIOException(s"DJIO class '${source_cls.getName}' is missing the @DJIOTargetMachineArgPosition annotation on one of its constructors")
         }
         val targetArgPos = ann.asInstanceOf[DJIOTargetMachineArgPosition].value()

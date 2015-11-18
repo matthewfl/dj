@@ -13,5 +13,13 @@ public class SimpleIOMain {
 
         System.out.println(t.getInt());
 
+        t.startServer();
+
+        System.out.println("server started");
+
+        try {
+            Thread.sleep(120 * 1000);
+        } catch (InterruptedException e) {}
+
     }
 }

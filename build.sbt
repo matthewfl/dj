@@ -28,10 +28,18 @@ mainClass in assembly := Some("edu.berkeley.dj.rt.Main")
 
 // adding the tools.jar to the unmanaged-jars seq
 unmanagedJars in Compile ~= {uj =>
-    Seq(Attributed.blank(file(System.getProperty("java.home").dropRight(3)+"lib/tools.jar"))) ++ uj
+  Seq(Attributed.blank(file(System.getProperty("java.home").dropRight(3)+"lib/tools.jar"))) ++ uj
 }
 
 // exluding the tools.jar file from the build
 excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
-    cp filter {_.data.getName == "tools.jar"}
+  cp filter {_.data.getName == "tools.jar"}
 }
+
+// TODO: have an artifact that contains useful classes for the public api such as: DJIO, JITInterface
+
+
+// TODO: remove
+// these are for the examples which are currently being built at the same time
+// normally they wouldn't have their code included
+libraryDependencies += "org.eclipse.jetty" % "jetty-server" % "9.3.6.v20151106"
