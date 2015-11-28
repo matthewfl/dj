@@ -23,7 +23,7 @@ public class IOInternalInterface {
 
 }
 
-class IOInternalInterfaceWrap extends IOInternalInterface{
+class IOInternalInterfaceWrap extends IOInternalInterface {
 
     private Object base;
     private Class cls;

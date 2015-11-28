@@ -37,8 +37,12 @@ public final class SimpleIOTarget {
 
     public void startServer() {
         try {
-            server = new JettyHelloWorld();
+            server = new JettyHelloWorld(this);
         } catch(Exception e) {}
+    }
+
+    void reqHandle(Request baseRequest, HttpServletRequest request, HttpServletResponse response) {
+
     }
 
 }
@@ -56,7 +60,7 @@ class JettyHelloWorld extends AbstractHandler {
 
     public Server server;
 
-    public JettyHelloWorld() throws Exception {
+    public JettyHelloWorld(SimpleIOTarget self) throws Exception {
         server = new Server(8080);
         server.setHandler(this);
         server.start();

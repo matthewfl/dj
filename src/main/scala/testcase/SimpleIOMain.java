@@ -2,6 +2,7 @@ package testcase;
 
 import edu.berkeley.dj.internal.InternalInterface;
 
+
 /**
  * Created by matthewfl
  */
@@ -22,4 +23,21 @@ public class SimpleIOMain {
         } catch (InterruptedException e) {}
 
     }
+
+    static class RequestWrapper {
+
+
+
+    }
+
+    static class RequestHandler {
+
+        RequestWrapper getNewWrapper() {
+            return new RequestWrapper();
+        }
+
+    }
 }
+
+
+

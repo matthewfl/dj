@@ -88,8 +88,8 @@ public class SerializeManager {
 //        return new Deserialization(b);
 //    }
 
-    static void deserialize(ByteBuffer b) {
-        new Deserialization(b).run();
+    static Object deserialize(ByteBuffer b) {
+        return new Deserialization(b).run();
     }
 
     public static int computeSize(Object base, int depth) {
@@ -139,9 +139,12 @@ public class SerializeManager {
         }
     };
 
-
-
-
+    public static final SerializationController MoveController = new SerializationController() {
+        @Override
+        public SerializationAction getAction(Object o) {
+            return SerializationAction.MOVE_OBJ_MASTER;
+        }
+    };
 
 }
 
@@ -157,13 +160,19 @@ class Deserialization extends SerializeManager {
         //depth_left = b.getInt();
     }
 
-    void run() {
+    Object run() {
+        boolean first = true;
+        Object ret = null;
         while(buff.position() < buff.limit()) {
             int action_i = buff.getInt();
             SerializationAction act = SerializationActionList[action_i];
             current_action = act;
             DistributedObjectHelper.DistributedObjectId id = new DistributedObjectHelper.DistributedObjectId(buff);
             Object o = DistributedObjectHelper.getObject(id);
+            if(first) {
+                ret = o;
+                first = false;
+            }
             if(o instanceof ObjectBase) {
                 ObjectBase ob = (ObjectBase)o;
                 ob.__dj_deserialize_obj(this);
@@ -192,6 +201,7 @@ class Deserialization extends SerializeManager {
                 throw new DJError();
             }
         }
+        return ret;
     }
 
     public boolean get_value_Z() { return buff.get() == 1; }

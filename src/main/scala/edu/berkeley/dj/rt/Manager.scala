@@ -37,6 +37,8 @@ sealed private[rt] trait Manager {
 
   def loader: LoaderProxy
 
+  def ioLoader: LoaderProxy
+
   private[rt] val threadPool = new ThreadPool
 
   private[rt] val io = new IOManager(this)
@@ -125,7 +127,7 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
  *
  * Will essentially proxy requests for classes to the main machine
  */
-private [rt] class ClientManager (val config: Config) extends Manager {
+private[rt] class ClientManager (val config: Config) extends Manager {
 
   override def classRename(name: String): String = innerClassRename(name)
 
@@ -142,6 +144,9 @@ private [rt] class ClientManager (val config: Config) extends Manager {
   }
 
   val loader = new RemoteLoaderProxy(this, ClassPool.getDefault)
+
+  val ioLoader: LoaderProxy = new RemoteLoaderProxy(this, ClassPool.getDefault, ioLoader=true)
+  io.loadInterface(ioLoader)
 
   val protectionDomain = new ProtectionDomain(null, null, loader, null)
   loader.setDomain(protectionDomain)

@@ -802,6 +802,9 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
           case _: RewriteAddArrayWrap => {
             addArrayWrapMethods(cls)
           }
+          case _: RewriteAddSerialization => {
+            addSerializeMethods(cls)
+          }
           case _ => {} // nop
         }
       }
