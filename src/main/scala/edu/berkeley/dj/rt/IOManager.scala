@@ -18,7 +18,11 @@ class IOManager (val manager: Manager) {
 
   private def unsafe = Unsafe.theUnsafe
 
-  def loader = manager.ioLoader
+  lazy val loader = {
+    val r = manager.ioLoader
+    manager.io.loadInterface(r)
+    r
+  }
 
   def djLoader = manager.loader
 
@@ -37,8 +41,10 @@ class IOManager (val manager: Manager) {
 
     val argsClss = argsCls.map(findClass)
 
+    val argsC = args.map(convertFromDJ)
+
     val constructor = cls.getDeclaredConstructor(argsClss:_*)
-    val obj = constructor.newInstance(args:_*)
+    val obj = constructor.newInstance(argsC:_*)
 
     val id = this.synchronized {
       val i = nextInt
@@ -62,11 +68,13 @@ class IOManager (val manager: Manager) {
 
     val argsClss = argsCls.map(findClass)
 
+    val argsC = args.map(convertFromDJ)
+
     val mth = cls.getDeclaredMethod(methodName, argsClss:_*)
 
-    val ret = mth.invoke(obj, args:_*)
+    val ret = mth.invoke(obj, argsC:_*)
 
-    ret
+    convertToDJ(ret)
   }
 
   private def findClass(classname: String): Class[_] = classname match {
@@ -82,7 +90,7 @@ class IOManager (val manager: Manager) {
 
   lazy val objectBase = djLoader.loadClass(config.internalPrefix+"ObjectBase")
 
-  private def convertFromDJ(obj: Any): Any = {
+  private def convertFromDJ(obj: Object): Object = {
     val cls = obj.getClass
     val cname = cls.getName
 
@@ -161,7 +169,8 @@ class IOManager (val manager: Manager) {
       var ccls = cls
       while (ccls != objectBase) {
         acls += ccls
-        ccls = ccls.getSuperclass
+//        ccls = ccls.getSuperclass
+        ???
       }
       val afields = acls.flatMap(_.getDeclaredFields)
       for(field <- afields)
@@ -182,7 +191,7 @@ class IOManager (val manager: Manager) {
     ???
   }
 
-  private def convertToDJ(obj: Any): Any = {
+  private def convertToDJ(obj: Object): Object = {
     // if it is some primitive type that we allowed, then just pass it through
     // if it is an instance of DJIO then we can wrap the class and pass it back
     // if the class is currently a io_proxy
@@ -231,6 +240,9 @@ class IOManager (val manager: Manager) {
     if(cls.isArray) {
       ???
     }
+    ???
+    null
+
   }
 
   private def protectedName(name: String) = {

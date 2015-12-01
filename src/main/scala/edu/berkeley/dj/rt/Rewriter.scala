@@ -1453,7 +1453,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
                              super();
                              this.__dj_class_mode |= 0x80; // IS_IO_WRAPPER
                              this.__dj_io_owning_machine = arg${targetArgPos - 1} ;
-                             this.__dj_io_object_id = ${config.internalPrefix}IOHelper.constructLocalIO(this.__dj_io_owning_machine, "${source_cls.getName}", $argsTypStr ,  $$args);
+                             this.__dj_io_object_id = ${config.internalPrefix}IOHelper.constructLocalIO(this.__dj_io_owning_machine, "${source_cls.getName}", $argsTypStr ,  $$args, this);
                            }
                            """
         cls.addConstructor(CtNewConstructor.make(con_code, cls))
@@ -1483,7 +1483,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
         val mth_code =
           s"""
              public ${getUsableName(mth.getReturnType)} ${mth.getName} (${args}) {
-               ${returnPrefix} ${config.internalPrefix}IOHelper.callMethod(this.__dj_io_owning_machine, this.__dj_io_object_id, "${mth.getName}", $argsTypStr , $$args) ${returnSuffix} ;
+               ${returnPrefix} ${config.internalPrefix}IOHelper.callMethod(this.__dj_io_owning_machine, this.__dj_io_object_id, "${mth.getName}", $argsTypStr , $$args, this) ${returnSuffix} ;
              }
            """
         cls.addMethod(CtMethod.make(mth_code, cls))

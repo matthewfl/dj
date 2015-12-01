@@ -81,7 +81,7 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
   val ioRunningPool = new ClassPoolProxy(this, ioRewriter)
 
   val ioLoader = new LoaderProxy(this, ioRunningPool, debug_prefix = "-io/")
-  io.loadInterface(ioLoader)
+  //io.loadInterface(ioLoader)
 
   val protectionDomain = new ProtectionDomain(null, null, loader, null)
   loader.setDomain(protectionDomain)
@@ -145,8 +145,10 @@ private[rt] class ClientManager (val config: Config) extends Manager {
 
   val loader = new RemoteLoaderProxy(this, ClassPool.getDefault)
 
-  val ioLoader: LoaderProxy = new RemoteLoaderProxy(this, ClassPool.getDefault, ioLoader=true)
-  io.loadInterface(ioLoader)
+  lazy val ioLoader: LoaderProxy = {
+    new RemoteLoaderProxy(this, ClassPool.getDefault, ioLoader=true)
+  }
+  //io.loadInterface(ioLoader)
 
   val protectionDomain = new ProtectionDomain(null, null, loader, null)
   loader.setDomain(protectionDomain)

@@ -10,7 +10,11 @@ public class SimpleIOMain {
 
     static public void main(String[] args) {
 
-        SimpleIOTarget t = new SimpleIOTarget(InternalInterface.getInternalInterface().getSelfId(), 5); //"/tmp/test");
+        RequestHandler rq = new RequestHandler();
+
+        SimpleIOTarget t = new SimpleIOTarget(
+                InternalInterface.getInternalInterface().getSelfId(), 5,
+                "/tmp/test", rq);
 
         System.out.println(t.getInt());
 

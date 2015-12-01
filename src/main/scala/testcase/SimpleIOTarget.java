@@ -21,10 +21,14 @@ public final class SimpleIOTarget {
 
     private int q;
 
+    private SimpleIOMain.RequestHandler rq;
+
     @DJIOTargetMachineArgPosition(1)
-    public SimpleIOTarget(int target, int q) { //String fname) {
+    public SimpleIOTarget(int target, int q, String fname, SimpleIOMain.RequestHandler rq) { //String fname) {
         //this.fname = fname;
         this.q = q;
+        System.out.println("fname: "+fname);
+        this.rq = rq;
     }
 
     public String getContent() {
