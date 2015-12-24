@@ -281,6 +281,8 @@ Error message and password prompt
 
 <li>Directions for DJ</li>
 
+<li>Distributed locks</li>
+
 <li>Documentation</li>
 
 <li>Function call redirector</li>
@@ -289,15 +291,21 @@ Error message and password prompt
 
 <li>Introduction</li>
 
+<li>JIT</li>
+
 <li>matthewfl</li>
 
 <li>Namespace rewriter</li>
+
+<li>Presentations</li>
 
 <li>Previous work</li>
 
 <li>Proxy generator</li>
 
 <li>Rewriter</li>
+
+<li>Runtime</li>
 
 <li>Variable write redirector</li>
 
@@ -317,7 +325,7 @@ Error message and password prompt
 <div modified="20150522084826364" modifier="matthewfl" title="$:/config/DefaultSidebarTab">
 <pre>$:/core/ui/SideBar/Recent</pre>
 </div>
-<div modified="20150522084756761" modifier="matthewfl" title="$:/config/Navigation/UpdateAddressBar">
+<div modified="20151224090517114" modifier="matthewfl" title="$:/config/Navigation/UpdateAddressBar">
 <pre>permaview</pre>
 </div>
 <div modified="20150522084721391" modifier="matthewfl" title="$:/config/Navigation/UpdateHistory">
@@ -5805,10 +5813,10 @@ Error message and password prompt
     }
 }</pre>
 </div>
-<div created="20150503220513255" creator="matthewfl" modified="20150921085829781" modifier="matthewfl" title="$:/DefaultTiddlers">
+<div created="20150503220513255" creator="matthewfl" modified="20151224055354869" modifier="matthewfl" title="$:/DefaultTiddlers">
 <pre>Introduction
 Documentation
-</pre>
+Presentations</pre>
 </div>
 <div title="$:/isEncrypted">
 <pre>no</pre>
@@ -5976,17 +5984,17 @@ Documentation
 <div modified="20150503222119373" modifier="matthewfl" title="$:/state/tab--1498284803">
 <pre>$:/core/ui/AdvancedSearch/Filter</pre>
 </div>
-<div modified="20150522084901086" modifier="matthewfl" title="$:/state/tab--1963855381">
-<pre>$:/themes/tiddlywiki/vanilla/themetweaks</pre>
+<div modified="20151224090457184" modifier="matthewfl" title="$:/state/tab--1963855381">
+<pre>$:/core/ui/ControlPanel/Palette</pre>
 </div>
-<div modified="20150602172408998" modifier="matthewfl" title="$:/state/tab--86143343">
+<div modified="20151224090539606" modifier="matthewfl" title="$:/state/tab--86143343">
 <pre>$:/core/ui/ControlPanel/Plugins/Installed/Themes</pre>
 </div>
-<div modified="20150602172413148" modifier="matthewfl" title="$:/state/tab-1342078386">
+<div modified="20151224090640008" modifier="matthewfl" title="$:/state/tab-1342078386">
 <pre>$:/core/ui/ControlPanel/Plugins/Add/Themes</pre>
 </div>
-<div modified="20150921085813016" modifier="matthewfl" title="$:/state/tab-1749438307">
-<pre>$:/core/ui/ControlPanel/Info</pre>
+<div modified="20151224090545419" modifier="matthewfl" title="$:/state/tab-1749438307">
+<pre>$:/core/ui/ControlPanel/Plugins</pre>
 </div>
 <div modified="20150521214429559" modifier="matthewfl" title="$:/state/tab/moresidebar-401116514">
 <pre>$:/core/ui/MoreSideBar/Orphans</pre>
@@ -6000,7 +6008,7 @@ Documentation
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="Introduction Documentation" title="$:/StoryList">
+<div list="Introduction Documentation Presentations" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6020,7 +6028,7 @@ Documentation
     }
 }</pre>
 </div>
-<div created="20150503220354505" modified="20150920181419209" modifier="matthewfl" title="$:/temp/NewTagName">
+<div created="20150503220354505" creator="matthewfl" modified="20151224082511687" modifier="matthewfl" title="$:/temp/NewTagName">
 <pre></pre>
 </div>
 <div author="Zdeněk Jašek" core-version="&gt;=5.0.0" created="20150503222212011" creator="matthewfl" dependents="" description="Česky (Czech Republic)" icon="data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%3F%3E%0A%3Csvg%20version%3D%221.0%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22900%22%20height%3D%22600%22%3E%0A%09%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22%23d7141a%22%2F%3E%0A%09%3Crect%20width%3D%22900%22%20height%3D%22300%22%20fill%3D%22%23fff%22%2F%3E%0A%09%3Cpath%20d%3D%22M%20450%2C300%200%2C0%20V%20600%20z%22%20fill%3D%22%2311457e%22%2F%3E%0A%3C%2Fsvg%3E%0A" modified="20150503222212011" modifier="matthewfl" name="cs-CZ" original-plugin-type="language" original-tags="" original-title="$:/languages/cs-CZ" original-type="application/json" server-url="http://tiddlywiki.com/library/v5.1.8/index.html" tags="$:/tags/RemoteAssetInfo" title="$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/languages/cs-CZ" type="text/vnd.tiddlywiki" version="5.1.8">
@@ -6404,16 +6412,26 @@ java -jar target/scala-2.11/dj-assembly-0.0.1.jar -fjar target/scala-2.11/dj-ass
 * making services scalable
 ** the system need not be fast as long as it can keep being scaled.</pre>
 </div>
-<div created="20150503220345237" creator="matthewfl" modified="20150521214412886" modifier="matthewfl" tags="Documentation" title="Documentation">
+<div created="20151224082522643" creator="matthewfl" modified="20151224085251961" modifier="matthewfl" tags="Documentation Internals Runtime" title="Distributed locks">
+<pre>In Java every object has the methods `.wait()`, and is able to perform locking through the `synchronization (...) {}` method.  As such these primitive operations need to continue working when an object is being access remotely.
+
+To ensure that locks continue to operate correctly, the Java bytecode instructions `monitorenter` and `moniterexit` are replaced with method calls to the [[Distributed Object Helper|https://github.com/matthewfl/dj/blob/2dc81444ddb536493e214bc06d8f2c661d970c5e/src/main/scala/edu/berkeley/dj/internal/DistributedObjectHelper.java#L674-L723]] which has special static method that can be easily inlined the JVM and will properly manage the case when an object is distributed.</pre>
+</div>
+<div created="20150503220345237" creator="matthewfl" modified="20151224085356885" modifier="matthewfl" tags="Documentation" title="Documentation">
 <pre>* [[Basic usage]]
 * [[Internals]]
-* [[Optimizations]] </pre>
+&lt;!--* [[Optimizations]] --&gt;</pre>
 </div>
 <div created="20150521204305668" creator="matthewfl" modified="20150521212459119" modifier="matthewfl" title="Function call redirector">
 <pre>In a java program we are still bound to having all object inherit from the base type of `java.lang.Object`.  The Object class automatically provides useful methods such as `wait` and `notify`, however these methods are defined to be final, so we can not simply override them in the inheritance structure.  Instead we define new functions `__dj_wait` and `__dj_notify` which intelligently wrap the original functions.  We then have to parse all of the bytecode and examine which functions are being called.  If it is one of these functions, then we rewrite the function call to call our new function.</pre>
 </div>
-<div created="20150503220449624" creator="matthewfl" modified="20150521214418483" modifier="matthewfl" tags="Documentation Internals" title="Internals">
-<pre>* [[Rewriter]]</pre>
+<div created="20150503220449624" creator="matthewfl" modified="20151224062058220" modifier="matthewfl" tags="Documentation Internals" title="Internals">
+<pre>DJ is broken into two major components.  The &quot;[[JIT]]&quot; is the top component that makes high level scheduling and data placement decision.  The [[Runtime]] is the low level component that provides features such as automatic code [[rewriting|Rewriter]], distributed memory abstractions, distributed locks etc.
+
+* [[JIT]]
+* [[Runtime]]
+** [[Rewriter]]
+</pre>
 </div>
 <div created="20150920181408795" creator="matthewfl" modified="20150921085245630" modifier="matthewfl" tags="" title="Introduction">
 <pre>! DJ: Distributed JIT
@@ -6424,6 +6442,17 @@ On the other hand, DJ is designed to dynamically manage the split of programs an
 
 DJ is split into two major components.  First the runtime component manages rewriting java programs such that they can have their data and execution split between multiple hosts without affecting the correctness of the program.  The second component of DJ is the &quot;JIT&quot; which controls how a program is distributed.  It collects statistics from the runtime and uses this information to determine the best places to locate data and split computation.  These decisions made by the JIT are pushed back into the runtime which adjusts the the running program to reflect the JITs decisions.  </pre>
 </div>
+<div created="20151224060447465" creator="matthewfl" modified="20151224085318988" modifier="matthewfl" tags="Documentation JIT" title="JIT">
+<pre>The JIT component of DJ is responsible for making high level scheduling and placement decisions about how a program should run. The JIT receives notifications from the [[runtime|Runtime]] about how the program is performing, and sends asynchronous requests to the runtime to perform actions such as enabling and disabling RPC methods or moving objects between different machines in the cluster.
+
+Because the JIT is decoupled from the runtime, we are able to run the JIT on top of the runtime.  Additionally, since it is running on top of the runtime, it is running inside the same program space as the normal running programming.  As such, it is able directly interact directly with any objects that are produced by the normal running programming.  The JIT can also be provided by the programmer to customize the way that a program is distributed.  One of the design principles of the JIT is that it is only responsible for the performance of a program, and regardless of placement/scheduling decisions made, the correctness of a running programming will not be affected.
+
+ The JIT can be changed out using the flag `-djit [class-name]` and by implementing the the [[JITInterface|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/JITInterface.java]].  The JIT will make use of the [[JITCommands|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/internal/JITCommands.java]] to send commands back into the runtime.
+
+* [[JIT Interface|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/JITInterface.java]]
+* [[JIT Commands|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/internal/JITCommands.java]]
+* [[Minimal nop JIT example|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/SimpleJIT.java]]</pre>
+</div>
 <div created="20150521214252927" creator="matthewfl" modified="20150521214351092" modifier="matthewfl" title="matthewfl">
 <pre>*Name: Matthew Francis-Landau
 *Website: [[matthewfl.com|http://matthewfl.com]]
@@ -6433,6 +6462,11 @@ DJ is split into two major components.  First the runtime component manages rewr
 <pre>Java has a number of &quot;special namespaces&quot; such as //java.*// where only the system classloader is allowed to load classes into these namespaces.  However, we still want to rewrite these classes, since it includes data structures such as hash tables/maps/lists which we would like to operate in a distributed fashion.
 
 To counter act this, we change all references to classes that are in these protected namespace, to be prefixed with out own namespace `edu.berkeley.dj.internal.coreclazz.`.  We then load the original class and modify its internals such that it can operate in a distributed fashion.</pre>
+</div>
+<div created="20151224054322208" creator="matthewfl" modified="20151224091040196" modifier="matthewfl" tags="" title="Presentations">
+<pre>DJ is currently being prepared for publication in early 2016.
+
+* [[slides|http://matthewfl.com/wp/wp-content/uploads/2015/12/dj-slides-201509.pdf]] from technical presentation in September 2015</pre>
 </div>
 <div created="20150602090411877" creator="matthewfl" modified="20150602171754556" modifier="matthewfl" tags="" title="Previous work">
 <pre>Previous work for distributed Java JVM:
@@ -6465,7 +6499,7 @@ Previous work for distributed languages:
 <div created="20150521213601188" creator="matthewfl" modified="20150521214241570" modifier="matthewfl" title="Proxy generator">
 <pre>When we are using the [[Namespace rewriter]], we end up changing the name for a number of classes.  However, the JVM still requires that some classes maintain the same name as it needs to link up native methods.  To make this continue to work, we create proxy classes that wrap the original class and pass all method invocations back to the original class.</pre>
 </div>
-<div created="20150503220844359" creator="matthewfl" modified="20150906214250722" modifier="matthewfl" tags="Documentation Internals" title="Rewriter">
+<div created="20150503220844359" creator="matthewfl" modified="20151224085258669" modifier="matthewfl" tags="Documentation Internals Runtime" title="Rewriter">
 <pre>The rewriter takes bytecode from the project and automatically redirects all variable reads and writes so that we can appear as if we have shared memory architecture.
 
 The smallest unit of a distributed element will be an object in the java program.  If an object is currently not operating in a distributed fashion, then the additional overhead should only be a quick read from some status element on the object followed with an and operation for the specific bit.
@@ -6481,6 +6515,12 @@ When an object is remote, but being accessed locally, it will still have a local
 * [[Namespace rewriter]]
 * [[Proxy generator]]
 * [[Array classes]]
+* [[Distributed locks]]
+
+</pre>
+</div>
+<div created="20151224075157859" creator="matthewfl" modified="20151224085307941" modifier="matthewfl" tags="Documentation Runtime Internals" title="Runtime">
+<pre>The Runtime is the bottom component of DJ.  It is responsible for maintaining the correctness of any running program regardless of decisions made by the [[JIT]].  The main feature of the runtime is its automatic code [[rewriter|Rewriter]].  Automatic rewriting selectivly enables and disables features such as [[field access indirection|Variable write redirector]], [[RPC|Function call redirector]], [[distributed locks|Distributed locks]].
 
 </pre>
 </div>
