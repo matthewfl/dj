@@ -66,13 +66,19 @@ public class Thrasher {
                 callRes[i] = DistributedRunner.runOnRemote(allHosts[i], new Callable<Integer>() {
                     @Override
                     public Integer call() {
+                        InternalInterface.getInternalInterface().debug("worker task starting: "+z);
                         incSlot(root, z);
                         return z;
                     }
 
+                    int c = 0;
+
                     private void incSlot(TData n, int slot) {
                         if (n == null)
                             return;
+                        if((++c) % 200 == 0) {
+                            InternalInterface.getInternalInterface().debug("worker task "+z+" at "+c);
+                        }
                         n.counts[slot]++;
                         for (int j = 0; j < n.children.length; j++) {
                             incSlot(n.children[j], slot);
@@ -87,16 +93,22 @@ public class Thrasher {
             }
             System.out.println("checking value of all slots");
             for (int i = 0; i < num_hosts; i++) {
-                int v = (i + 1) % num_hosts;
+                final int v = (i + 1) % num_hosts;
                 callRes[i] = DistributedRunner.runOnRemote(allHosts[i], new Callable<Integer>() {
                     @Override
                     public Integer call() throws Exception {
+                        InternalInterface.getInternalInterface().debug("checker task starting: "+v);
                         return checkSlot(root, v, cntf + 1);
                     }
+
+                    int c = 0;
 
                     private int checkSlot(TData n, int slot, int val) {
                         if (n == null)
                             return 0;
+                        if((++c) % 200 == 0) {
+                            InternalInterface.getInternalInterface().debug("checker task "+v+" at "+c);
+                        }
                         int r = 0;
                         if (n.counts[slot] != val) {
                             r++;

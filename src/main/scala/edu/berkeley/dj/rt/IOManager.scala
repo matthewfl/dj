@@ -100,8 +100,10 @@ class IOManager (val manager: Manager) {
     if(cls.getClassLoader == null)
       return obj
 
-    if(!cls.isInstance(objectBase))
-      ???
+    // check that this is a subclass of the ObjectBase class
+    // this will throw cast exception otherwise
+    cls.asSubclass(objectBase)
+
 
     // this must be from our internal DJ rewritten class
 
@@ -122,6 +124,7 @@ class IOManager (val manager: Manager) {
           return arr_field.get("ir")
         } else {
           // need to make a copy of the array and convert all the objects
+          ???
         }
       }
       // TODO: handle other cases
@@ -163,7 +166,7 @@ class IOManager (val manager: Manager) {
     } else {
       new_cls.getDeclaredField("__dj_io_wraps").set(new_instance, obj)
     }
-
+/*
     if (cname.startsWith(config.coreprefix)) {
       val acls = new mutable.MutableList[Class[_]]
       var ccls = cls
@@ -184,11 +187,10 @@ class IOManager (val manager: Manager) {
       }
       ???
 
-    }
+    }*/
 
+    return new_instance
 
-
-    ???
   }
 
   private def convertToDJ(obj: Object): Object = {
