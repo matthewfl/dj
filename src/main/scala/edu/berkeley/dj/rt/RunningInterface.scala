@@ -236,5 +236,20 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(machine, 112, req)
   }
 
+  def createIOObject(clsname: String, argsTyp: Array[String], args: Array[Object], self: Array[Byte]): Int = {
+    manager.io.constructClass(clsname, argsTyp, args, self)
+  }
+
+  def callIOMethod(objectId: Int, methodName: String, argsTyp: Array[String], args: Array[Object]): Any = {
+    manager.io.callMethod(objectId, methodName, argsTyp, args)
+  }
+
+  def proxyCreateIOObject(target: Int, req: ByteBuffer) = {
+    ???
+  }
+
+  def proxyCallIOMethod(target: Int, req: ByteBuffer) = {
+    ???
+  }
 
 }

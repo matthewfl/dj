@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 /**
  * Created by matthewfl
  */
-class RemoteLoaderProxy (private val manager: Manager, private val pool: ClassPool) extends LoaderProxy(manager, pool) {
+class RemoteLoaderProxy (private val manager: Manager, private val pool: ClassPool, val ioLoader:Boolean=false) extends LoaderProxy(manager, pool) {
 
   // this should cache classes as they are loaded, so there should be some multicast message that tells
   // the 
@@ -27,7 +27,8 @@ class RemoteLoaderProxy (private val manager: Manager, private val pool: ClassPo
       }
     }*/
     println(s"remote loading $classname")
-    Await.result(manager.networkInterface.sendWrpl(0, 1, classname.getBytes), 600 seconds)
+    val remoteAction = if(ioLoader) 32 else 1
+    Await.result(manager.networkInterface.sendWrpl(0, remoteAction, classname.getBytes), 600 seconds)
   }
 
   val classByteCache = new collection.mutable.HashMap[String, Array[Byte]]()

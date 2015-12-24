@@ -177,6 +177,23 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
           // perform an rpc call to this machine
           man.runningInterface.callIn(13, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
         }
+        case 32 => {
+          // perform a load of an IO class
+          if (man.isMaster) {
+            val cname = new String(msg)
+            Future.successful(man.asInstanceOf[MasterManager].ioLoader.getClassBytes(cname))
+          } else {
+            Future.failed(new RuntimeException("This is not the master machine"))
+          }
+        }
+        case 33 => {
+          // construct an io class instance
+          man.runningInterface.callIn(16, from, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
+        }
+        case 34 => {
+          // call a method on an io class
+          man.runningInterface.callIn(17, from, ByteBuffer.wrap(msg)).asInstanceOf[ByteBuffer].array()
+        }
       }
     } catch {
       case e: NetworkForwardRequest => {

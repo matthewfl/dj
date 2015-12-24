@@ -149,6 +149,14 @@ public class InternalInterface {
 
     public void sendSerializedObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
 
+    public int createIOObject(String clsname, String[] argsTyp, Object[] args, byte[] self) { throw new InterfaceException(); }
+
+    public Object callIOMethod(int objectId, String methodName, String[] argsTyp, Object[] args) { throw new InterfaceException(); }
+
+    public int proxyCreateIOObject(int target, ByteBuffer buf) { throw new InterfaceException(); }
+
+    public ByteBuffer proxyCallIOMethod(int target, ByteBuffer buf) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -353,6 +361,28 @@ final class InternalInterfaceWrap extends InternalInterface {
         invoke("sendSerializedObject", new Class[]{ByteBuffer.class, int.class}, req, machine);
     }
 
+    @Override
+    public int createIOObject(String clsname, String[] argsTyp, Object[] args, byte[] self) {
+        return (int) invoke("createIOObject",
+                new Class[]{String.class, String[].class, Object[].class, byte[].class},
+                clsname, argsTyp, args, self);
+    }
+
+    @Override
+    public Object callIOMethod(int objectId, String methodName, String[] argsTyp, Object[] args) {
+        return invoke("callIOMethod",
+                new Class[]{int.class, String.class, String[].class, Object[].class},
+                objectId, methodName, argsTyp, args);
+    }
+
+    @Override
+    public int proxyCreateIOObject(int target, ByteBuffer buf) {
+        return (int) invoke("proxyCreateIOObject", new Class[]{int.class, ByteBuffer.class}, target, buf);
+    }
+
+    public ByteBuffer proxyCallIOMethod(int target, ByteBuffer buf) {
+        return (ByteBuffer) invoke("proxyCallIOMethod", new Class[]{int.class, ByteBuffer.class}, target, buf);
+    }
 
 
 
@@ -414,6 +444,10 @@ final class InternalInterfaceWrap extends InternalInterface {
             case 15:
                 DistributedObjectHelper.recvMovedObject((ByteBuffer)args[0]);
                 return null;
+            case 16:
+                return IOHelper.recvConstructLocalIO((int)args[0], (ByteBuffer)args[1]);
+            case 17:
+                return IOHelper.recvCallMethod((int)args[0], (ByteBuffer)args[1]);
         }
         return null;
     }

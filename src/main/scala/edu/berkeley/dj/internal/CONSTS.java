@@ -16,4 +16,5 @@ public class CONSTS {
     public static final int OBJECT_INITED = 0x10;
     public static final int PERFORM_RPC_REDIRECTS = 0x20;
     public static final int IS_CACHED_COPY = 0x40;
+    public static final int IS_IO_WRAPPER = 0x80;
 }

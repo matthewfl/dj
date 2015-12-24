@@ -11,6 +11,7 @@ target = 'dj-assembly-0.0.1.jar'
 
 program_jar = os.environ.get('PROGRAM_JAR', None)
 main_cls = os.environ.get('MAIN_CLS', 'testcase.SimpleSerializationTest')
+djit_cls = os.environ.get('DJIT_CLS', 'edu.berkeley.dj.jit.SimpleJIT')
 
 def short_hash(h):
     return hashlib.md5(h).hexdigest()[:10]
@@ -46,12 +47,13 @@ def start_client():
     ))
 
 def start_master():
-    run("tmux new -d -s dj-session-master 'java -Xmx2g -Ddj.cluster_seed={hosts} -jar /tmp/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp /tmp/{program_jar} -maincls {main_cls} -debug_clazz_bytecode /tmp/djcls/ 2>&1 > /tmp/dj-log-master-{short_code}-{hash}' > /dev/null".format(
+    run("tmux new -d -s dj-session-master 'java -Xmx2g -Ddj.cluster_seed={hosts} -jar /tmp/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp /tmp/{program_jar} -maincls {main_cls} -djit {djit_cls} -debug_clazz_bytecode /tmp/djcls/ 2>&1 > /tmp/dj-log-master-{short_code}-{hash}' > /dev/null".format(
         target=target,
         code=code,
         hosts=env.dj_hosts,
         program_jar=program_jar.split('/')[-1] if program_jar is not None else target,
         main_cls=main_cls,
+        djit_cls=djit_cls,
         hash=short_uid(),
         short_code=code[:6]
     ))
@@ -71,12 +73,13 @@ def start():
     env.dj_hosts = ','.join([h.split('@')[-1] for h in env.hosts])
     client_r = execute(start_client, hosts=env.hosts)
     time.sleep(7)
-    local("tmux new -d -s dj-session-master 'java -Xmx2g -Ddj.cluster_seed={hosts} -jar ../target/scala-2.11/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp ../target/scala-2.11/{target} -maincls {main_cls} -debug_clazz_bytecode /tmp/djcls/ 2>&1 >> /tmp/dj-log-master' > /dev/null".format(
+    local("tmux new -d -s dj-session-master 'java -Xmx2g -Ddj.cluster_seed={hosts} -jar ../target/scala-2.11/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp ../target/scala-2.11/{target} -maincls {main_cls} -djit {djit_cls} -debug_clazz_bytecode /tmp/djcls/ 2>&1 >> /tmp/dj-log-master' > /dev/null".format(
         target=target,
         code=code,
         hosts=env.dj_hosts,
         #program_jar=program_jar.split('/')[-1] if program_jar is not None else target,
         main_cls=main_cls,
+        djit_cls=djit_cls,
         hash=short_uid(),
         short_code=code[:6]
     ))

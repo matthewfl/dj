@@ -27,7 +27,7 @@ import scala.collection.mutable
   println("constructed")
 }*/
 
-class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
+class LoaderProxy(private val manager: Manager, private val pool: ClassPool, val debug_prefix: String="/")
   extends Loader(null, pool) {
 
   // called by the class reloader to check that we have the correct class
@@ -62,7 +62,7 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
           cls.detach()
           val clazz = cls.toBytecode()
           if (manager.config.debug_clazz_bytecode != null) {
-            val fl = new File(s"${manager.config.debug_clazz_bytecode}/${classname.replace(".", "/")}.class")
+            val fl = new File(s"${manager.config.debug_clazz_bytecode}${debug_prefix}${classname.replace(".", "/")}.class")
             fl.getParentFile.mkdirs()
             val f = new FileOutputStream(fl)
             f.write(clazz)
@@ -145,8 +145,5 @@ class LoaderProxy(private val manager: Manager, private val pool: ClassPool)
     println("res: "+name)
     null
   }
-
-
-
 
 }

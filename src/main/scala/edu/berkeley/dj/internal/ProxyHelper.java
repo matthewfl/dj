@@ -12,6 +12,8 @@ import java.util.Map;
 
 /**
  * Created by matthewfl
+ *
+ * Supports calling native methods on rewritten classes
  */
 public class ProxyHelper {
 

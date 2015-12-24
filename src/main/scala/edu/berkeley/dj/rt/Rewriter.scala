@@ -17,7 +17,14 @@ import scala.collection.mutable
 /**
  * Created by matthewfl
  */
-private[rt] class Rewriter (private val manager : MasterManager) {
+
+private[rt] trait RewriterInterface {
+
+  def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass
+
+}
+
+private[rt] class Rewriter (private val manager : MasterManager) extends RewriterInterface {
 
   def config = manager.config
 
@@ -795,6 +802,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
           case _: RewriteAddArrayWrap => {
             addArrayWrapMethods(cls)
           }
+          case _: RewriteAddSerialization => {
+            addSerializeMethods(cls)
+          }
           case _ => {} // nop
         }
       }
@@ -1371,6 +1381,9 @@ private[rt] class Rewriter (private val manager : MasterManager) {
        """
       cls.addMethod(CtMethod.make(static_constructor, cls))
 
+
+      // TODO: serialization methods
+
       /*val get_helper =
         s"""
            public static ${wrapType} helper_get(${inter_name} inst, int i) {
@@ -1388,6 +1401,98 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       cls.addMethod(CtMethod.make(set_helper, cls))
       */
     }
+
+    cls
+  }
+
+  lazy val ioWrapperObject = runningPool.get(s"${config.internalPrefix}IOWrapperObject")
+
+  // construct a wrapper for this class to be run without modifications so that it can perform IO type operatos
+  def makeIOClass(source_cls: CtClass): CtClass = {
+    val cls = runningPool.makeClass(source_cls.getName, ioWrapperObject)
+
+    // first check that we can use use this class
+    // eg no public fields, inherits from Object, is final
+    if(source_cls.getSuperclass.getName != "java.lang.Object")
+      throw new DJIOException(s"DJIO class '${source_cls.getName}' must have super class of 'java.lang.Object'")
+
+    if(!Modifier.isFinal(source_cls.getModifiers))
+      throw new DJIOException(s"DJIO class '${source_cls.getName}' must be final")
+
+    for(field <- source_cls.getDeclaredFields) {
+      if(Modifier.isPublic(field.getModifiers))
+        throw new DJIOException(s"DJIO class '${source_cls.getName}' can not have public field '${field.getName}'")
+    }
+
+//    cls.addField(CtField.make("public int __dj_io_owning_machine = -1;", cls))
+//    cls.addField(CtField.make("public int __dj_io_object_id = -1;", cls))
+
+    for(con <- source_cls.getConstructors) {
+      // not sure why would have a non public constructor
+      if(Modifier.isPublic(con.getModifiers)) {
+        val ann = con.getAnnotation(classOf[DJIOTargetMachineArgPosition])
+        if(ann == null) {
+          // TODO: should allow this constructor but simply just
+          // prevent it from being called inside the distributed program
+          throw new DJIOException(s"DJIO class '${source_cls.getName}' is missing the @DJIOTargetMachineArgPosition annotation on one of its constructors")
+        }
+        val targetArgPos = ann.asInstanceOf[DJIOTargetMachineArgPosition].value()
+        val paramsTypes = con.getParameterTypes
+        if(!(targetArgPos >= 1 && targetArgPos <= paramsTypes.length && paramsTypes(targetArgPos - 1) == CtClass.intType)) {
+          throw new DJIOException(s"DJIO class '${source_cls.getName}' has bad target argument for target argument")
+        }
+        val args = paramsTypes.zipWithIndex.map(a => s"${getUsableName(a._1)} arg${a._2}").mkString(", ")
+        val argsTyp = paramsTypes.map(s => "\""+s.getName+"\"").mkString(", ")
+        val argsTypStr = if(paramsTypes.length > 0) {
+          s"new String [] { $argsTyp }"
+        } else {
+          s"new String[0]"
+        }
+        val con_code = s"""
+                           public ${cls.getSimpleName} (${args}) {
+                             super();
+                             this.__dj_class_mode |= 0x80; // IS_IO_WRAPPER
+                             this.__dj_io_owning_machine = arg${targetArgPos - 1} ;
+                             this.__dj_io_object_id = ${config.internalPrefix}IOHelper.constructLocalIO(this.__dj_io_owning_machine, "${source_cls.getName}", $argsTypStr ,  $$args, this);
+                           }
+                           """
+        cls.addConstructor(CtNewConstructor.make(con_code, cls))
+      }
+    }
+
+    for(mth <- source_cls.getDeclaredMethods) {
+      if(Modifier.isPublic(mth.getModifiers)) {
+        // we need to create a proxy to this method
+        val params = mth.getParameterTypes
+        val args = params.zipWithIndex.map(a => s"${getUsableName(a._1)} arg${a._2}").mkString(", ")
+        val argsTyp = params.map(s => "\""+s.getName+"\"").mkString(", ")
+        val argsTypStr = if(params.length > 0) {
+          s"new String [] { $argsTyp }"
+        } else {
+          "new String[0]"
+        }
+        val (returnPrefix, returnSuffix) = if(mth.getReturnType == CtClass.voidType) {
+          ("", "") // void do nothing
+        } else {
+          if(mth.getReturnType.isPrimitive) {
+            (s"return ((${mth.getReturnType.asInstanceOf[CtPrimitiveType].getWrapperName})(", s")).${mth.getReturnType.getName}Value()")
+          } else {
+            (s"return (${getUsableName(mth.getReturnType)})(", ")")
+          }
+        }
+        val mth_code =
+          s"""
+             public ${getUsableName(mth.getReturnType)} ${mth.getName} (${args}) {
+               ${returnPrefix} ${config.internalPrefix}IOHelper.callMethod(this.__dj_io_owning_machine, this.__dj_io_object_id, "${mth.getName}", $argsTypStr , $$args, this) ${returnSuffix} ;
+             }
+           """
+        cls.addMethod(CtMethod.make(mth_code, cls))
+      }
+    }
+
+    // TODO: serialize/deserialize methods
+    // TODO: remote reads and write methods??
+
 
     cls
   }
@@ -1454,8 +1559,7 @@ private[rt] class Rewriter (private val manager : MasterManager) {
     }
   }
 
-
-  def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
+  override def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
     MethodInfo.doPreverify = true
 
     if(classname.startsWith(config.coreprefix) && classname.endsWith("00DJ")) {
@@ -1563,6 +1667,12 @@ private[rt] class Rewriter (private val manager : MasterManager) {
       // don't think tha this is ever used
       ???
     } else if (!classname.startsWith("edu.berkeley.dj.internal.")) {
+
+      if(cls.getAnnotation(classOf[DJIO]) != null) {
+        // this is an io class
+        return makeIOClass(cls)
+      }
+
       val mana = getMethodAnalysis(cls)
       addToCache(cls)
       if(!checkIsAThrowable(cls))
