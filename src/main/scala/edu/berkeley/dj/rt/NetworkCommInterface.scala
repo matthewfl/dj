@@ -1,5 +1,6 @@
 package edu.berkeley.dj.rt
 
+import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 import java.util.UUID
 
@@ -198,6 +199,17 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
     } catch {
       case e: NetworkForwardRequest => {
         throw new RedirectRequestToAlternateMachine(e.to)
+      }
+      case e: InvocationTargetException => {
+        val te = e.getTargetException
+        val tec = te.getClass
+        if(tec.getName == classOf[NetworkForwardRequest].getName) {
+          // the classes don't match since they are from different class loaders
+          throw new RedirectRequestToAlternateMachine(tec.getField("to").getInt(te))
+        }
+        System.err.println(s"There was an error with command $action\n$e")
+        e.printStackTrace(System.err)
+        Future.failed(e)
       }
       case e: Throwable => {
         System.err.println(s"There was an error with command $action\n$e")
