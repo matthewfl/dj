@@ -1475,7 +1475,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
           ("", "") // void do nothing
         } else {
           if(mth.getReturnType.isPrimitive) {
-            (s"return ((${mth.getReturnType.asInstanceOf[CtPrimitiveType].getWrapperName})(", s")).${mth.getReturnType.getName}Value()")
+            (s"return ((${config.coreprefix}${mth.getReturnType.asInstanceOf[CtPrimitiveType].getWrapperName})(", s")).${mth.getReturnType.getName}Value()")
           } else {
             (s"return (${getUsableName(mth.getReturnType)})(", ")")
           }

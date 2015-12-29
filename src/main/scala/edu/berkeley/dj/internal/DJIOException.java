@@ -9,4 +9,8 @@ public class DJIOException extends RuntimeException {
         super(msg);
     }
 
+    public DJIOException(String msg, Throwable e) {
+        super(msg, e);
+    }
+
 }

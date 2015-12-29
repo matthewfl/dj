@@ -32,12 +32,17 @@ public class SimpleIOMain {
 
 
 
+
     }
 
     static class RequestHandler {
 
-        RequestWrapper getNewWrapper() {
+        public RequestWrapper getNewWrapper() {
             return new RequestWrapper();
+        }
+
+        public String res(String path) {
+            return path + "gg2";
         }
 
     }

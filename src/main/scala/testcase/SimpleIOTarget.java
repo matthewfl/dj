@@ -49,6 +49,11 @@ public final class SimpleIOTarget {
 
     }
 
+    String simpleReq(String path) {
+        //return path + "gg";
+        return rq.res(path);
+    }
+
 }
 
 
@@ -58,13 +63,18 @@ class JettyHelloWorld extends AbstractHandler {
     public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         response.setContentType("text/html; charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
-        response.getWriter().println("<h1>Hello World</h1>");
+        response.getWriter().println(this.target.simpleReq(target));
+
+//        response.getWriter().println("<h1>Hello World</h1>");
+
         baseRequest.setHandled(true);
     }
 
+    private SimpleIOTarget target;
     public Server server;
 
     public JettyHelloWorld(SimpleIOTarget self) throws Exception {
+        target = self;
         server = new Server(8080);
         server.setHandler(this);
         server.start();

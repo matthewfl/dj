@@ -105,7 +105,7 @@ private[rt] class IORewriter (private val manager: MasterManager) extends Rewrit
         s"""
            ${access} ${rtype.getName} ${mth.getName} (${args.zipWithIndex.map(v => v._1.getName + " a"+v._2).mkString(", ")}) {
              ${if(rtype != CtClass.voidType) s"return $cast_prefix" else ""}
-             edu.berkeley.dj.iointernal.IOCallDJHelper.call(__dj_io_wraps, "${mth.getName}",
+             edu.berkeley.dj.ioInternal.IOCallDJHelper.call(__dj_io_wraps, "${mth.getName}",
                $cls_types,
                $$args
              ) ${if(rtype != CtClass.voidType) cast_suffix else ""};

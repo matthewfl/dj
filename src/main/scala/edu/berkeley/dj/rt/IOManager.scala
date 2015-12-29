@@ -1,5 +1,7 @@
 package edu.berkeley.dj.rt
 
+import java.lang.reflect.Modifier
+
 import edu.berkeley.dj.internal.{CONSTS, DJIO}
 
 import scala.collection.mutable
@@ -57,6 +59,9 @@ class IOManager (val manager: Manager) {
     id
   }
 
+  /*
+  Call method from DJ into runtime
+   */
   def callMethod(objectId: Int, methodName: String, argsCls: Array[String], args: Array[Object]): Any = {
     val obj = this.synchronized {
       objs.get(objectId).orNull
@@ -77,6 +82,31 @@ class IOManager (val manager: Manager) {
     convertToDJ(ret)
   }
 
+  def callDJMethod(wrapped: Object, method: String, argsType: Array[String], args: Array[Object]): Object = {
+    val clsw = wrapped.getClass
+    val argsT = argsType.map(findClassDJ)
+    val mth = clsw.getDeclaredMethod(method, argsT:_*)
+    val argsV = args.zip(argsT).map(v => {
+      if(!v._2.isPrimitive)
+        convertToDJ(v._1)
+      else
+        v._1
+    })
+    val res = mth.invoke(wrapped, argsV:_*)
+    convertFromDJ(res)
+  }
+
+  private def findClassDJ(classname: String): Class[_] = classname match {
+    case "byte" => classOf[Byte]
+    case "short" => classOf[Short]
+    case "char" => classOf[Char]
+    case "int" => classOf[Int]
+    case "long" => classOf[Long]
+    case "float" => classOf[Float]
+    case "double" => classOf[Double]
+    case v => manager.loader.loadClass(v)
+  }
+
   private def findClass(classname: String): Class[_] = classname match {
     case "byte" => classOf[Byte]
     case "short" => classOf[Short]
@@ -88,9 +118,12 @@ class IOManager (val manager: Manager) {
     case v => loader.loadClass(v)
   }
 
-  lazy val objectBase = djLoader.loadClass(config.internalPrefix+"ObjectBase")
+  private lazy val objectBase = djLoader.loadClass(config.internalPrefix+"ObjectBase")
 
   private def convertFromDJ(obj: Object): Object = {
+    if(obj == null)
+      return null
+
     val cls = obj.getClass
     val cname = cls.getName
 
@@ -197,6 +230,9 @@ class IOManager (val manager: Manager) {
     // if it is some primitive type that we allowed, then just pass it through
     // if it is an instance of DJIO then we can wrap the class and pass it back
     // if the class is currently a io_proxy
+    if(obj == null) {
+      return null
+    }
     val cls = obj.getClass()
     val cls_name = cls.getName
     if(cls_name.endsWith(config.ioProxySuffix)) {
@@ -219,9 +255,18 @@ class IOManager (val manager: Manager) {
           val dj_inst = unsafe.allocateInstance(dj_cls)
           dj_cls.getField("__dj_io_object_id").setInt(dj_inst, intId)
           dj_cls.getField("__dj_io_owning_machine").setInt(dj_inst, manager.networkInterface.getSelfId)
+          this.synchronized {
+            objs.put(intId, obj)
+            //robjs.put(obj, intId)
+          }
+          //return dj_cls
           ???
         }
-        case Some(rr) => return rr
+        case Some(rr) => {
+          ???
+          // this needs to look up this object and
+          return rr
+        }
       }
     }
     val cname = cls.getName
@@ -231,12 +276,30 @@ class IOManager (val manager: Manager) {
       // or if we can just return it
       val nname = manager.classRename(cname.replace(".","/"))
       // we don't have to deal with renaming this class
-      if(nname == null)
+      if(nname == null || nname.replace("/", ".") == cname)
         return obj
       val ncls = manager.loader.loadClass(nname.replace("/", "."))
       val ninst = unsafe.allocateInstance(ncls)
       // need to copy over any potential fields
-      ???
+      var cl = cls
+      var ncl = ncls
+      while(cl != classOf[Object]) {
+        for(fid <- cl.getDeclaredFields) {
+          if(!Modifier.isStatic(fid.getModifiers)) {
+            fid.setAccessible(true)
+            val nfid = ncl.getDeclaredField(fid.getName)
+            nfid.setAccessible(true)
+            if(fid.getType.isPrimitive)
+              nfid.set(ninst, fid.get(obj))
+            else
+              nfid.set(ninst, convertToDJ(fid.get(obj)))
+          }
+        }
+        cl = cl.getSuperclass.asInstanceOf[Class[_ <: Object]]
+        ncl = ncl.getSuperclass
+      }
+      return ninst
+//      ???
     }
 
     if(cls.isArray) {
