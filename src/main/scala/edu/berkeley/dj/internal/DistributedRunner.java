@@ -30,6 +30,7 @@ public class DistributedRunner {
 
     @RewriteAddAccessorMethods
     @RewriteUseAccessorMethods
+    @RewriteAddSerialization
     static private class dFutureRunner<T> extends ObjectBase implements Runnable {
 
         private DistributedFuture<T> f;
@@ -42,9 +43,12 @@ public class DistributedRunner {
 
         @Override
         public void run() {
+            Callable<T> cc = c;
+            DistributedFuture<T> ff = f;
             try {
                 f.success(c.call());
             } catch (Throwable e) {
+                e.printStackTrace();
                 f.failure(e);
             }
         }

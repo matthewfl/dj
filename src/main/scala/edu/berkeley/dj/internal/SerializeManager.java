@@ -115,9 +115,14 @@ public class SerializeManager {
     }
 
     public enum SerializationAction {
+        // will raise an error if the object is currently locked
         MOVE_OBJ_MASTER,
         MOVE_OBJ_MASTER_LEAVE_CACHE,
-        MAKE_OBJ_CACHE
+        MAKE_OBJ_CACHE,
+        // will block until the object is unlocked
+        MOVE_OBJ_BLOCK_TIL_READY,
+        // will simply create a remote object reference
+        MAKE_REFERENCE,
     }
 
     static final SerializationAction[] SerializationActionList = SerializationAction.values();
@@ -195,6 +200,9 @@ class Deserialization extends SerializeManager {
                     m |= CONSTS.IS_CACHED_COPY;
                     m &= ~(CONSTS.REMOTE_READS);
                     ob.__dj_class_mode = m;
+                } else if(act == SerializationAction.MAKE_REFERENCE) {
+                    // this should never happen since we are just expecting a reference
+                    throw new RuntimeException();
                 }
             } else {
                 // this should never happen since the heads of an object should always be an objectBase type
@@ -278,19 +286,45 @@ class Serialization extends SerializeManager {
                 buff.putInt(act.ordinal());
                 o.__dj_serialize_obj(this);
                 // TODO: locking or something in here
-                if(act == SerializationAction.MOVE_OBJ_MASTER) {
-                    o.__dj_class_manager.owning_machine = target_machine;
-                    o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES;
-                    o.__dj_class_manager.dj_serialize_obj(this, act);
-                } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
-                    o.__dj_class_manager.owning_machine = target_machine;
-                    if(o.__dj_class_manager.cached_copies == null) {
-                        o.__dj_class_manager.cached_copies = new int[] { InternalInterface.getInternalInterface().getSelfId() };
-                    } else {
-                        throw new NotImplementedError();
+                if(act == SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
+                    while(true) {
+                        synchronized (o) {
+                            if(o.__dj_class_manager.monitor_lock_count == 0) {
+                                // the object is ready to be seralized
+                                o.__dj_class_manager.owning_machine = target_machine;
+                                //if(o.__dj_class_manager.monitor_lock_count)
+                                o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES;
+                                o.__dj_class_manager.dj_serialize_obj(this, act);
+                                break;
+                            }
+                        }
+                        try { Thread.sleep(2); } catch (InterruptedException e) {}
                     }
-                    o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES;
-                    o.__dj_class_manager.dj_serialize_obj(this, act);
+                }
+                if(act == SerializationAction.MOVE_OBJ_MASTER) {
+                    synchronized (o) {
+                        if(o.__dj_class_manager.monitor_lock_count != 0) {
+                            throw new SerializeException("Object is currently locked", o);
+                        }
+                        o.__dj_class_manager.owning_machine = target_machine;
+                        //if(o.__dj_class_manager.monitor_lock_count)
+                        o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES;
+                        o.__dj_class_manager.dj_serialize_obj(this, act);
+                    }
+                } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
+                    synchronized (o) {
+                        if(o.__dj_class_manager.monitor_lock_count != 0) {
+                            throw new SerializeException("Object is currently locked", o);
+                        }
+                        o.__dj_class_manager.owning_machine = target_machine;
+                        if (o.__dj_class_manager.cached_copies == null) {
+                            o.__dj_class_manager.cached_copies = new int[]{InternalInterface.getInternalInterface().getSelfId()};
+                        } else {
+                            throw new NotImplementedError();
+                        }
+                        o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES;
+                        o.__dj_class_manager.dj_serialize_obj(this, act);
+                    }
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
                     if(o.__dj_class_manager.cached_copies == null) {
                         o.__dj_class_manager.cached_copies = new int[] {target_machine};
@@ -301,6 +335,8 @@ class Serialization extends SerializeManager {
                         na[na.length - 1] = target_machine;
                         o.__dj_class_manager.cached_copies = na;
                     }
+                } else if(act == SerializationAction.MAKE_REFERENCE) {
+                    // NOP
                 }
             }
         }
@@ -316,7 +352,8 @@ class Serialization extends SerializeManager {
             if(o instanceof ObjectBase)
                 nextObj.add((ObjectBase)o);
         }
-        if(current_action == SerializationAction.MOVE_OBJ_MASTER) {
+        if(current_action == SerializationAction.MOVE_OBJ_MASTER ||
+                current_action == SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
             // we are emptying out this object and moving the master elsewhere
             return null;
         }

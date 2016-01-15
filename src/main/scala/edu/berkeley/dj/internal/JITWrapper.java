@@ -54,6 +54,7 @@ public class JITWrapper {
         RemoteRPC,
         ReceiveRemoteRead,
         ReceiveRemoteWrite,
+        ProxyObjectCreated,
     }
 
     public static class RecordedOperation {
@@ -122,6 +123,12 @@ public class JITWrapper {
                 operations.notify();
             }
         }
+    }
+
+    static void recordProxyObjectCreated(Object self) {
+        // TODO: determine when this is a proxy object and not a derseralization I guess
+        // will allow the JIT to start moving over other commonly accessed objects based off the type
+        //RecordedOperation r = new RecordedOperation()
     }
 
     // call from the machine

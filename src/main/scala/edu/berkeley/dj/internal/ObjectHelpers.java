@@ -49,7 +49,7 @@ public class ObjectHelpers {
             ObjectBase ob = (ObjectBase)o;
             if(ob.__dj_class_manager == null) {
                 ob.wait();
-                // there will be a notify all when we switch from a non distribuited mode to a distribuited mode
+                // there will be a notify all when we switch from a non distributed mode to a distributed mode
                 if(ob.__dj_class_manager != null) {
                     // TODO: may have to unlock the current monitor
                     // since we will end up spinning trying to get the lock
@@ -73,6 +73,7 @@ public class ObjectHelpers {
                 if(ob.__dj_class_manager != null)
                     throw new NotImplementedException(); // we need to rewait on the distributed object
             } else {
+                // TODO: need a timer implementation of waiting on distributed objects
                 throw new NotImplementedException();
             }
         } else {
@@ -110,7 +111,7 @@ public class ObjectHelpers {
     }
 
     public static void monitorExit(Object o) {
-        // TODO: need to handle the case where something is holding the monitor while something is becoming distibuited
+        // TODO: need to handle the case where something is holding the monitor while something is becoming distributed
         if(o instanceof ObjectBase) {
             ObjectBase ob = (ObjectBase)o;
             if(ob.__dj_class_manager != null) {

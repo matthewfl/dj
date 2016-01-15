@@ -194,6 +194,7 @@ public class DistributedObjectHelper {
                             CONSTS.REMOTE_WRITES |
                             CONSTS.IS_NOT_MASTER;
                     localDistributedObjects.put(id.identifier, obj);
+                    JITWrapper.recordProxyObjectCreated(obj);
                     return obj;
                 }
             } catch(ClassNotFoundException|InstantiationException e) {
@@ -645,7 +646,8 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
             // we are not the master machine here, we should forward this request
-            throw new NotImplementedException();
+            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+//            throw new NotImplementedException();
         }
         if(h.__dj_class_manager.notifications_to_send != -1) {
             if(notify_cnt == -1) {
@@ -681,7 +683,8 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             // redirect to the correct machine
-            throw new NotImplementedException();
+                throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+//            throw new NotImplementedException();
         synchronized (h) {
             // we have a param for spinning since we do not want to block the io threads with spinning on an object
             do {
@@ -707,7 +710,8 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
             // redirect to the correct machine
-            throw new NotImplementedException();
+            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+//            throw new NotImplementedException();
         synchronized (h) {
             assert(h.__dj_class_manager.monitor_lock_count == 1);
             if(h.__dj_class_manager.notifications_to_send != -1) {

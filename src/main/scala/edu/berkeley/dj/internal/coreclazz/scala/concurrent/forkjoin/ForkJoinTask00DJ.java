@@ -173,6 +173,7 @@ import java.util.concurrent.*;
 @RewriteAllBut(nonModClasses = {})
 @RewriteAddAccessorMethods
 @RewriteUseAccessorMethods
+@RewriteAddSerialization
 public abstract class ForkJoinTask00DJ<V> implements Future<V>, Serializable {
 
     /*

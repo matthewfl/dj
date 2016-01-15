@@ -6,6 +6,7 @@ package edu.berkeley.dj.internal.coreclazz.scala.concurrent.forkjoin;
 
 
 import edu.berkeley.dj.internal.RewriteAddAccessorMethods;
+import edu.berkeley.dj.internal.RewriteAddSerialization;
 import edu.berkeley.dj.internal.RewriteAllBut;
 import edu.berkeley.dj.internal.RewriteUseAccessorMethods;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -28,6 +29,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 @RewriteAllBut(nonModClasses = {})
 @RewriteAddAccessorMethods
 @RewriteUseAccessorMethods
+@RewriteAddSerialization
 public class ForkJoinWorkerThread00DJ extends Thread {
     /*
      * ForkJoinWorkerThreads are managed by ForkJoinPools and perform

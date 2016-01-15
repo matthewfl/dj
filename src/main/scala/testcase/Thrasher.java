@@ -53,7 +53,7 @@ public class Thrasher {
 
         // now we are going to run tasks on all the nodes which will go through everything and increment the values
 
-        int[] allHosts =InternalInterface.getInternalInterface().getAllHosts();
+        int[] allHosts = InternalInterface.getInternalInterface().getAllHosts();
         Future<Integer> callRes[] = new Future[num_hosts];
 
         for(int cnt = 0; cnt < 10; cnt++) {
@@ -106,7 +106,7 @@ public class Thrasher {
                     private int checkSlot(TData n, int slot, int val) {
                         if (n == null)
                             return 0;
-                        if((++c) % 200 == 0) {
+                        if((c++) % 200 == 0) {
                             InternalInterface.getInternalInterface().debug("checker task "+v+" at "+c);
                         }
                         int r = 0;

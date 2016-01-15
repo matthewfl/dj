@@ -25,6 +25,7 @@ import java.util.concurrent.*;
 @RewriteAllBut(nonModClasses = {})
 @RewriteAddAccessorMethods
 @RewriteUseAccessorMethods
+@RewriteAddSerialization
 /*public*/ abstract class CountedCompleter00DJ<T> extends ForkJoinTask00DJ<T> {
     private static final long serialVersionUID = 5232453752276485070L;
 
@@ -476,6 +477,7 @@ import java.util.concurrent.*;
 @RewriteAllBut(nonModClasses = {})
 @RewriteAddAccessorMethods
 @RewriteUseAccessorMethods
+@RewriteAddSerialization
 public class ForkJoinPool00DJ extends AbstractExecutorService {
 
     /*

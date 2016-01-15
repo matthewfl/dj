@@ -13,6 +13,7 @@ public class DistributedVariable<T> {
     // TODO: some annotation to rewrite the
     @RewriteAddAccessorMethods
     @RewriteUseAccessorMethods
+    @RewriteAddSerialization
     private static final class ObjectHolder extends ObjectBase {
         private Object o;
         void set(Object o) { this.o = o; }

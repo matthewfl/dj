@@ -17,5 +17,6 @@ public interface Base {
 
     static int length(Base b) { return b.length(); }
 
+
 }
 

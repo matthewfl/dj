@@ -157,7 +157,8 @@ final public class ClassManager {
 
     public Object readField_A(int id) {
         ByteBuffer res = requestRead(id, 18);
-        return DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(res.array()));
+        Object r = DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(res.array()));
+        return r;
     }
 
 
