@@ -163,6 +163,7 @@ final public class ClassManager {
 
 
     private ByteBuffer requestRead(int fid, int op) {
+        InternalInterface.debug("read request "+fid+" "+op+" "+distributedObjectId);
         ByteBuffer bb = requestRemote(fid, 0);
         JITWrapper.recordRemoteRead(managedObject, fid, owning_machine);
         return InternalInterface.getInternalInterface().readField(bb, op, owning_machine);

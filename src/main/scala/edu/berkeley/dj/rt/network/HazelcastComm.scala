@@ -4,7 +4,6 @@ import java.io.Serializable
 
 import com.hazelcast.config.{MulticastConfig, TcpIpConfig, ListenerConfig, Config}
 import com.hazelcast.core._
-import edu.berkeley.dj.internal.NetworkForwardRequest
 import edu.berkeley.dj.rt.network.HazelcastComm.{sendReply, sendMessage}
 import edu.berkeley.dj.rt.network.HazelcastHost.{DJModConfig, startProgram}
 import edu.berkeley.dj.utils.Memo
@@ -93,8 +92,8 @@ class HazelcastComm(recever: NetworkRecever,
         })
       }
     } catch {
-      case e: NetworkForwardRequest => {
-        val tom = app_id_map(e.to)
+      case e: RedirectRequestToAlternateMachine => {
+        val tom = app_id_map(e.altMachine)
         val exec = host.instance.getExecutorService("send-msg")
         exec.executeOnMember(new sendMessage(appId, from, action, replyId, msg), tom)
       }

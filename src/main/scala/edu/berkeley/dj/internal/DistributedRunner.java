@@ -74,9 +74,16 @@ public class DistributedRunner {
     static void runRunnable(int from_id, byte[] id) {
         ThreadHelpers.registerWorkerThread();
         Runnable r = (Runnable)DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(id));
-        ThreadHelpers.newThreadCallback(r); // set knowledge about this runnable task
-        //r.run();
-        ThreadHelpers.unregisterWorkerThread();
+        try {
+            ThreadHelpers.newThreadCallback(r); // set knowledge about this runnable task
+            //r.run();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            InternalInterface.debug("error from runnable");
+            throw e;
+        } finally {
+            ThreadHelpers.unregisterWorkerThread();
+        }
     }
 
 

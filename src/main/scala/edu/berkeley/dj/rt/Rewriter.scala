@@ -1382,24 +1382,36 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       cls.addMethod(CtMethod.make(static_constructor, cls))
 
 
-      // TODO: serialization methods
+      // serialization methods
 
-      /*val get_helper =
-        s"""
-           public static ${wrapType} helper_get(${inter_name} inst, int i) {
-             return inst.get_${augName(wrapType)}(i);
-           }
-         """
-      cls.addMethod(CtMethod.make(get_helper, cls))
+      val serialize_helper = s"""
+        public void __dj_serialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
+          super.__dj_serialize_obj(man);
+          int len = length();
+          man.put_value_I(len);
+          for(int i = 0; i < len; i++) {
+            ${
+        if(isPrimitive) s"man.put_value_${jvmtyp}(this.ir[i]);" else "this.ir[i] = man.put_object(this.ir[i]);"
+         }
+          }
+        }
+        """
 
-      val set_helper =
-        s"""
-           public static void helper_set(${inter_name} inst, int i, ${wrapType} val) {
-             inst.set_${augName(wrapType)}(i, val);
-           }
-         """
-      cls.addMethod(CtMethod.make(set_helper, cls))
-      */
+
+
+      val deserialize_helper = s"""
+        public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
+          int len = man.get_value_I();
+          this.ir = new ${inner_arr_typ}[len];
+          for(int i = 0; i < len; i++) {
+            ${if(isPrimitive) s"this.ir[i] = man.get_value_${jvmtyp}();" else "this.ir[i] = man.get_object(this.ir[i]);"}
+          }
+        }
+        """
+
+      cls.addMethod(CtMethod.make(serialize_helper, cls))
+      cls.addMethod(CtMethod.make(deserialize_helper, cls))
+
     }
 
     cls

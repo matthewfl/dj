@@ -24,8 +24,8 @@ class DummyComm(recever: NetworkRecever,
     DummyHost.comms.get((appId, to)) match {
       case Some(h) => Future {
         try { h.recv(selfid, action, msg) }
-        catch { case e: NetworkForwardRequest => {
-          send(e.to, action, msg)
+        catch { case e: RedirectRequestToAlternateMachine => {
+          send(e.altMachine, action, msg)
         }}
       }
       case None => throw new RuntimeException("host not found: "+to)
@@ -54,8 +54,8 @@ class DummyComm(recever: NetworkRecever,
             })
             //f.onComplete(ret.complete)
 
-          } catch { case e: NetworkForwardRequest => {
-            sendWrpl(e.to, action, msg).onComplete(ret.complete)
+          } catch { case e: RedirectRequestToAlternateMachine => {
+            sendWrpl(e.altMachine, action, msg).onComplete(ret.complete)
           }}
         }
         ret.future

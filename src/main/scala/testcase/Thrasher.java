@@ -66,9 +66,14 @@ public class Thrasher {
                 callRes[i] = DistributedRunner.runOnRemote(allHosts[i], new Callable<Integer>() {
                     @Override
                     public Integer call() {
-                        InternalInterface.getInternalInterface().debug("worker task starting: "+z);
-                        incSlot(root, z);
-                        return z;
+                        try {
+                            InternalInterface.getInternalInterface().debug("worker task starting: " + z);
+                            incSlot(root, z);
+                            return z;
+                        } catch (Throwable e) {
+                            e.printStackTrace();
+                            throw e;
+                        }
                     }
 
                     int c = 0;
