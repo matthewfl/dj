@@ -2,6 +2,7 @@ package edu.berkeley.dj.rt
 
 import java.nio._
 import java.util.concurrent.TimeoutException
+import java.util.UUID
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -250,6 +251,14 @@ class RunningInterface (private val config: Config, private val manager: Manager
 
   def proxyCallIOMethod(target: Int, req: ByteBuffer) = {
     ???
+  }
+
+  def updateObjectLocation(id: UUID, target: Int, machine: Int): Unit = {
+    val buf = ByteBuffer.allocate(20)
+    buf.putLong(id.getMostSignificantBits)
+    buf.putLong(id.getLeastSignificantBits)
+    buf.putInt(target)
+    manager.networkInterface.send(machine, 104, buf)
   }
 
 }

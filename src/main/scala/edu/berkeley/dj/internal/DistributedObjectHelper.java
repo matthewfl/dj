@@ -29,8 +29,8 @@ public class DistributedObjectHelper {
 
         @Override
         public String toString() {
-            if(lastKnownHost != -2)
-                return "DJ_OBJ("+identifier+")";
+            if(!isFinalObj())
+                return "DJ_OBJ("+identifier+", "+new String(extradata)+")";
             else
                 return "DJ_OBJ(final)";
         }
@@ -521,7 +521,19 @@ public class DistributedObjectHelper {
         }
         if(h == null)
             return;
+        // this is the master machine, we should not be telling it where the owner is
+        if((h.__dj_getClassMode() & CONSTS.IS_NOT_MASTER) == 0)
+            return;
         h.__dj_getManager().owning_machine = machine_location;
+    }
+
+    static public void sendUpdateObjectLocation(UUID id, int machine_location, int to) {
+        if(to == InternalInterface.getInternalInterface().getSelfId()) {
+            // this is a waste
+//            throw new RuntimeException();
+            return;
+        }
+        InternalInterface.getInternalInterface().updateObjectLocation(id, machine_location, to);
     }
 
     static public ByteBuffer readField(int op, int from, ByteBuffer req) {
@@ -538,7 +550,7 @@ public class DistributedObjectHelper {
 
             // TODO: update the location from the machine that made the request
             // already exists the code for recving the update
-
+            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
             throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
 //            throw new NotImplementedException();
         }
@@ -599,7 +611,9 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.REMOTE_WRITES) != 0) {
             // need to redirect the request elsewhere
-            throw new NotImplementedException();
+//            throw new NotImplementedException();
+            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
+            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
         }
         JITWrapper.recordReceiveRemoteWrite(h, fid, from);
         switch(op) {
@@ -802,7 +816,9 @@ public class DistributedObjectHelper {
         }
         if(h == null) {
             // there is something wrong since we should have owned this object??
-            throw new RuntimeException();
+            // the object could have recieved another command already to move it?
+            //throw new RuntimeException();
+            InternalInterface.debug("failed to locate object to move: "+id);
         } else {
             moveObject(h, to);
         }

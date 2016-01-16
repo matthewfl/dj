@@ -157,6 +157,8 @@ public class InternalInterface {
 
     public ByteBuffer proxyCallIOMethod(int target, ByteBuffer buf) { throw new InterfaceException(); }
 
+    public void updateObjectLocation(UUID id, int target, int to) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -380,10 +382,15 @@ final class InternalInterfaceWrap extends InternalInterface {
         return (int) invoke("proxyCreateIOObject", new Class[]{int.class, ByteBuffer.class}, target, buf);
     }
 
+    @Override
     public ByteBuffer proxyCallIOMethod(int target, ByteBuffer buf) {
         return (ByteBuffer) invoke("proxyCallIOMethod", new Class[]{int.class, ByteBuffer.class}, target, buf);
     }
 
+    @Override
+    public void updateObjectLocation(UUID id, int target, int to) {
+        invoke("updateObjectLocation", new Class[]{UUID.class,int.class,int.class}, id, target, to);
+    }
 
 
     /*public void printStdout(int i) throws InterfaceException {
