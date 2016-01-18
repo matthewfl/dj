@@ -163,10 +163,17 @@ final public class ClassManager {
 
 
     private ByteBuffer requestRead(int fid, int op) {
+        int owner = owning_machine;
+        int mode = managedObject.__dj_class_mode;
         InternalInterface.debug("read request "+fid+" "+op+" "+distributedObjectId);
-        ByteBuffer bb = requestRemote(fid, 0);
-        JITWrapper.recordRemoteRead(managedObject, fid, owning_machine);
-        return InternalInterface.getInternalInterface().readField(bb, op, owning_machine);
+        if(owner == -1) {
+            // we are sending this request to ourselves, this is likely the result of synchronization with serialization
+            return DistributedObjectHelper.readFieldSwitch(managedObject, op, fid);
+        } else {
+            ByteBuffer bb = requestRemote(fid, 0);
+            JITWrapper.recordRemoteRead(managedObject, fid, owner);
+            return InternalInterface.getInternalInterface().readField(bb, op, owner);
+        }
     }
 
     private ByteBuffer requestRemote(int fid, int exces) {
@@ -178,8 +185,20 @@ final public class ClassManager {
     }
 
     private void requestWrite(ByteBuffer bb, int op, int fid) {
-        JITWrapper.recordRemoteWrite(managedObject, fid, owning_machine);
-        InternalInterface.getInternalInterface().writeField(bb, op, owning_machine);
+        int owner = owning_machine;
+        int mode = managedObject.__dj_class_mode;
+        if(owner == -1) {
+            // we are sending this to ourselves
+            if(cached_copies != null) {
+                // update all of the cached copies with the new value
+                throw new NotImplementedException();
+            }
+            bb.position(bb.position() + 20); // 2*long + int
+            DistributedObjectHelper.writeFieldSwitch(managedObject, bb, op, fid);
+        } else {
+            JITWrapper.recordRemoteWrite(managedObject, fid, owner);
+            InternalInterface.getInternalInterface().writeField(bb, op, owner);
+        }
     }
 
 

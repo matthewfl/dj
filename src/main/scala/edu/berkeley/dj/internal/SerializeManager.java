@@ -2,6 +2,7 @@ package edu.berkeley.dj.internal;
 
 import scala.Array;
 import scala.NotImplementedError;
+import sun.misc.Unsafe;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -16,6 +17,8 @@ import java.util.HashSet;
  *
  */
 public class SerializeManager {
+
+    static Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
 
     public int depth_left;
 
@@ -89,7 +92,12 @@ public class SerializeManager {
 //    }
 
     static Object deserialize(ByteBuffer b) {
-        return new Deserialization(b).run();
+        try {
+            return new Deserialization(b).run();
+        } catch(Throwable e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     public static int computeSize(Object base, int depth) {
@@ -101,15 +109,20 @@ public class SerializeManager {
 
 
     public static ByteBuffer serialize(Object base, SerializationController controller, int depth, int target_machine) {
-        ByteBuffer buff = ByteBuffer.allocate(1024*1024); // TODO: compute the proper size
-        ObjectBase ob = (ObjectBase)base;
-        Serialization s = new Serialization(buff, controller, depth, target_machine);
+        try {
+            ByteBuffer buff = ByteBuffer.allocate(1024 * 1024); // TODO: compute the proper size
+            ObjectBase ob = (ObjectBase) base;
+            Serialization s = new Serialization(buff, controller, depth, target_machine);
 
-        s.run(ob);
-        InternalInterface.debug("buff size:"+buff.position());
-        ByteBuffer ret = ByteBuffer.allocate(buff.position());
-        ret.put(buff.array(), 0, buff.position());
-        return ret;
+            s.run(ob);
+            InternalInterface.debug("buff size:" + buff.position());
+            ByteBuffer ret = ByteBuffer.allocate(buff.position());
+            ret.put(buff.array(), 0, buff.position());
+            return ret;
+        } catch(Throwable e) {
+            e.printStackTrace();
+            throw e;
+        }
 
         //return buff;
     }
@@ -123,9 +136,15 @@ public class SerializeManager {
         MOVE_OBJ_BLOCK_TIL_READY,
         // will simply create a remote object reference
         MAKE_REFERENCE,
+        // simply computing the size of an object
+        COMPUTE_SIZE,
     }
 
     static final SerializationAction[] SerializationActionList = SerializationAction.values();
+
+    public SerializationAction getCurrentAction() {
+        return SerializationAction.COMPUTE_SIZE;
+    }
 
     public interface SerializationController {
 
@@ -190,11 +209,13 @@ class Deserialization extends SerializeManager {
                         m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
                     }
                     ob.__dj_class_mode = m;
+                    ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
                     //int m = ob.__dj_class_mode;
                     // we know that there must have been a cache left behind, so will still have "remote_writes"
                     ob.__dj_class_mode &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
+                    ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
                     int m = ob.__dj_class_mode;
                     m |= CONSTS.IS_CACHED_COPY;
@@ -251,6 +272,10 @@ class Deserialization extends SerializeManager {
             }
         }
     }
+
+    public SerializationAction getCurrentAction() {
+        return current_action;
+    }
 }
 
 class Serialization extends SerializeManager {
@@ -284,24 +309,23 @@ class Serialization extends SerializeManager {
                 SerializationAction act = controller.getAction(o);
                 current_action = act;
                 buff.putInt(act.ordinal());
-                o.__dj_serialize_obj(this);
                 // TODO: locking or something in here
                 if(act == SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
                     while(true) {
                         synchronized (o) {
                             if(o.__dj_class_manager.monitor_lock_count == 0) {
-                                // the object is ready to be seralized
+                                // the object is ready to be serialized
                                 o.__dj_class_manager.owning_machine = target_machine;
                                 //if(o.__dj_class_manager.monitor_lock_count)
                                 o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES;
+                                o.__dj_serialize_obj(this);
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
                                 break;
                             }
                         }
                         try { Thread.sleep(2); } catch (InterruptedException e) {}
                     }
-                }
-                if(act == SerializationAction.MOVE_OBJ_MASTER) {
+                } else if(act == SerializationAction.MOVE_OBJ_MASTER) {
                     synchronized (o) {
                         if(o.__dj_class_manager.monitor_lock_count != 0) {
                             throw new SerializeException("Object is currently locked", o);
@@ -309,6 +333,7 @@ class Serialization extends SerializeManager {
                         o.__dj_class_manager.owning_machine = target_machine;
                         //if(o.__dj_class_manager.monitor_lock_count)
                         o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES;
+                        o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
                     }
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
@@ -323,6 +348,7 @@ class Serialization extends SerializeManager {
                             throw new NotImplementedError();
                         }
                         o.__dj_class_mode |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES;
+                        o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
                     }
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
@@ -335,8 +361,9 @@ class Serialization extends SerializeManager {
                         na[na.length - 1] = target_machine;
                         o.__dj_class_manager.cached_copies = na;
                     }
+                    o.__dj_serialize_obj(this);
                 } else if(act == SerializationAction.MAKE_REFERENCE) {
-                    // NOP
+                    //o.__dj_serialize_obj(this);
                 }
             }
         }
@@ -399,6 +426,10 @@ class Serialization extends SerializeManager {
     public void put_value_D(double v) {
         buff.putDouble(v);
     }
+
+    public SerializationAction getCurrentAction() {
+        return current_action;
+    }
 }
 
 
@@ -458,5 +489,8 @@ class ComputeBufSize extends SerializeManager {
         object_head_size += id.toArr().length;
     }
 
+    public SerializationAction getCurrentAction() {
+        return SerializationAction.COMPUTE_SIZE;
+    }
 }
 

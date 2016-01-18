@@ -1114,17 +1114,17 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       clsname.substring(config.arrayprefix.size, uindx - 5)
     }
 
-    val (wrapType, jvmtyp, isPrimitive) = baseType match {
-      case "Byte" => ("byte", "B", true)
-      case "Character" => ("char", "C", true)
-      case "Short" => ("short", "S", true)
-      case "Integer" => ("int", "I", true)
-      case "Long" => ("long", "J", true)
-      case "Float" => ("float", "F", true)
-      case "Double" => ("double", "D", true)
-      case "Boolean" => ("boolean", "Z", true)
+    val (wrapType, jvmtyp, isPrimitive, primType) = baseType match {
+      case "Byte" => ("byte", "B", true, CtClass.byteType)
+      case "Character" => ("char", "C", true, CtClass.charType)
+      case "Short" => ("short", "S", true, CtClass.shortType)
+      case "Integer" => ("int", "I", true, CtClass.intType)
+      case "Long" => ("long", "J", true, CtClass.longType)
+      case "Float" => ("float", "F", true, CtClass.floatType)
+      case "Double" => ("double", "D", true, CtClass.doubleType)
+      case "Boolean" => ("boolean", "Z", true, CtClass.booleanType)
       case s => {
-        (s, "A", false)
+        (s, "A", false, null)
       }
     }
 
@@ -1387,12 +1387,19 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       val serialize_helper = s"""
         public void __dj_serialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
           super.__dj_serialize_obj(man);
-          int len = length();
+          int len = ir.length;
+          man.register_size(4 ${if(isPrimitive) s"+ ${primType.asInstanceOf[CtPrimitiveType].getDataSize} * len" else ""},
+          ${if(!isPrimitive) "len" else "0"});
           man.put_value_I(len);
           for(int i = 0; i < len; i++) {
             ${
         if(isPrimitive) s"man.put_value_${jvmtyp}(this.ir[i]);" else "this.ir[i] = man.put_object(this.ir[i]);"
          }
+          }
+
+          if(man.getCurrentAction() == edu.berkeley.dj.internal.SerializeManager.SerializationAction.MOVE_OBJ_MASTER ||
+             man.getCurrentAction() == edu.berkeley.dj.internal.SerializeManager.SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
+            this.ir = null;
           }
         }
         """
@@ -1401,6 +1408,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
 
       val deserialize_helper = s"""
         public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
+          super.__dj_deserialize_obj(man);
           int len = man.get_value_I();
           this.ir = new ${inner_arr_typ}[len];
           for(int i = 0; i < len; i++) {

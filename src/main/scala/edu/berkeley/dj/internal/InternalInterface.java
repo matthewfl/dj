@@ -216,7 +216,7 @@ final class InternalInterfaceWrap extends InternalInterface {
     public String classRenamed(String name) throws InterfaceException {
         return (String) invoke("classRenamed", new Class[]{String.class}, name);
     }
-
+ru
     @Override
     public String toString() {
         try {
@@ -399,63 +399,70 @@ final class InternalInterfaceWrap extends InternalInterface {
     }*/
 
     public Object callIn(Integer action, Object[] args) {
-        switch(action) {
-            case 0:
-                // dummy test
-                return "this works";
-            case 1:
-                // callback for creating a new thread
-                ThreadHelpers.newThreadCallback(args[0]);
-                return null;
-            case 2:
-                // callback for the existence of a new client
-                JITWrapper.registerNewClient((int)args[0]);
-                return null;
-            case 3:
-                // callin to run a task on this machine as sent by another machine
-                // this should be called in a new thread already so we can just start
-                DistributedRunner.runRunnable((Integer) args[0], (byte[]) args[1]);
-                return null;
-            case 4:
-                // update the location for an object
-                DistributedObjectHelper.updateObjectLocation((UUID)args[0], (int)args[1]);
-                return null;
-            case 5:
-                // reading of fields
-                return DistributedObjectHelper.readField((int)args[0], (int)args[1], (ByteBuffer)args[2]);
-            case 6:
-                // writing of fields
-                DistributedObjectHelper.writeField((int) args[0], (int)args[1], (ByteBuffer) args[2]);
-                return null;
-            case 7:
-                DistributedObjectHelper.waitingFrom((int)args[0], (ByteBuffer)args[1]);
-                return null;
-            case 8:
-                return DistributedObjectHelper.lockMonitor((ByteBuffer)args[0], (boolean)args[1]);
-            case 9:
-                DistributedObjectHelper.unlockMonitor((ByteBuffer) args[0]);
-                return null;
-            case 10:
-                DistributedObjectHelper.recvNotify((ByteBuffer)args[0]);
-                return null;
-            case 11:
-                return StaticFieldHelper.getAllStaticFields((String)args[0]);
-            case 12:
-                StaticFieldHelper.recvWriteField((ByteBuffer)args[0]);
-                return null;
-            case 13:
-                return RPCHelpers.recvRemoteCall((ByteBuffer)args[0]);
-            case 14:
-                DistributedObjectHelper.recvMoveReq((ByteBuffer)args[0]);
-                return null;
-            case 15:
-                DistributedObjectHelper.recvMovedObject((ByteBuffer)args[0]);
-                return null;
-            case 16:
-                return IOHelper.recvConstructLocalIO((int)args[0], (ByteBuffer)args[1]);
-            case 17:
-                return IOHelper.recvCallMethod((int)args[0], (ByteBuffer)args[1]);
+        try {
+            switch (action) {
+                case 0:
+                    // dummy test
+                    return "this works";
+                case 1:
+                    // callback for creating a new thread
+                    ThreadHelpers.newThreadCallback(args[0]);
+                    return null;
+                case 2:
+                    // callback for the existence of a new client
+                    JITWrapper.registerNewClient((int) args[0]);
+                    return null;
+                case 3:
+                    // callin to run a task on this machine as sent by another machine
+                    // this should be called in a new thread already so we can just start
+                    DistributedRunner.runRunnable((Integer) args[0], (byte[]) args[1]);
+                    return null;
+                case 4:
+                    // update the location for an object
+                    DistributedObjectHelper.updateObjectLocation((UUID) args[0], (int) args[1]);
+                    return null;
+                case 5:
+                    // reading of fields
+                    return DistributedObjectHelper.readField((int) args[0], (int) args[1], (ByteBuffer) args[2]);
+                case 6:
+                    // writing of fields
+                    DistributedObjectHelper.writeField((int) args[0], (int) args[1], (ByteBuffer) args[2]);
+                    return null;
+                case 7:
+                    DistributedObjectHelper.waitingFrom((int) args[0], (ByteBuffer) args[1]);
+                    return null;
+                case 8:
+                    return DistributedObjectHelper.lockMonitor((ByteBuffer) args[0], (boolean) args[1]);
+                case 9:
+                    DistributedObjectHelper.unlockMonitor((ByteBuffer) args[0]);
+                    return null;
+                case 10:
+                    DistributedObjectHelper.recvNotify((ByteBuffer) args[0]);
+                    return null;
+                case 11:
+                    return StaticFieldHelper.getAllStaticFields((String) args[0]);
+                case 12:
+                    StaticFieldHelper.recvWriteField((ByteBuffer) args[0]);
+                    return null;
+                case 13:
+                    return RPCHelpers.recvRemoteCall((ByteBuffer) args[0]);
+                case 14:
+                    DistributedObjectHelper.recvMoveReq((ByteBuffer) args[0]);
+                    return null;
+                case 15:
+                    DistributedObjectHelper.recvMovedObject((ByteBuffer) args[0]);
+                    return null;
+                case 16:
+                    return IOHelper.recvConstructLocalIO((int) args[0], (ByteBuffer) args[1]);
+                case 17:
+                    return IOHelper.recvCallMethod((int) args[0], (ByteBuffer) args[1]);
+            }
+            return null;
+        } catch(NetworkForwardRequest e) {
+            throw e;
+        } catch (Throwable e) {
+            e.printStackTrace();
+            throw e;
         }
-        return null;
     }
 }

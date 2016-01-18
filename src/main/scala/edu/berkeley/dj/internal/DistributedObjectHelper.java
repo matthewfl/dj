@@ -12,7 +12,14 @@ import java.util.UUID;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {"java/util/HashMap", "java/nio/ByteBuffer", "java/util/UUID", "java/lang/Thread", "java/nio/Buffer", "java/lang/System"})
+@RewriteAllBut(nonModClasses = {
+        "java/util/HashMap",
+        "java/nio/ByteBuffer",
+        "java/util/UUID",
+        "java/lang/Thread",
+        "java/nio/Buffer",
+        "java/lang/System"
+})
 public class DistributedObjectHelper {
 
     private DistributedObjectHelper() {}
@@ -536,6 +543,8 @@ public class DistributedObjectHelper {
         InternalInterface.getInternalInterface().updateObjectLocation(id, machine_location, to);
     }
 
+    static Object lastReadLoop = null;
+
     static public ByteBuffer readField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
         int fid = req.getInt();
@@ -550,11 +559,22 @@ public class DistributedObjectHelper {
 
             // TODO: update the location from the machine that made the request
             // already exists the code for recving the update
-            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
-            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
-//            throw new NotImplementedException();
+            int owner = h.__dj_class_manager.owning_machine;
+            if(owner == InternalInterface.getInternalInterface().getSelfId() || owner == -1) {
+                InternalInterface.debug("trying to resolve machine to self");
+            }
+            sendUpdateObjectLocation(id, owner, from);
+            if(h == lastReadLoop) {
+                InternalInterface.debug("in loop");
+            }
+            lastReadLoop = h;
+            throw new NetworkForwardRequest(owner);
         }
         JITWrapper.recordReceiveRemoteRead(h, fid, from);
+        return readFieldSwitch(h, op, fid);
+    }
+
+    static public ByteBuffer readFieldSwitch(ObjectBase h, int op, int fid) {
         ByteBuffer ret;
         switch(op) {
             case 10:
@@ -600,6 +620,8 @@ public class DistributedObjectHelper {
         }
     }
 
+    static Object lastWriteLoop = null;
+
     static public void writeField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
         int fid = req.getInt();
@@ -612,10 +634,22 @@ public class DistributedObjectHelper {
         if((h.__dj_class_mode & CONSTS.REMOTE_WRITES) != 0) {
             // need to redirect the request elsewhere
 //            throw new NotImplementedException();
-            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
-            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+            int owner = h.__dj_class_manager.owning_machine;
+            if(owner == InternalInterface.getInternalInterface().getSelfId() || owner == -1) {
+                InternalInterface.debug("trying to resolve machine to self");
+            }
+//            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
+            if(h == lastWriteLoop) {
+                InternalInterface.debug("In a loop");
+            }
+            lastWriteLoop = h;
+            throw new NetworkForwardRequest(owner);
         }
         JITWrapper.recordReceiveRemoteWrite(h, fid, from);
+        writeFieldSwitch(h, req, op, fid);
+    }
+
+    static public void writeFieldSwitch(ObjectBase h, ByteBuffer req, int op, int fid) {
         switch(op) {
             case 20:
                 h.__dj_writeFieldID_Z(fid, req.get() == 1);
