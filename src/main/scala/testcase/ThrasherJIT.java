@@ -58,11 +58,13 @@ public class ThrasherJIT implements JITInterface {
 
     @Override
     public void recordReceiveRemoteRead(Object self, int from_machine, int to_machine, int field_id) {
+//        InternalInterface.debug("prep move cmd: "+ DistributedObjectHelper.getDistributedId(self));
         JITCommands.moveObject(self, from_machine);
     }
 
     @Override
     public void recordReceiveRemoteWrite(Object self, int from_machine, int to_machine, int field_id) {
+//        InternalInterface.debug("prep move cmd: "+ DistributedObjectHelper.getDistributedId(self));
         JITCommands.moveObject(self, from_machine);
     }
 }

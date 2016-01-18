@@ -29,13 +29,13 @@ public abstract class Base_impl extends ObjectBase implements Base {
     @Override
     public void __dj_serialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
         super.__dj_serialize_obj(man);
-        System.err.println("trying to serialize an array");
+//        System.err.println("trying to serialize an array");
 //        throw new NotImplementedException();
     }
 
     @Override
     public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
         super.__dj_deserialize_obj(man);
-        System.err.println("trying to deserialize an array");
+//        System.err.println("trying to deserialize an array");
     }
 }

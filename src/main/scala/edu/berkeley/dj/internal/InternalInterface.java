@@ -72,6 +72,7 @@ public class InternalInterface {
 
     public static void debug(String s) {
         System.out.println("Internal interface debug: "+s);
+        System.out.flush();
     }
 
     public static void debug(int i) {
@@ -216,7 +217,7 @@ final class InternalInterfaceWrap extends InternalInterface {
     public String classRenamed(String name) throws InterfaceException {
         return (String) invoke("classRenamed", new Class[]{String.class}, name);
     }
-ru
+
     @Override
     public String toString() {
         try {

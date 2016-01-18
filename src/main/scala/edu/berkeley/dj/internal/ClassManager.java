@@ -14,7 +14,11 @@ import java.util.UUID;
  * Represents the backing information for a class that is shared between multiple machines
  *
  */
-@RewriteAllBut(nonModClasses = {"java/util/UUID", "java/nio/ByteBuffer"}) // tmp
+@RewriteAllBut(nonModClasses = {
+        "java/util/UUID",
+        "java/nio/ByteBuffer",
+        "java/nio/Buffer"
+}) // tmp
 final public class ClassManager {
 
     // TODO: this is inheriting from ObjectBase that means that we have two extra fields here
@@ -51,6 +55,10 @@ final public class ClassManager {
         managedObject = (ObjectBase)o;
         distributedObjectId = id;
         owning_machine = owner;
+    }
+
+    public boolean isLocal() {
+        return owning_machine == -1;
     }
 
     // TODO: I suppose that the identifier for the field can be a short, since that would be a limitation
@@ -165,7 +173,7 @@ final public class ClassManager {
     private ByteBuffer requestRead(int fid, int op) {
         int owner = owning_machine;
         int mode = managedObject.__dj_class_mode;
-        InternalInterface.debug("read request "+fid+" "+op+" "+distributedObjectId);
+        //InternalInterface.debug("read request "+fid+" "+op+" "+owner+" "+distributedObjectId);
         if(owner == -1) {
             // we are sending this request to ourselves, this is likely the result of synchronization with serialization
             return DistributedObjectHelper.readFieldSwitch(managedObject, op, fid);
@@ -193,7 +201,7 @@ final public class ClassManager {
                 // update all of the cached copies with the new value
                 throw new NotImplementedException();
             }
-            bb.position(bb.position() + 20); // 2*long + int
+            bb.position(20); // 2*long + int
             DistributedObjectHelper.writeFieldSwitch(managedObject, bb, op, fid);
         } else {
             JITWrapper.recordRemoteWrite(managedObject, fid, owner);
