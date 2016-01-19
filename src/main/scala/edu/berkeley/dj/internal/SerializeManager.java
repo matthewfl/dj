@@ -108,20 +108,24 @@ public class SerializeManager {
     }
 
 
-    public static ByteBuffer serialize(Object base, SerializationController controller, int depth, int target_machine) {
-        try {
-            ByteBuffer buff = ByteBuffer.allocate(1024 * 1024); // TODO: compute the proper size
-            ObjectBase ob = (ObjectBase) base;
-            Serialization s = new Serialization(buff, controller, depth, target_machine);
+    static private Object serializeLock = new Object();
 
-            s.run(ob);
+    public static ByteBuffer serialize(Object base, SerializationController controller, int depth, int target_machine) {
+        synchronized (serializeLock) {
+            try {
+                ByteBuffer buff = ByteBuffer.allocate(1024 * 1024); // TODO: compute the proper size
+                ObjectBase ob = (ObjectBase) base;
+                Serialization s = new Serialization(buff, controller, depth, target_machine);
+
+                s.run(ob);
 //            InternalInterface.debug("buff size:" + buff.position());
-            ByteBuffer ret = ByteBuffer.allocate(buff.position());
-            ret.put(buff.array(), 0, buff.position());
-            return ret;
-        } catch(Throwable e) {
-            e.printStackTrace();
-            throw e;
+                ByteBuffer ret = ByteBuffer.allocate(buff.position());
+                ret.put(buff.array(), 0, buff.position());
+                return ret;
+            } catch (Throwable e) {
+                e.printStackTrace();
+                throw e;
+            }
         }
 
         //return buff;
@@ -199,6 +203,7 @@ class Deserialization extends SerializeManager {
             }
             if(o instanceof ObjectBase) {
                 ObjectBase ob = (ObjectBase)o;
+                ob.__dj_class_mode |= CONSTS.CURRENTLY_DESERIALIZING;
                 ob.__dj_deserialize_obj(this);
                 if(act == SerializationAction.MOVE_OBJ_MASTER) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
@@ -209,7 +214,7 @@ class Deserialization extends SerializeManager {
                         m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
                     }
                     m |= CONSTS.DESERIALIZED_HERE;
-                    unsafe.storeFence();
+                    unsafe.fullFence();
                     ob.__dj_class_mode = m;
                     ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
@@ -219,14 +224,14 @@ class Deserialization extends SerializeManager {
                     int m = ob.__dj_class_mode;
                     m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
                     m |= CONSTS.DESERIALIZED_HERE;
-                    unsafe.storeFence();
+                    unsafe.fullFence();
                     ob.__dj_class_mode = m;
                     ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
                     int m = ob.__dj_class_mode;
                     m |= CONSTS.IS_CACHED_COPY | CONSTS.DESERIALIZED_HERE;
                     m &= ~(CONSTS.REMOTE_READS);
-                    unsafe.storeFence();
+                    unsafe.fullFence();
                     ob.__dj_class_mode = m;
                 } else if(act == SerializationAction.MAKE_REFERENCE) {
                     // this should never happen since we are just expecting a reference
@@ -334,7 +339,7 @@ class Serialization extends SerializeManager {
                                 o.__dj_class_manager.owning_machine = target_machine;
                                 //if(o.__dj_class_manager.monitor_lock_count)
                                 o.__dj_class_mode = m;
-                                unsafe.storeFence();
+                                unsafe.fullFence();
                                 o.__dj_serialize_obj(this);
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
                                 break;
@@ -353,7 +358,7 @@ class Serialization extends SerializeManager {
                         o.__dj_class_manager.owning_machine = target_machine;
                         //if(o.__dj_class_manager.monitor_lock_count)
                         o.__dj_class_mode = m;
-                        unsafe.storeFence();
+                        unsafe.fullFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
                     }
@@ -372,7 +377,7 @@ class Serialization extends SerializeManager {
                         InternalInterface.debug("move leave cache: "+id);
                         o.__dj_class_manager.owning_machine = target_machine;
                         o.__dj_class_mode = m;
-                        unsafe.storeFence();
+                        unsafe.fullFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
                     }
@@ -388,7 +393,7 @@ class Serialization extends SerializeManager {
                         na[na.length - 1] = target_machine;
                         o.__dj_class_manager.cached_copies = na;
                     }
-                    unsafe.storeFence();
+                    unsafe.fullFence();
                     o.__dj_serialize_obj(this);
                     InternalInterface.debug("make cache: "+id);
                 } else if(act == SerializationAction.MAKE_REFERENCE) {

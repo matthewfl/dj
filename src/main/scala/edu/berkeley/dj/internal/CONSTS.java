@@ -22,5 +22,7 @@ public class CONSTS {
     // attempt at getting more information about what is going on
     public static final int DESERIALIZED_HERE = 0x100;
     public static final int SERIALIZED_HERE = 0x200;
-    public static final int CURRENTLY_SERIALIZING = 0x400;
+
+    public static final int CURRENTLY_DESERIALIZING = 0x400;
+    public static final int SERIALIZED_OBJ_SENT = 0x800;
 }

@@ -1,12 +1,12 @@
 package edu.berkeley.dj.rt.network
 
-import edu.berkeley.dj.internal.NetworkForwardRequest
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Promise, Future}
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, Promise}
 
 /**
  * Created by matthewfl
@@ -20,44 +20,66 @@ class DummyComm(recever: NetworkRecever,
                 private val p: DummyHost,
                 private val selfid: Int) extends NetworkCommunication(recever) {
 
+  val workPool = new java.util.concurrent.ForkJoinPool(20)
+
+  val sendCnt = new AtomicInteger()
+
   override def send(to: Int, action: Int, msg: Array[Byte]): Unit = {
+    sendCnt.addAndGet(1)
     DummyHost.comms.get((appId, to)) match {
-      case Some(h) => Future {
-        try { h.recv(selfid, action, msg) }
-        catch { case e: RedirectRequestToAlternateMachine => {
-          send(e.altMachine, action, msg)
-        }}
+      case Some(h) => {
+        workPool.execute(new Runnable {
+          override def run() = {
+            try { h.recv(selfid, action, msg) }
+            catch { case e: RedirectRequestToAlternateMachine => {
+              send(e.altMachine, action, msg)
+            }}
+            sendCnt.addAndGet(-1)
+          }
+        })
       }
       case None => throw new RuntimeException("host not found: "+to)
     }
   }
 
+  val sendWCnt = new AtomicInteger()
+
   override def sendWrpl(to: Int, action: Int, msg: Array[Byte]): Future[Array[Byte]] = {
+    sendWCnt.addAndGet(1)
     DummyHost.comms.get((appId, to)) match {
       case Some(h) => {
         val ret = Promise[Array[Byte]]()
         // doing it this way disconnects the calls between these two operations
         // so they can happen concurrently
-        Future {
-          try {
-            val f = h.recvWrpl(selfid, action, msg)
-            f.onSuccess({
-              case e => ret.success(e)
-            })
-            f.onFailure({
-              // not sure if want to support passing back the redirect through the future?
-              case e: NetworkForwardRequest => {
-                ???
-                //sendWrpl(e.to, action, msg).onComplete(ret.complete)
-              }
-              case e: Throwable => { ret.failure(e) }
-            })
-            //f.onComplete(ret.complete)
+        //Future {
+        workPool.execute(new Runnable {
+          override def run() = {
+            try {
+              val f = h.recvWrpl(selfid, action, msg)
+              f.onSuccess({
+                case e => ret.success(e)
+              })
+              f.onFailure({
+                // not sure if want to support passing back the redirect through the future?
+                /*case e: NetworkForwardRequest => {
+                  ???
+                  //sendWrpl(e.to, action, msg).onComplete(ret.complete)
+                }*/
+                case e: Throwable => {
+                  e.printStackTrace()
+                  ret.failure(e)
+                }
+              })
+              //f.onComplete(ret.complete)
 
-          } catch { case e: RedirectRequestToAlternateMachine => {
-            sendWrpl(e.altMachine, action, msg).onComplete(ret.complete)
-          }}
-        }
+            } catch {
+              case e: RedirectRequestToAlternateMachine => {
+                sendWrpl(e.altMachine, action, msg).onComplete(ret.complete)
+              }
+            }
+            sendWCnt.addAndGet(-1)
+          }
+        })
         ret.future
       }
         /*Future {

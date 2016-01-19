@@ -14,7 +14,11 @@ import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
 )
 public class ObjectBase implements Object00DJ {
 
-    public int __dj_class_mode = 0;
+
+    // this causes java to have to read this variable at all times
+    // but the performance is going to suck a lot worse then it has too
+    // we just need to ensure that the order of reading does not change
+    public volatile int __dj_class_mode = 0;
 
     public ClassManager __dj_class_manager = null;
 

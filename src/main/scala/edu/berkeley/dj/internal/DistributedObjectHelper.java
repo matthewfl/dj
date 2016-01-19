@@ -883,10 +883,15 @@ public class DistributedObjectHelper {
                 }
             }, 1, to);
             InternalInterface.getInternalInterface().sendSerializedObject(so, to);
+            obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+            sendObjs ++;
 //            InternalInterface.debug("send moved obj "+id);
             //throw new NotImplementedException();
         }
     }
+
+    static int sendObjs = 0;
+    static int recvObjs = 0;
 
     static public void recvMoveReq(ByteBuffer req) {
         int to = req.getInt();
@@ -908,6 +913,7 @@ public class DistributedObjectHelper {
     static public void recvMovedObject(ByteBuffer buf) {
         // calling on the recving machine for make the
         Object obj = SerializeManager.deserialize(buf);
+        recvObjs++;
 //        InternalInterface.debug("recv moved obj  "+getDistributedId(obj));
 //        UUID id = new UUID(buf.getLong(), buf.getLong());
 //        ObjectBase h;
