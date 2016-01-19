@@ -261,6 +261,8 @@ Error message and password prompt
 
 <li>$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/themes/tiddlywiki/vanilla</li>
 
+<li>$:/temp/search</li>
+
 <li>$:/temp/ServerConnection/http://tiddlywiki.com/library/v5.1.8/index.html</li>
 
 <li>$:/theme</li>
@@ -283,9 +285,13 @@ Error message and password prompt
 
 <li>Distributed locks</li>
 
+<li>Distributed Objects</li>
+
 <li>Documentation</li>
 
 <li>Function call redirector</li>
+
+<li>Garbage collection</li>
 
 <li>Internals</li>
 
@@ -5975,14 +5981,14 @@ Presentations</pre>
 <div modified="20150503222258295" modifier="matthewfl" title="$:/state/add-plugin-info/$:/temp/ServerConnection/http://tiddlywiki.com/library/v5.1.8/index.html/$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/themes/tiddlywiki/snowwhite">
 <pre>no</pre>
 </div>
-<div modified="20150920181651696" modifier="matthewfl" title="$:/state/showeditpreview">
+<div modified="20160118215115067" modifier="matthewfl" title="$:/state/showeditpreview">
 <pre>yes</pre>
 </div>
 <div modified="20150602172658013" modifier="matthewfl" title="$:/state/sidebar">
 <pre>yes</pre>
 </div>
-<div modified="20150503222119373" modifier="matthewfl" title="$:/state/tab--1498284803">
-<pre>$:/core/ui/AdvancedSearch/Filter</pre>
+<div modified="20160118190409796" modifier="matthewfl" title="$:/state/tab--1498284803">
+<pre>$:/core/ui/AdvancedSearch/Standard</pre>
 </div>
 <div modified="20151224090457184" modifier="matthewfl" title="$:/state/tab--1963855381">
 <pre>$:/core/ui/ControlPanel/Palette</pre>
@@ -5993,14 +5999,14 @@ Presentations</pre>
 <div modified="20151224090640008" modifier="matthewfl" title="$:/state/tab-1342078386">
 <pre>$:/core/ui/ControlPanel/Plugins/Add/Themes</pre>
 </div>
-<div modified="20151224090545419" modifier="matthewfl" title="$:/state/tab-1749438307">
-<pre>$:/core/ui/ControlPanel/Plugins</pre>
+<div modified="20160118190416632" modifier="matthewfl" title="$:/state/tab-1749438307">
+<pre>$:/core/ui/ControlPanel/Info</pre>
 </div>
-<div modified="20150521214429559" modifier="matthewfl" title="$:/state/tab/moresidebar-401116514">
-<pre>$:/core/ui/MoreSideBar/Orphans</pre>
+<div modified="20160118200623267" modifier="matthewfl" title="$:/state/tab/moresidebar-401116514">
+<pre>$:/core/ui/MoreSideBar/System</pre>
 </div>
-<div modified="20150921085757308" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
-<pre>$:/core/ui/SideBar/Tools</pre>
+<div modified="20160118200657925" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
+<pre>$:/core/ui/SideBar/Open</pre>
 </div>
 <div modified="20150522084850108" modifier="matthewfl" title="$:/state/tabs/controlpanel/toolbars-1345989671">
 <pre>$:/core/ui/ControlPanel/Toolbars/PageControls</pre>
@@ -6008,7 +6014,7 @@ Presentations</pre>
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="Introduction Documentation Presentations" title="$:/StoryList">
+<div list="[[Distributed Objects]] [[Garbage collection]] Runtime" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6250,6 +6256,9 @@ At this point it is largely for experimentation by @zooko.
 <div author="JeremyRuston" core-version="&gt;=5.0.0" created="20150503222212011" creator="matthewfl" dependents="" description="Basic theme" modified="20150503222212011" modifier="matthewfl" name="Vanilla" original-plugin-type="theme" original-tags="" original-title="$:/themes/tiddlywiki/vanilla" original-type="application/json" server-url="http://tiddlywiki.com/library/v5.1.8/index.html" tags="$:/tags/RemoteAssetInfo" title="$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/themes/tiddlywiki/vanilla" type="text/vnd.tiddlywiki" version="5.1.8">
 <pre></pre>
 </div>
+<div created="20160118194955954" creator="matthewfl" modified="20160118195002301" modifier="matthewfl" title="$:/temp/search">
+<pre></pre>
+</div>
 <div created="20150602172622771" creator="matthewfl" modified="20150602172622771" modifier="matthewfl" tags="$:/tags/ServerConnection" title="$:/temp/ServerConnection/http://tiddlywiki.com/library/v5.1.8/index.html" url="http://tiddlywiki.com/library/v5.1.8/index.html">
 <pre>loaded</pre>
 </div>
@@ -6417,6 +6426,27 @@ java -jar target/scala-2.11/dj-assembly-0.0.1.jar -fjar target/scala-2.11/dj-ass
 
 To ensure that locks continue to operate correctly, the Java bytecode instructions `monitorenter` and `moniterexit` are replaced with method calls to the [[Distributed Object Helper|https://github.com/matthewfl/dj/blob/2dc81444ddb536493e214bc06d8f2c661d970c5e/src/main/scala/edu/berkeley/dj/internal/DistributedObjectHelper.java#L674-L723]] which has special static method that can be easily inlined the JVM and will properly manage the case when an object is distributed.</pre>
 </div>
+<div created="20160118195004558" creator="matthewfl" modified="20160119005133344" modifier="matthewfl" tags="Documentation" title="Distributed Objects">
+<pre>DJ's core abstraction is distributed object
+
+DJ's smallest unit of operation is an object.  This is due to being built on top of the Java runtime.  Following Java's design, we have worked to make our system optimized for short lived object which are common in Java programs.  These object will only experience a slight overhead from the two additional fields.  Given that the object is not operated on in a distributed fashion, it is handled exactly the same by the JVM.  The first time that an object is referenced in a distributed context, the object is converted to a distributed mode.  This means that the system will create a distributed identifier for the object and register the object in a local table of distributed objects.  This table is used for when an object is remotely requested.  In interfacing with a list of local objects that can be accessed remotely, we need to also support garbage collection of this table.  This is accomplished by remote machines indicating when they lose the last reference to an object.  Once this occurs, the runtime is able to convert the object back into a typical local object at which time the local JVM garbage collection routeen is free to collect the object.
+
+
+
+!!! Notes
+* Objects are first created in a local context and have minimal overhead.
+* The conditions that an object is converted to a distributed object
+** A remote machine requests a reference to an object
+** The object does not become distributed simply because some other object is referencing it that is currently distributed
+* Once an object is distributed, it will have its identity added to the local distributed object table
+** the identity of an object contains the last know machine to be the master of an object
+** in the case that the master machine has changed since, then the object's master location will be updated 
+* different modes for the object
+** The object is not distributed, and not tracked by the runtime
+** object is a the master copy of the object
+** is a proxy to an object
+** contains a complete cached copy of an object</pre>
+</div>
 <div created="20150503220345237" creator="matthewfl" modified="20151224085356885" modifier="matthewfl" tags="Documentation" title="Documentation">
 <pre>* [[Basic usage]]
 * [[Internals]]
@@ -6424,6 +6454,19 @@ To ensure that locks continue to operate correctly, the Java bytecode instructio
 </div>
 <div created="20150521204305668" creator="matthewfl" modified="20150521212459119" modifier="matthewfl" title="Function call redirector">
 <pre>In a java program we are still bound to having all object inherit from the base type of `java.lang.Object`.  The Object class automatically provides useful methods such as `wait` and `notify`, however these methods are defined to be final, so we can not simply override them in the inheritance structure.  Instead we define new functions `__dj_wait` and `__dj_notify` which intelligently wrap the original functions.  We then have to parse all of the bytecode and examine which functions are being called.  If it is one of these functions, then we rewrite the function call to call our new function.</pre>
+</div>
+<div created="20160118193416207" creator="matthewfl" modified="20160119013221182" modifier="matthewfl" tags="Internals Runtime Documentation" title="Garbage collection" type="text/vnd.tiddlywiki">
+<pre>DJ's garbage collection mechanism works by extending the existing system present 
+
+
+!!! Note
+* The system tries to stay unaware of as many objects as possible for performance reasons
+** this allows the JVM to perform the same set of optimizations for short lived objects
+* Long living objects that are only referenced locally also ignored by the runtime system.
+* When the system first requests a remote reference to an object, does it create an distributed object manager for that instance as well a unique identifier
+** the identifier contains the type of the object and a UUID.  This means that the identifier contains enough information to reconstruct a proxy instance of the object
+* The objects that are between machines are tracked with referencing counting.  This is similar to systems where referencing counting is used for offline storage or disk backed storage that are difficult to scan directly.
+** This dual notion of tracking objects easily integrates with the JVM existing GC, since when the reference count drops to zero it can be cleaned up by the traditional GC cycle</pre>
 </div>
 <div created="20150503220449624" creator="matthewfl" modified="20151224062058220" modifier="matthewfl" tags="Documentation Internals" title="Internals">
 <pre>DJ is broken into two major components.  The &quot;[[JIT]]&quot; is the top component that makes high level scheduling and data placement decision.  The [[Runtime]] is the low level component that provides features such as automatic code [[rewriting|Rewriter]], distributed memory abstractions, distributed locks etc.
