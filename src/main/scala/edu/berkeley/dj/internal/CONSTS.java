@@ -17,4 +17,10 @@ public class CONSTS {
     public static final int PERFORM_RPC_REDIRECTS = 0x20;
     public static final int IS_CACHED_COPY = 0x40;
     public static final int IS_IO_WRAPPER = 0x80;
+
+
+    // attempt at getting more information about what is going on
+    public static final int DESERIALIZED_HERE = 0x100;
+    public static final int SERIALIZED_HERE = 0x200;
+    public static final int CURRENTLY_SERIALIZING = 0x400;
 }

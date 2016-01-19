@@ -208,18 +208,25 @@ class Deserialization extends SerializeManager {
                     } else {
                         m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
                     }
+                    m |= CONSTS.DESERIALIZED_HERE;
+                    unsafe.storeFence();
                     ob.__dj_class_mode = m;
                     ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
                     //int m = ob.__dj_class_mode;
                     // we know that there must have been a cache left behind, so will still have "remote_writes"
-                    ob.__dj_class_mode &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
+                    int m = ob.__dj_class_mode;
+                    m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
+                    m |= CONSTS.DESERIALIZED_HERE;
+                    unsafe.storeFence();
+                    ob.__dj_class_mode = m;
                     ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
                     int m = ob.__dj_class_mode;
-                    m |= CONSTS.IS_CACHED_COPY;
+                    m |= CONSTS.IS_CACHED_COPY | CONSTS.DESERIALIZED_HERE;
                     m &= ~(CONSTS.REMOTE_READS);
+                    unsafe.storeFence();
                     ob.__dj_class_mode = m;
                 } else if(act == SerializationAction.MAKE_REFERENCE) {
                     // this should never happen since we are just expecting a reference
@@ -322,11 +329,12 @@ class Serialization extends SerializeManager {
                             if(o.__dj_class_manager.monitor_lock_count == 0) {
                                 // the object is ready to be serialized
                                 int m = o.__dj_class_mode;
-                                m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES;
+                                m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
                                 InternalInterface.debug("moved blocked:"+id);
                                 o.__dj_class_manager.owning_machine = target_machine;
                                 //if(o.__dj_class_manager.monitor_lock_count)
-                                o.__dj_class_mode = m ;
+                                o.__dj_class_mode = m;
+                                unsafe.storeFence();
                                 o.__dj_serialize_obj(this);
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
                                 break;
@@ -340,11 +348,12 @@ class Serialization extends SerializeManager {
                             throw new SerializeException("Object is currently locked", o);
                         }
                         int m = o.__dj_class_mode;
-                        m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES;
+                        m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
 //                        InternalInterface.debug("moved throw:"+id);
                         o.__dj_class_manager.owning_machine = target_machine;
                         //if(o.__dj_class_manager.monitor_lock_count)
                         o.__dj_class_mode = m;
+                        unsafe.storeFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
                     }
@@ -359,10 +368,11 @@ class Serialization extends SerializeManager {
                             throw new NotImplementedError();
                         }
                         int m = o.__dj_class_mode;
-                        m |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES;
+                        m |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
                         InternalInterface.debug("move leave cache: "+id);
                         o.__dj_class_manager.owning_machine = target_machine;
                         o.__dj_class_mode = m;
+                        unsafe.storeFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
                     }
@@ -370,7 +380,7 @@ class Serialization extends SerializeManager {
                     if(o.__dj_class_manager.cached_copies == null) {
                         o.__dj_class_manager.cached_copies = new int[] {target_machine};
                         int m = o.__dj_class_mode;
-                        m |= CONSTS.REMOTE_WRITES;
+                        m |= CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
                         o.__dj_class_mode = m;
                     } else {
                         int[] na = new int[o.__dj_class_manager.cached_copies.length];
@@ -378,6 +388,7 @@ class Serialization extends SerializeManager {
                         na[na.length - 1] = target_machine;
                         o.__dj_class_manager.cached_copies = na;
                     }
+                    unsafe.storeFence();
                     o.__dj_serialize_obj(this);
                     InternalInterface.debug("make cache: "+id);
                 } else if(act == SerializationAction.MAKE_REFERENCE) {

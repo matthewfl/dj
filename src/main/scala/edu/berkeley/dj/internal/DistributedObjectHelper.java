@@ -604,8 +604,8 @@ public class DistributedObjectHelper {
             sendUpdateObjectLocation(id, owner, from);
             if(h == lastReadLoop) {
                 InternalInterface.debug("in loop "+id);
-                throw new RuntimeException();
-//                try { Thread.sleep(1000); } catch(InterruptedException e) {}
+//                throw new RuntimeException();
+                try { Thread.sleep(1000); } catch(InterruptedException e) {}
             }
             lastReadLoop = h;
             throw new NetworkForwardRequest(owner);
@@ -681,8 +681,8 @@ public class DistributedObjectHelper {
 //            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
             if(h == lastWriteLoop) {
                 InternalInterface.debug("In a loop "+id);
-                throw new RuntimeException();
-//                try { Thread.sleep(1000); } catch(InterruptedException e) {}
+//                throw new RuntimeException();
+                try { Thread.sleep(1000); } catch(InterruptedException e) {}
             }
             lastWriteLoop = h;
             throw new NetworkForwardRequest(owner);
