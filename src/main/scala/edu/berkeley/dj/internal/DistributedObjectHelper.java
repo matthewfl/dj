@@ -154,6 +154,8 @@ public class DistributedObjectHelper {
             InternalInterface.getInternalInterface().typeDistributed(o.getClass().getName());
             boolean ownsLock = Thread.currentThread().holdsLock(o);
             synchronized (o) {
+                if(o.__dj_class_manager != null)
+                    return;
                 o.__dj_class_manager = new ClassManager(o);
                 synchronized (localDistributedObjects) {
                     localDistributedObjects.put(o.__dj_class_manager.distributedObjectId, o);
@@ -165,7 +167,7 @@ public class DistributedObjectHelper {
                     throw new NotImplementedException();
                 }
                 // send a notification to any objects that may be waiting on this
-                // they will start waiting on
+                // they will start waiting on the distributed object
                 o.notifyAll();
             }
         }
@@ -603,6 +605,7 @@ public class DistributedObjectHelper {
 
     static Object lastReadLoop = null;
 
+    // this is receiving the remote reads on the network, so it is already on the slow path
     static public ByteBuffer readField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
         int fid = req.getInt();
@@ -616,6 +619,8 @@ public class DistributedObjectHelper {
         if(((mode = h.__dj_class_mode) & CONSTS.REMOTE_READS) != 0) {
             // need to redirect the request elsewhere
 
+            assert(h.__dj_class_manager.distributedObjectId.equals(id));
+
             // TODO: update the location from the machine that made the request
             // already exists the code for recving the update
             int owner = h.__dj_class_manager.owning_machine;
@@ -625,15 +630,19 @@ public class DistributedObjectHelper {
             sendUpdateObjectLocation(id, owner, from);
             if(h == lastReadLoop) {
                 InternalInterface.debug("in loop "+id+" "+mode);
-                printState();
+                printState(h);
 //                throw new RuntimeException();
-                try { Thread.sleep(1000); } catch(InterruptedException e) {}
+                try { Thread.sleep(50); } catch(InterruptedException e) {}
             }
             lastReadLoop = h;
-            throw new NetworkForwardRequest(owner);
+            if(owner != -1) // check twice
+                throw new NetworkForwardRequest(owner);
+            if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0)
+                throw new DJError();
         }
+        ByteBuffer ret = readFieldSwitch(h, op, fid);
         JITWrapper.recordReceiveRemoteRead(h, fid, from);
-        return readFieldSwitch(h, op, fid);
+        return ret;
     }
 
     static public ByteBuffer readFieldSwitch(ObjectBase h, int op, int fid) {
@@ -697,6 +706,9 @@ public class DistributedObjectHelper {
         if(((mode = h.__dj_class_mode) & CONSTS.REMOTE_WRITES) != 0) {
             // need to redirect the request elsewhere
 //            throw new NotImplementedException();
+
+            assert(h.__dj_class_manager.distributedObjectId.equals(id));
+
             int owner = h.__dj_class_manager.owning_machine;
             if(owner == InternalInterface.getInternalInterface().getSelfId() || owner == -1) {
                 InternalInterface.debug("trying to resolve machine to self "+owner);
@@ -704,15 +716,19 @@ public class DistributedObjectHelper {
 //            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
             if(h == lastWriteLoop) {
                 InternalInterface.debug("In a loop "+id+" "+mode);
-                printState();
+                printState(h);
 //                throw new RuntimeException();
-                try { Thread.sleep(1000); } catch(InterruptedException e) {}
+                try { Thread.sleep(50); } catch(InterruptedException e) {}
             }
             lastWriteLoop = h;
-            throw new NetworkForwardRequest(owner);
+            if(owner != -1)
+                throw new NetworkForwardRequest(owner);
+            int[] cache = h.__dj_class_manager.cached_copies;
+            if(cache != null)
+                throw new NotImplementedException();
         }
-        JITWrapper.recordReceiveRemoteWrite(h, fid, from);
         writeFieldSwitch(h, req, op, fid);
+        JITWrapper.recordReceiveRemoteWrite(h, fid, from);
     }
 
     static public void writeFieldSwitch(ObjectBase h, ByteBuffer req, int op, int fid) {
@@ -912,7 +928,7 @@ public class DistributedObjectHelper {
                 InternalInterface.getInternalInterface().sendSerializedObject(so, to);
                 lastMovedSend = obj;
                 lastBufferSend = so;
-                sendObjsL.add(obj);
+                //sendObjsL.add(obj);
                 sendObjs++;
                 obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
             } catch(Throwable e) {
@@ -938,7 +954,7 @@ public class DistributedObjectHelper {
     static LinkedList<Object> sendObjsL = new LinkedList<Object>();
     static LinkedList<Object> recvObjsL = new LinkedList<Object>();
 
-    static public void printState() {
+    static public void printState(Object look) {
         InternalInterface.debug("DOH state: "+preSendObj+" "+sendObjs+" "+recvObjs+" "+finRecvObjs+" "+recvFinal);
         if(lastMovedSend != null)
             InternalInterface.debug("last move send:"+((ObjectBase)lastMovedSend).__dj_class_manager.distributedObjectId);
@@ -958,6 +974,11 @@ public class DistributedObjectHelper {
             s += ((ObjectBase)ll.get(i)).__dj_class_manager.distributedObjectId.toString() + " ";
         }
         InternalInterface.debug("objs: "+s);
+
+        for(i = 0; i < ll.size(); i++) {
+            if(ll.get(i) == look)
+                InternalInterface.debug("found object at: "+i);
+        }
     }
 
     static public void recvMoveReq(ByteBuffer req) {
@@ -978,21 +999,25 @@ public class DistributedObjectHelper {
         }
     }
 
+    static Object recvLock = new Object();
+
     static public void recvMovedObject(ByteBuffer buf) {
         // calling on the recving machine for make the
-        try {
-            recvObjs++;
+        synchronized (recvLock) {
+            try {
+                recvObjs++;
 //            try { Thread.sleep(10); } catch(InterruptedException e) {}
-            ObjectBase obj = (ObjectBase)SerializeManager.deserialize(buf);
-            lastMovedRecv = obj;
-            lastBufferRecv = buf;
-            recvObjsL.add(obj);
-            finRecvObjs++;
-        } catch(Throwable e) {
-            e.printStackTrace();
-            throw e;
-        } finally {
-            recvFinal++;
+                ObjectBase obj = (ObjectBase) SerializeManager.deserialize(buf);
+                lastMovedRecv = obj;
+                lastBufferRecv = buf;
+                //recvObjsL.add(obj);
+                finRecvObjs++;
+            } catch (Throwable e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                recvFinal++;
+            }
         }
 //        InternalInterface.debug("recv moved obj  "+getDistributedId(obj));
 //        UUID id = new UUID(buf.getLong(), buf.getLong());

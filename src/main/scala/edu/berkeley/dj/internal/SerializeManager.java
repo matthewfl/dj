@@ -204,6 +204,7 @@ class Deserialization extends SerializeManager {
             if(o instanceof ObjectBase) {
                 ObjectBase ob = (ObjectBase)o;
                 ob.__dj_class_mode |= CONSTS.CURRENTLY_DESERIALIZING;
+                assert(ob.__dj_class_manager.distributedObjectId.equals(id.identifier));
                 ob.__dj_deserialize_obj(this);
                 if(act == SerializationAction.MOVE_OBJ_MASTER) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
@@ -311,6 +312,20 @@ class Serialization extends SerializeManager {
         this.target_machine = target_machine;
     }
 
+    // TODO: need a better way to make this not race with the reading and writing threads
+    // I suppose that it could first write onto all the objects that are getting moved the new flags
+    // and then use a thread yield or something to try ensure that other threads drain, however that still sounds like
+    // it would race
+    //
+    // I suppose that I could perform a check after the read/write is performed
+    // if there is now some flag that indicates that the read/write should be remote, then it could perform the redirect
+    // maybe it would be better to update the local object write and then check if the object is actually remote
+    // that way if it is racing then it would have written the field and also send a remote update to the other machine
+    // the field update would eventually be reflected
+    //
+    // The field update redirect could also use the static indirect field access methods
+    // that way the state of the object has change then it would still end up getting redirected correctly
+
     void run(ObjectBase base) {
         seen.add(base);
         nextObj.add(base);
@@ -334,6 +349,7 @@ class Serialization extends SerializeManager {
                         synchronized (o) {
                             if(o.__dj_class_manager.monitor_lock_count == 0) {
                                 // the object is ready to be serialized
+                                unsafe.loadFence();
                                 int m = o.__dj_class_mode;
                                 m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
                                 InternalInterface.debug("moved blocked:"+id);
@@ -343,6 +359,8 @@ class Serialization extends SerializeManager {
                                 unsafe.fullFence();
                                 o.__dj_serialize_obj(this);
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
+                                unsafe.storeFence();
+                                o.__dj_empty_obj();
                                 break;
                             }
                         }
@@ -354,6 +372,7 @@ class Serialization extends SerializeManager {
                         if((lock_cnt = o.__dj_class_manager.monitor_lock_count) != 0) {
                             throw new SerializeException("Object is currently locked", o);
                         }
+                        unsafe.loadFence();
                         int m = o.__dj_class_mode;
                         m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
 //                        InternalInterface.debug("moved throw:"+id);
@@ -363,6 +382,8 @@ class Serialization extends SerializeManager {
                         unsafe.fullFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
+                        unsafe.storeFence();
+                        o.__dj_empty_obj();
                     }
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
                     synchronized (o) {

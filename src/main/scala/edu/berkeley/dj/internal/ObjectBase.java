@@ -185,6 +185,11 @@ public class ObjectBase implements Object00DJ {
 
     }
 
+    // used by the serializer to remove all references contained in this object
+    public void __dj_empty_obj() {
+
+    }
+
     // these methods are overwritten so that we can efficently access fields on an object using a switch statement
     public void __dj_writeFieldID_Z(int id, boolean v) { throw new DJError(); }
 

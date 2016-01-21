@@ -478,6 +478,12 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
             public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
             super.__dj_deserialize_obj(man);
       """
+    var empty_obj_method =
+    """
+      public void __dj_empty_obj() {
+        super.__dj_empty_obj();
+    """
+
     var prim_size = 0
     var num_objs = 0
     for(f <- cls.getDeclaredFields) {
@@ -500,15 +506,18 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       if(!f.getType.isPrimitive) {
         serialize_obj_method +=   s"this.${f.getName} = (${getUsableName(f.getType)}) man.put_object( this.${f.getName} );\n"
         deserialize_obj_method += s"this.${f.getName} = (${getUsableName(f.getType)}) man.get_object( this.${f.getName} ); \n"
+        empty_obj_method += s"this.${f.getName} = null; \n"
       }
     }
 
     serialize_obj_method += "}"
     deserialize_obj_method += "}"
+    empty_obj_method += "}"
 
     try {
       cls.addMethod(CtMethod.make(serialize_obj_method, cls))
       cls.addMethod(CtMethod.make(deserialize_obj_method, cls))
+      cls.addMethod(CtMethod.make(empty_obj_method, cls))
     } catch {
       case e: Throwable => {
         println(e)
@@ -1387,7 +1396,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       val serialize_helper = s"""
         public void __dj_serialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
           super.__dj_serialize_obj(man);
-          ${inner_arr_typ} arr = this.ir;
+          ${inner_arr_typ}[] arr = this.ir;
           if(man.getCurrentAction() == edu.berkeley.dj.internal.SerializeManager.SerializationAction.MOVE_OBJ_MASTER ||
             man.getCurrentAction() == edu.berkeley.dj.internal.SerializeManager.SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
             this.ir = null;
@@ -1406,8 +1415,6 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
         }
         """
 
-
-
       val deserialize_helper = s"""
         public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
           super.__dj_deserialize_obj(man);
@@ -1419,8 +1426,17 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
         }
         """
 
+      val empty_obj_helper =
+        s"""
+           public void __dj_empty_obj() {
+             super.__dj_empty_obj();
+             this.ir = null;
+           }
+         """
+
       cls.addMethod(CtMethod.make(serialize_helper, cls))
       cls.addMethod(CtMethod.make(deserialize_helper, cls))
+      cls.addMethod(CtMethod.make(empty_obj_helper, cls))
 
     }
 
