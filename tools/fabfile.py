@@ -103,3 +103,13 @@ def stop_remote():
 @parallel
 def tail():
     run('tail -f `ls -1t /tmp/dj-log* | head -n 1`')
+
+
+@task
+def start_single():
+    run(('java -ea -Ddj.classreload=false '
+
+         '-jar /tmp/{target} -fjar /tmp/{target} -maincls testcase.Thrasher -debug_clazz_bytecode /tmp/djtcls/ -djit testcase.ThrasherJIT').format(
+        target=target,
+    ))
+#           '-agentlib:jdwp=transport=dt_socket,server=n,address=10.7.0.5:5005,suspend=y '

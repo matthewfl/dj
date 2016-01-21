@@ -7,6 +7,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.UUID;
 
 /**
@@ -187,35 +188,47 @@ public class DistributedObjectHelper {
     }
 
     static public Object getObject(DistributedObjectId id) {
+        Object00DJ h;
         synchronized (localDistributedObjects) {
-            Object00DJ h = localDistributedObjects.get(id.identifier);
-            if(h != null)
-                return h;
-            // we do not have some proxy of this object locally so we need to construct some proxy for it
-            try {
-                if(id.isFinalObj() /* lastKnownHost == -2 */) {
-                    // this is some final object, and we just need to reconstruct it
-                    return constructFinalObject(ByteBuffer.wrap(id.extradata));
-                } else {
-                    // shouldn't need the AugmentedClassLoader since the classname will already be augmented
-                    // this will save a round trip communication with the master machine
-                    Class<?> cls = Class.forName(new String(id.extradata));
-                    ObjectBase obj = (ObjectBase) Unsafe00DJ.getUnsafe().allocateInstance(cls);
-                    assert(id.lastKnownHost != -1);
-                    assert(id.lastKnownHost != InternalInterface.getInternalInterface().getSelfId());
-                    obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
-                    obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
-                            CONSTS.REMOTE_READS |
-                            CONSTS.REMOTE_WRITES |
-                            CONSTS.IS_NOT_MASTER;
-                    localDistributedObjects.put(id.identifier, obj);
-                    JITWrapper.recordProxyObjectCreated(obj);
-                    return obj;
-                }
-            } catch(ClassNotFoundException|InstantiationException e) {
-                throw new RuntimeException(e);
-            }
+            h = localDistributedObjects.get(id.identifier);
         }
+        if(h != null)
+            return h;
+        // we do not have some proxy of this object locally so we need to construct some proxy for it
+        try {
+            if(id.isFinalObj() /* lastKnownHost == -2 */) {
+                // this is some final object, and we just need to reconstruct it
+                return constructFinalObject(ByteBuffer.wrap(id.extradata));
+            } else {
+                // shouldn't need the AugmentedClassLoader since the classname will already be augmented
+                // this will save a round trip communication with the master machine
+                // this potentially represents a round trip as a remote class is loaded
+                // that is why we release the lock before we get to this point
+                Class<?> cls = Class.forName(new String(id.extradata));
+                ObjectBase obj = (ObjectBase) Unsafe00DJ.getUnsafe().allocateInstance(cls);
+                assert(id.lastKnownHost != -1);
+                assert(id.lastKnownHost != InternalInterface.getInternalInterface().getSelfId());
+                obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
+                obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
+                        CONSTS.REMOTE_READS |
+                        CONSTS.REMOTE_WRITES |
+                        CONSTS.IS_NOT_MASTER;
+                synchronized (localDistributedObjects) {
+                    // check again if we now have the object
+                    // if we do, then return that instead
+                    // the other objects will end up getting collected shortly
+                    h = localDistributedObjects.get(id.identifier);
+                    if(h != null)
+                        return h;
+                    localDistributedObjects.put(id.identifier, obj);
+                }
+                JITWrapper.recordProxyObjectCreated(obj);
+                return obj;
+            }
+        } catch(ClassNotFoundException|InstantiationException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     static Object constructFinalObject(ByteBuffer buf) {
@@ -568,7 +581,7 @@ public class DistributedObjectHelper {
         // this is the master machine, we should not be telling it where the owner is
         if((h.__dj_getClassMode() & CONSTS.IS_NOT_MASTER) == 0)
             return;
-        InternalInterface.debug("update location: "+id);
+//        InternalInterface.debug("update location: "+id);
         h.__dj_getManager().owning_machine = machine_location;
     }
 
@@ -578,6 +591,13 @@ public class DistributedObjectHelper {
 //            throw new RuntimeException();
             return;
         }
+        if(to == machine_location) {
+            // if the remote machine truely owns it then it must be getting deserialized or
+            // changed, so we don't want to interfear
+//            InternalInterface.debug("trying to update object location to self machine");
+            return;
+        }
+        assert(machine_location != -1);
         InternalInterface.getInternalInterface().updateObjectLocation(id, machine_location, to);
     }
 
@@ -592,7 +612,8 @@ public class DistributedObjectHelper {
         }
         if(h == null)
             throw new InterfaceException();
-        if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0) {
+        int mode;
+        if(((mode = h.__dj_class_mode) & CONSTS.REMOTE_READS) != 0) {
             // need to redirect the request elsewhere
 
             // TODO: update the location from the machine that made the request
@@ -603,7 +624,8 @@ public class DistributedObjectHelper {
             }
             sendUpdateObjectLocation(id, owner, from);
             if(h == lastReadLoop) {
-                InternalInterface.debug("in loop "+id);
+                InternalInterface.debug("in loop "+id+" "+mode);
+                printState();
 //                throw new RuntimeException();
                 try { Thread.sleep(1000); } catch(InterruptedException e) {}
             }
@@ -671,16 +693,18 @@ public class DistributedObjectHelper {
         }
         if(h == null)
             throw new InterfaceException();
-        if((h.__dj_class_mode & CONSTS.REMOTE_WRITES) != 0) {
+        int mode;
+        if(((mode = h.__dj_class_mode) & CONSTS.REMOTE_WRITES) != 0) {
             // need to redirect the request elsewhere
 //            throw new NotImplementedException();
             int owner = h.__dj_class_manager.owning_machine;
             if(owner == InternalInterface.getInternalInterface().getSelfId() || owner == -1) {
-                InternalInterface.debug("trying to resolve machine to self");
+                InternalInterface.debug("trying to resolve machine to self "+owner);
             }
 //            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
             if(h == lastWriteLoop) {
-                InternalInterface.debug("In a loop "+id);
+                InternalInterface.debug("In a loop "+id+" "+mode);
+                printState();
 //                throw new RuntimeException();
                 try { Thread.sleep(1000); } catch(InterruptedException e) {}
             }
@@ -852,6 +876,7 @@ public class DistributedObjectHelper {
         }
     }
 
+
     static public void moveObject(ObjectBase obj, int to) {
         DistributedObjectId id = getDistributedId(obj);
         if(obj.__dj_class_manager.owning_machine == to || id.isFinalObj()) {
@@ -872,19 +897,28 @@ public class DistributedObjectHelper {
             }
             // serialize the object, and then send it to the new machine
 //            InternalInterface.debug("before send obj "+id);
-            ByteBuffer so = SerializeManager.serialize(obj, new SerializeManager.SerializationController() {
-                @Override
-                public SerializeManager.SerializationAction getAction(Object o) {
-                    if(o == obj)
-                        return SerializeManager.SerializationAction.MOVE_OBJ_MASTER;
-                    else
-                        return SerializeManager.SerializationAction.MAKE_REFERENCE;
-                    //return null;
-                }
-            }, 1, to);
-            InternalInterface.getInternalInterface().sendSerializedObject(so, to);
-            obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
-            sendObjs ++;
+            try {
+                preSendObj++;
+                ByteBuffer so = SerializeManager.serialize(obj, new SerializeManager.SerializationController() {
+                    @Override
+                    public SerializeManager.SerializationAction getAction(Object o) {
+                        if (o == obj)
+                            return SerializeManager.SerializationAction.MOVE_OBJ_MASTER;
+                        else
+                            return SerializeManager.SerializationAction.MAKE_REFERENCE;
+                        //return null;
+                    }
+                }, 1, to);
+                InternalInterface.getInternalInterface().sendSerializedObject(so, to);
+                lastMovedSend = obj;
+                lastBufferSend = so;
+                sendObjsL.add(obj);
+                sendObjs++;
+                obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+            } catch(Throwable e) {
+                e.printStackTrace();
+                throw e;
+            }
 //            InternalInterface.debug("send moved obj "+id);
             //throw new NotImplementedException();
         }
@@ -892,6 +926,39 @@ public class DistributedObjectHelper {
 
     static int sendObjs = 0;
     static int recvObjs = 0;
+    static int finRecvObjs = 0;
+    static int preSendObj = 0;
+    static int recvFinal = 0;
+
+
+    static Object lastMovedSend = null;
+    static ByteBuffer lastBufferSend = null;
+    static Object lastMovedRecv = null;
+    static ByteBuffer lastBufferRecv = null;
+    static LinkedList<Object> sendObjsL = new LinkedList<Object>();
+    static LinkedList<Object> recvObjsL = new LinkedList<Object>();
+
+    static public void printState() {
+        InternalInterface.debug("DOH state: "+preSendObj+" "+sendObjs+" "+recvObjs+" "+finRecvObjs+" "+recvFinal);
+        if(lastMovedSend != null)
+            InternalInterface.debug("last move send:"+((ObjectBase)lastMovedSend).__dj_class_manager.distributedObjectId);
+        if(lastMovedRecv != null)
+            InternalInterface.debug("last move recv:"+((ObjectBase)lastMovedRecv).__dj_class_manager.distributedObjectId);
+
+        LinkedList<Object> ll;
+        if(sendObjsL.size() > recvObjsL.size())
+            ll = sendObjsL;
+        else
+            ll = recvObjsL;
+
+        String s = "";
+        int i = ll.size() - 15;
+        if(i < 0) i =0;
+        for(; i < ll.size(); i++) {
+            s += ((ObjectBase)ll.get(i)).__dj_class_manager.distributedObjectId.toString() + " ";
+        }
+        InternalInterface.debug("objs: "+s);
+    }
 
     static public void recvMoveReq(ByteBuffer req) {
         int to = req.getInt();
@@ -906,14 +973,27 @@ public class DistributedObjectHelper {
             //throw new RuntimeException();
             InternalInterface.debug("failed to locate object to move: "+id);
         } else {
+            assert(h.__dj_class_manager.isLocal());
             moveObject(h, to);
         }
     }
 
     static public void recvMovedObject(ByteBuffer buf) {
         // calling on the recving machine for make the
-        Object obj = SerializeManager.deserialize(buf);
-        recvObjs++;
+        try {
+            recvObjs++;
+//            try { Thread.sleep(10); } catch(InterruptedException e) {}
+            ObjectBase obj = (ObjectBase)SerializeManager.deserialize(buf);
+            lastMovedRecv = obj;
+            lastBufferRecv = buf;
+            recvObjsL.add(obj);
+            finRecvObjs++;
+        } catch(Throwable e) {
+            e.printStackTrace();
+            throw e;
+        } finally {
+            recvFinal++;
+        }
 //        InternalInterface.debug("recv moved obj  "+getDistributedId(obj));
 //        UUID id = new UUID(buf.getLong(), buf.getLong());
 //        ObjectBase h;

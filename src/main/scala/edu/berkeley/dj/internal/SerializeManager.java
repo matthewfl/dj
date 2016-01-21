@@ -327,6 +327,7 @@ class Serialization extends SerializeManager {
                 }
                 current_action = act;
                 buff.putInt(act.ordinal());
+                unsafe.fullFence();
                 // TODO: locking or something in here
                 if(act == SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
                     while(true) {
@@ -349,7 +350,8 @@ class Serialization extends SerializeManager {
                     }
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER) {
                     synchronized (o) {
-                        if(o.__dj_class_manager.monitor_lock_count != 0) {
+                        int lock_cnt;// = o.__dj_class_manager.monitor_lock_count;
+                        if((lock_cnt = o.__dj_class_manager.monitor_lock_count) != 0) {
                             throw new SerializeException("Object is currently locked", o);
                         }
                         int m = o.__dj_class_mode;
@@ -398,6 +400,8 @@ class Serialization extends SerializeManager {
                     InternalInterface.debug("make cache: "+id);
                 } else if(act == SerializationAction.MAKE_REFERENCE) {
                     //o.__dj_serialize_obj(this);
+                } else {
+                    throw new DJError();
                 }
             }
         }
