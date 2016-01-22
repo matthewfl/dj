@@ -640,9 +640,15 @@ public class DistributedObjectHelper {
             if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0)
                 throw new DJError();
         }
-        ByteBuffer ret = readFieldSwitch(h, op, fid);
-        JITWrapper.recordReceiveRemoteRead(h, fid, from);
-        return ret;
+        try {
+            ByteBuffer ret = readFieldSwitch(h, op, fid);
+            JITWrapper.recordReceiveRemoteRead(h, fid, from);
+            return ret;
+        } catch(NullPointerException e) {
+            // array is causing this to happen sometimes
+            // I suppose that this race
+            throw e;
+        }
     }
 
     static public ByteBuffer readFieldSwitch(ObjectBase h, int op, int fid) {
@@ -919,18 +925,21 @@ public class DistributedObjectHelper {
                     @Override
                     public SerializeManager.SerializationAction getAction(Object o) {
                         if (o == obj)
-                            return SerializeManager.SerializationAction.MOVE_OBJ_MASTER;
+                            return SerializeManager.SerializationAction.TRY_MOVE_OBJ_MASTER;
                         else
                             return SerializeManager.SerializationAction.MAKE_REFERENCE;
                         //return null;
                     }
                 }, 1, to);
-                InternalInterface.getInternalInterface().sendSerializedObject(so, to);
-                lastMovedSend = obj;
-                lastBufferSend = so;
-                //sendObjsL.add(obj);
-                sendObjs++;
-                obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+                // we could have a zero byte object, then no need to try and move it
+                if(so.limit() != 0) {
+                    InternalInterface.getInternalInterface().sendSerializedObject(so, to);
+                    lastMovedSend = obj;
+                    lastBufferSend = so;
+                    //sendObjsL.add(obj);
+                    sendObjs++;
+                    obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+                }
             } catch(Throwable e) {
                 e.printStackTrace();
                 throw e;

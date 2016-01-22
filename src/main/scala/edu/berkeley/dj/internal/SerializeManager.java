@@ -136,6 +136,8 @@ public class SerializeManager {
         MOVE_OBJ_MASTER,
         MOVE_OBJ_MASTER_LEAVE_CACHE,
         MAKE_OBJ_CACHE,
+        // will silently fail if there is a problem, no exceptions
+        TRY_MOVE_OBJ_MASTER,
         // will block until the object is unlocked
         MOVE_OBJ_BLOCK_TIL_READY,
         // will simply create a remote object reference
@@ -206,7 +208,7 @@ class Deserialization extends SerializeManager {
                 ob.__dj_class_mode |= CONSTS.CURRENTLY_DESERIALIZING;
                 assert(ob.__dj_class_manager.distributedObjectId.equals(id.identifier));
                 ob.__dj_deserialize_obj(this);
-                if(act == SerializationAction.MOVE_OBJ_MASTER) {
+                if(act == SerializationAction.MOVE_OBJ_MASTER || act == SerializationAction.TRY_MOVE_OBJ_MASTER) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
                     int m = ob.__dj_class_mode;
                     if(ob.__dj_class_manager.cached_copies == null) {
@@ -366,11 +368,16 @@ class Serialization extends SerializeManager {
                         }
                         try { Thread.sleep(2); } catch (InterruptedException e) {}
                     }
-                } else if(act == SerializationAction.MOVE_OBJ_MASTER) {
+                } else if(act == SerializationAction.MOVE_OBJ_MASTER || act == SerializationAction.TRY_MOVE_OBJ_MASTER) {
                     synchronized (o) {
                         int lock_cnt;// = o.__dj_class_manager.monitor_lock_count;
                         if((lock_cnt = o.__dj_class_manager.monitor_lock_count) != 0) {
-                            throw new SerializeException("Object is currently locked", o);
+                            if(act != SerializationAction.TRY_MOVE_OBJ_MASTER)
+                                throw new SerializeException("Object is currently locked", o);
+                            else {
+                                buff.position(buff.position() - 4); // remove the act ind that was added to buff
+                                continue;
+                            }
                         }
                         unsafe.loadFence();
                         int m = o.__dj_class_mode;

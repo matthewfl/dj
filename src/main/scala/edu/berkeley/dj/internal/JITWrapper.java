@@ -126,7 +126,7 @@ public class JITWrapper {
     }
 
     static void recordProxyObjectCreated(Object self) {
-        // TODO: determine when this is a proxy object and not a derseralization I guess
+        // TODO: determine when this is a proxy object and not a deserialization I guess
         // will allow the JIT to start moving over other commonly accessed objects based off the type
         //RecordedOperation r = new RecordedOperation()
     }
