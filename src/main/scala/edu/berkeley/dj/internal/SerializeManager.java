@@ -338,7 +338,7 @@ class Serialization extends SerializeManager {
                 DistributedObjectHelper.DistributedObjectId id = DistributedObjectHelper.getDistributedId(o);
                 SerializationAction act = controller.getAction(o);
                 if(!o.__dj_class_manager.isLocal()) {
-                    if(act != SerializationAction.MAKE_REFERENCE)
+                    if(act != SerializationAction.MAKE_REFERENCE && act != SerializationAction.TRY_MOVE_OBJ_MASTER)
                         throw new SerializeException("object is not local, can't serialize", o);
                     continue;
                 }

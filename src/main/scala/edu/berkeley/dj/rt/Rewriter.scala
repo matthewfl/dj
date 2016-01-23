@@ -487,26 +487,32 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     var prim_size = 0
     var num_objs = 0
     for(f <- cls.getDeclaredFields) {
-      if(f.getType.isPrimitive) {
-        prim_size += f.getType.asInstanceOf[CtPrimitiveType].getDataSize
-      } else {
-        num_objs += 1
+      if(!Modifier.isStatic(f.getModifiers)) {
+        if (f.getType.isPrimitive) {
+          prim_size += f.getType.asInstanceOf[CtPrimitiveType].getDataSize
+        } else {
+          num_objs += 1
+        }
       }
     }
     serialize_obj_method +=   s"man.register_size(${prim_size}, ${num_objs});\n"
     deserialize_obj_method += s"man.register_size(${prim_size}, ${num_objs});\n"
     for(f <- cls.getDeclaredFields) {
-      if(f.getType.isPrimitive) {
-        val p = f.getType.asInstanceOf[CtPrimitiveType]
-        serialize_obj_method +=   s"man.put_value_${p.getDescriptor} ( this.${f.getName} );\n"
-        deserialize_obj_method += s"this.${f.getName} = man.get_value_${p.getDescriptor} ();\n"
+      if(!Modifier.isStatic(f.getModifiers)) {
+        if (f.getType.isPrimitive) {
+          val p = f.getType.asInstanceOf[CtPrimitiveType]
+          serialize_obj_method += s"man.put_value_${p.getDescriptor} ( this.${f.getName} );\n"
+          deserialize_obj_method += s"this.${f.getName} = man.get_value_${p.getDescriptor} ();\n"
+        }
       }
     }
     for(f <- cls.getDeclaredFields) {
-      if(!f.getType.isPrimitive) {
-        serialize_obj_method +=   s"this.${f.getName} = (${getUsableName(f.getType)}) man.put_object( this.${f.getName} );\n"
-        deserialize_obj_method += s"this.${f.getName} = (${getUsableName(f.getType)}) man.get_object( this.${f.getName} ); \n"
-        empty_obj_method += s"this.${f.getName} = null; \n"
+      if(!Modifier.isStatic(f.getModifiers)) {
+        if (!f.getType.isPrimitive) {
+          serialize_obj_method += s"this.${f.getName} = (${getUsableName(f.getType)}) man.put_object( this.${f.getName} );\n"
+          deserialize_obj_method += s"this.${f.getName} = (${getUsableName(f.getType)}) man.get_object( this.${f.getName} ); \n"
+          empty_obj_method += s"this.${f.getName} = null; \n"
+        }
       }
     }
 

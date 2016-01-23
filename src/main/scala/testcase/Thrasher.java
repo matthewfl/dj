@@ -131,7 +131,7 @@ public class Thrasher {
             for (int i = 0; i < num_hosts; i++) {
                 failed += callRes[i].get();
             }
-            System.out.println("done running all checks, failed: " + failed);
+            System.out.println("done running all checks, failed: " + failed + " "+cnt);
         }
     }
 

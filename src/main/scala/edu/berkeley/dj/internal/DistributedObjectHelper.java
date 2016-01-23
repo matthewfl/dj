@@ -733,8 +733,13 @@ public class DistributedObjectHelper {
             if(cache != null)
                 throw new NotImplementedException();
         }
-        writeFieldSwitch(h, req, op, fid);
-        JITWrapper.recordReceiveRemoteWrite(h, fid, from);
+        try {
+            writeFieldSwitch(h, req, op, fid);
+            JITWrapper.recordReceiveRemoteWrite(h, fid, from);
+        } catch(NullPointerException e) {
+
+            throw e;
+        }
     }
 
     static public void writeFieldSwitch(ObjectBase h, ByteBuffer req, int op, int fid) {
@@ -1012,7 +1017,7 @@ public class DistributedObjectHelper {
 
     static public void recvMovedObject(ByteBuffer buf) {
         // calling on the recving machine for make the
-        synchronized (recvLock) {
+        //synchronized (recvLock) {
             try {
                 recvObjs++;
 //            try { Thread.sleep(10); } catch(InterruptedException e) {}
@@ -1027,7 +1032,7 @@ public class DistributedObjectHelper {
             } finally {
                 recvFinal++;
             }
-        }
+        //}
 //        InternalInterface.debug("recv moved obj  "+getDistributedId(obj));
 //        UUID id = new UUID(buf.getLong(), buf.getLong());
 //        ObjectBase h;
