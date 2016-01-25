@@ -20,7 +20,13 @@ public abstract class Base_impl extends ObjectBase implements Base {
 
     public int __dj_readFieldID_I(int id) {
         if(id == 9) {
-            return length();
+            try {
+                // don't try and redirect the length request if no longer the master, simply throw the exception
+                return raw_length();
+            } catch (java.lang.NullPointerException e) {
+                // caller needs to determine if this value is valid
+                return 0;
+            }
         } else {
             return super.__dj_readFieldID_I(id);
         }

@@ -172,16 +172,23 @@ final public class ClassManager {
 
     private ByteBuffer requestRead(int fid, int op) {
         int owner = owning_machine;
-        int mode = managedObject.__dj_class_mode;
+//        int mode = managedObject.__dj_class_mode;
         //InternalInterface.debug("read request "+fid+" "+op+" "+owner+" "+distributedObjectId);
         if(owner == -1) {
             // we are sending this request to ourselves, this is likely the result of synchronization with serialization
-            return DistributedObjectHelper.readFieldSwitch(managedObject, op, fid);
-        } else {
-            ByteBuffer bb = requestRemote(fid, 0);
-            JITWrapper.recordRemoteRead(managedObject, fid, owner);
-            return InternalInterface.getInternalInterface().readField(bb, op, owner);
+            ByteBuffer ret = DistributedObjectHelper.readFieldSwitch(managedObject, op, fid);
+            int mode2 = managedObject.__dj_class_mode;
+            if((mode2 & CONSTS.REMOTE_READS) == 0) {
+                ret.position(0);
+                return ret;
+            }
+            owner = owning_machine;
+            assert(owner != -1);
         }
+        ByteBuffer bb = requestRemote(fid, 0);
+        JITWrapper.recordRemoteRead(managedObject, fid, owner);
+        return InternalInterface.getInternalInterface().readField(bb, op, owner);
+
     }
 
     private ByteBuffer requestRemote(int fid, int exces) {
@@ -203,10 +210,15 @@ final public class ClassManager {
             }
             bb.position(20); // 2*long + int
             DistributedObjectHelper.writeFieldSwitch(managedObject, bb, op, fid);
-        } else {
-            JITWrapper.recordRemoteWrite(managedObject, fid, owner);
-            InternalInterface.getInternalInterface().writeField(bb, op, owner);
+            int mode2 = managedObject.__dj_class_mode;
+            if((mode2 & CONSTS.REMOTE_WRITES) == 0) {
+                return;
+            }
+            owner = owning_machine;
+            bb.position(0);
         }
+        JITWrapper.recordRemoteWrite(managedObject, fid, owner);
+        InternalInterface.getInternalInterface().writeField(bb, op, owner);
     }
 
 

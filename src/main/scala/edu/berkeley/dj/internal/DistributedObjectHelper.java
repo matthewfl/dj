@@ -214,7 +214,8 @@ public class DistributedObjectHelper {
                 obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
                         CONSTS.REMOTE_READS |
                         CONSTS.REMOTE_WRITES |
-                        CONSTS.IS_NOT_MASTER;
+                        CONSTS.IS_NOT_MASTER |
+                        CONSTS.IS_PROXY_OBJ;
                 synchronized (localDistributedObjects) {
                     // check again if we now have the object
                     // if we do, then return that instead
@@ -638,17 +639,23 @@ public class DistributedObjectHelper {
             if(owner != -1) // check twice
                 throw new NetworkForwardRequest(owner);
             if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0)
-                throw new DJError();
+                throw new DJError(); // invalid state, idk what to do
         }
-        try {
-            ByteBuffer ret = readFieldSwitch(h, op, fid);
-            JITWrapper.recordReceiveRemoteRead(h, fid, from);
-            return ret;
-        } catch(NullPointerException e) {
-            // array is causing this to happen sometimes
-            // I suppose that this race
-            throw e;
+        ByteBuffer ret = readFieldSwitch(h, op, fid);
+        if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0) {
+            // the fact that this has changed since we performed the last operation, means that if we redirect this
+            // request at this very moment, then it is likely to race
+            // this is already a network request, and doing it incorrectly could incur 2 extra trips
+            try { Thread.sleep(2); } catch(InterruptedException e) {}
+            int owner = h.__dj_class_manager.owning_machine;
+            if(owner != -1)
+                throw new NetworkForwardRequest(owner);
+            throw new NetworkForwardRequest(InternalInterface.getInternalInterface().getSelfId()); // ga
         }
+            //throw new DJError();
+        JITWrapper.recordReceiveRemoteRead(h, fid, from);
+        return ret;
+
     }
 
     static public ByteBuffer readFieldSwitch(ObjectBase h, int op, int fid) {
@@ -733,13 +740,16 @@ public class DistributedObjectHelper {
             if(cache != null)
                 throw new NotImplementedException();
         }
-        try {
-            writeFieldSwitch(h, req, op, fid);
-            JITWrapper.recordReceiveRemoteWrite(h, fid, from);
-        } catch(NullPointerException e) {
-
-            throw e;
+        writeFieldSwitch(h, req, op, fid);
+        if((h.__dj_class_mode & CONSTS.REMOTE_WRITES) != 0) {
+            try { Thread.sleep(2); } catch(InterruptedException e) {}
+            int owner = h.__dj_class_manager.owning_machine;
+            if(owner != -1)
+                throw new NetworkForwardRequest(owner);
+            throw new NetworkForwardRequest(InternalInterface.getInternalInterface().getSelfId()); // ga
         }
+//            throw new DJError();
+        JITWrapper.recordReceiveRemoteWrite(h, fid, from);
     }
 
     static public void writeFieldSwitch(ObjectBase h, ByteBuffer req, int op, int fid) {
@@ -822,22 +832,36 @@ public class DistributedObjectHelper {
         }
         if(h == null)
             throw new InterfaceException();
-        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
-            // redirect to the correct machine
-                throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
-//            throw new NotImplementedException();
-        synchronized (h) {
-            // we have a param for spinning since we do not want to block the io threads with spinning on an object
-            do {
-                synchronized (h) {
-                    if(h.__dj_class_manager.monitor_lock_count != 0)
-                        continue;
+        while(true) {
+            synchronized (h) {
+                if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
+                    throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+                if(h.__dj_class_manager.monitor_lock_count == 0) {
                     h.__dj_class_manager.monitor_lock_count = 1;
                     return true;
                 }
-            } while(spin);
-            return false;
+            }
+            if(!spin)
+                return false;
+            try { Thread.sleep(1); } catch (InterruptedException e) {}
         }
+//
+//        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
+//            // redirect to the correct machine
+//                throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+////            throw new NotImplementedException();
+//        synchronized (h) {
+//            // we have a param for spinning since we do not want to block the io threads with spinning on an object
+//            do {
+//                synchronized (h) {
+//                    if(h.__dj_class_manager.monitor_lock_count != 0)
+//                        continue;
+//                    h.__dj_class_manager.monitor_lock_count = 1;
+//                    return true;
+//                }
+//            } while(spin);
+//            return false;
+//        }
     }
 
     static public void unlockMonitor(ByteBuffer obj) {
@@ -849,9 +873,12 @@ public class DistributedObjectHelper {
         }
         if(h == null)
             throw new InterfaceException();
-        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
+        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
+            // objects should get moved when they are locked, so this should not happen
+            throw new RuntimeException();
+        }
             // redirect to the correct machine
-            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+//            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
 //            throw new NotImplementedException();
         synchronized (h) {
             assert(h.__dj_class_manager.monitor_lock_count == 1);
@@ -1004,8 +1031,9 @@ public class DistributedObjectHelper {
         }
         if(h == null) {
             // there is something wrong since we should have owned this object??
-            // the object could have recieved another command already to move it?
+            // the object could have received another command already to move it?
             //throw new RuntimeException();
+            try { Thread.sleep(500); } catch(InterruptedException e) {}
             InternalInterface.debug("failed to locate object to move: "+id);
         } else {
             assert(h.__dj_class_manager.isLocal());

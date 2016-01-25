@@ -212,9 +212,9 @@ class Deserialization extends SerializeManager {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
                     int m = ob.__dj_class_mode;
                     if(ob.__dj_class_manager.cached_copies == null) {
-                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES);
+                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.IS_PROXY_OBJ);
                     } else {
-                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
+                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ);
                     }
                     m |= CONSTS.DESERIALIZED_HERE;
                     unsafe.fullFence();
@@ -225,7 +225,7 @@ class Deserialization extends SerializeManager {
                     //int m = ob.__dj_class_mode;
                     // we know that there must have been a cache left behind, so will still have "remote_writes"
                     int m = ob.__dj_class_mode;
-                    m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS);
+                    m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ);
                     m |= CONSTS.DESERIALIZED_HERE;
                     unsafe.fullFence();
                     ob.__dj_class_mode = m;
@@ -233,7 +233,7 @@ class Deserialization extends SerializeManager {
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
                     int m = ob.__dj_class_mode;
                     m |= CONSTS.IS_CACHED_COPY | CONSTS.DESERIALIZED_HERE;
-                    m &= ~(CONSTS.REMOTE_READS);
+                    m &= ~(CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ);
                     unsafe.fullFence();
                     ob.__dj_class_mode = m;
                 } else if(act == SerializationAction.MAKE_REFERENCE) {
@@ -361,6 +361,9 @@ class Serialization extends SerializeManager {
                                 unsafe.fullFence();
                                 o.__dj_serialize_obj(this);
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
+                                // indicates that the object should be empty, so we write it after we have performed the
+                                // serialization step otherwise we may null out a field before we get to serialize it
+                                o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
                                 unsafe.storeFence();
                                 o.__dj_empty_obj();
                                 break;
@@ -389,6 +392,7 @@ class Serialization extends SerializeManager {
                         unsafe.fullFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
+                        o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
                         unsafe.storeFence();
                         o.__dj_empty_obj();
                     }

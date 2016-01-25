@@ -9,7 +9,11 @@ import edu.berkeley.dj.internal.RewriteAllBut;
 @RewriteAllBut(nonModClasses = {})
 public interface Base {
 
+    // will return the correct value, even perform network calls etc
     int length();
+
+    // will return the local value or error, no network calls
+    int raw_length();
 
     Object get_java_lang_Object(int i);
 

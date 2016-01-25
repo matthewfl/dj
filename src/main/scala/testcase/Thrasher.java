@@ -2,6 +2,7 @@ package testcase;
 
 import edu.berkeley.dj.internal.DistributedRunner;
 import edu.berkeley.dj.internal.InternalInterface;
+import edu.berkeley.dj.internal.ObjectBase;
 
 import java.util.LinkedList;
 import java.util.concurrent.Callable;
@@ -103,7 +104,12 @@ public class Thrasher {
                     @Override
                     public Integer call() throws Exception {
                         InternalInterface.getInternalInterface().debug("checker task starting: "+v);
-                        return checkSlot(root, v, cntf + 1);
+                        try {
+                            return checkSlot(root, v, cntf + 1);
+                        } catch (Throwable e) {
+                            e.printStackTrace();
+                            throw e;
+                        }
                     }
 
                     int c = 0;
@@ -129,7 +135,24 @@ public class Thrasher {
             System.out.println("waiting on all checking worker threads");
             int failed = 0;
             for (int i = 0; i < num_hosts; i++) {
-                failed += callRes[i].get();
+                Future<Integer> ff = null;
+                Integer vv = null;
+                int mode = 0;
+                int mode2 = 0;
+                try {
+                    ff = callRes[i];
+                    mode = ((ObjectBase)ff).__dj_class_mode;
+                    vv = ff.get();
+                    mode2 = ((ObjectBase)ff).__dj_class_mode;
+                    failed += vv;
+                } catch (java.lang.NullPointerException e) {
+                    e.printStackTrace();
+                    System.err.println(ff);
+                    System.err.println(vv);
+                    System.err.println(mode);
+                    System.err.println(mode2);
+                    throw e;
+                }
             }
             System.out.println("done running all checks, failed: " + failed + " "+cnt);
         }

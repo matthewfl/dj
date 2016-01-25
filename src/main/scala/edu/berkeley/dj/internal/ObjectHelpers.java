@@ -55,6 +55,7 @@ public class ObjectHelpers {
                     // since we will end up spinning trying to get the lock
                     ob.__dj_class_manager.acquireMonitor();
                     ob.__dj_class_manager.dj_wait();
+                    unsafe.monitorExit(ob);
                 }
             } else {
                 ob.__dj_class_manager.dj_wait();
@@ -103,6 +104,10 @@ public class ObjectHelpers {
                 ob.__dj_class_manager.acquireMonitor();
             } else {
                 unsafe.monitorEnter(ob);
+                if(ob.__dj_class_manager != null) {
+                    unsafe.monitorExit(ob);
+                    ob.__dj_class_manager.acquireMonitor();
+                }
             }
         } else {
             // this is going to break if someone tries and synchronizes on something like Class<?> or String between machines

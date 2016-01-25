@@ -376,23 +376,23 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
             (// write method
               s"""
                   static ${accessMod} void ``${config.fieldPrefix}write_field_${name}`` (${cls_name} self, ${typ_name} val) {
-                    //edu.berkeley.dj.internal.InternalInterface.debug("writing field ${name}");
-                    if((self.${cls_mode} & 0x02) != 0) {
+                    int mode = self.${cls_mode};
+                    self.``${name}`` = val;
+                    mode = self.${cls_mode} | mode;
+                    if((mode & 0x02) != 0) {
+                      ${if(redirect_method_type == "A")  s"if((mode & 0x1000) != 0) { self.``${name}`` = null; }" else ""}
                       self.${cls_manager}.writeField_${redirect_method_type}(${field_id}, ${if(redirect_method_type=="A") "(java.lang.Object)" else ""} val);
-                    } else {
-                      self.``${name}`` = val;
                     }
                   }
                   """,
               // read method
               s"""
                static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
-                 //edu.berkeley.dj.internal.InternalInterface.debug("reading field ${name}");
+                 ${typ_name} val = self.``${name}``;
                  if((self.${cls_mode} & 0x01) != 0) {
-                   return (${typ_name})self.${cls_manager}.readField_${redirect_method_type}(${field_id});
-                 } else {
-                   return self.``${name}``;
+                   val = (${typ_name})self.${cls_manager}.readField_${redirect_method_type}(${field_id});
                  }
+                 return val;
                }
                   """
               )
@@ -1212,15 +1212,26 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
            if((__dj_class_mode & 0x01) != 0) {
              return __dj_class_manager.readField_I(9);
            } else {
-             return ir.length;
+             try {
+               return ir.length;
+             } catch (java.lang.NullPointerException e) {
+               return __dj_class_manager.readField_I(9);
+             }
            }
          }
        """
+    val length_mth_raw =
+      s"""
+         public int raw_length() { return ir.length; }
+       """
+
     val length_mth_int = "int length();"
     if(makeInterface)
       //cls.addMethod(CtMethod.make(length_mth_int, cls))
-    {} else
+    {} else {
       cls.addMethod(CtMethod.make(length_mth, cls))
+      cls.addMethod(CtMethod.make(length_mth_raw, cls))
+    }
 
     if(cnt > 1) {
       val typname = config.arrayprefix + baseType + "_" + (cnt - 1)
@@ -1234,7 +1245,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if((__dj_class_mode & 0x01) != 0) {
                return (${typname}) __dj_class_manager.readField_A(i + ${baseFieldCount});
              } else {
-               return ir[i];
+               try {
+                 return ir[i];
+               } catch (java.lang.NullPointerexception e) {
+                 return (${typname}) __dj_class_manager.readField_A(i + ${baseFieldCount});
+               }
              }
            }
          """
@@ -1251,7 +1266,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if((__dj_class_mode & 0x02) != 0) {
                __dj_class_manager.writeField_A(i + ${baseFieldCount}, v);
              } else {
-               ir[i] = v;
+               try {
+                 ir[i] = v;
+               } catch (java.lang.NullPointerException e) {
+                 __dj_class_manager.writeField_A(i + ${baseFieldCount}, v);
+               }
              }
            }
           """
@@ -1265,7 +1284,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if(id < ${baseFieldCount}) {
                super.__dj_writeFieldID_A(id, v);
              } else {
-               ir[id - ${baseFieldCount}] = (${typname})v;
+               try {
+                 ir[id - ${baseFieldCount}] = (${typname})v;
+               } catch (java.lang.NullPointerException e) {
+                 // it is up to the caller to check that this should have worked
+               }
              }
            }
          """
@@ -1277,7 +1300,12 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if(id < ${baseFieldCount}) {
                return super.__dj_readFieldID_A(id);
              } else {
-               return ir[id - ${baseFieldCount}];
+               try {
+                 return ir[id - ${baseFieldCount}];
+               } catch (java.lang.NullPointerException e) {
+                 // it is up to the caller to check if this is valid
+                 return null;
+               }
              }
            }
          """
@@ -1300,7 +1328,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if((__dj_class_mode & 0x1) != 0) {
                return (${wrapType}) __dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount});
              } else {
-               return ir[i];
+               try {
+                 return ir[i];
+               } catch (java.lang.NullPointerException e) {
+                 return (${wrapType}) __dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount});
+               }
              }
            }
          """
@@ -1313,7 +1345,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
                if((__dj_class_mode & 0x1) != 0) {
                  return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (__dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount}));
                } else {
-                 return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (ir[i]);
+                 try {
+                   return ${if(isPrimitive) (s"java.lang.$baseType.valueOf") else "" } (ir[i]);
+                 } catch (java.lang.NullPointerException e) {
+                   return ${if (isPrimitive) (s"java.lang.$baseType.valueOf") else ""} (__dj_class_manager.readField_${jvmtyp}(i + ${baseFieldCount}));
+                 }
                }
              }
            """
@@ -1333,7 +1369,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if((__dj_class_mode & 0x2) != 0) {
                __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, v);
              } else {
-               ir[i] = (${wrapType})v;
+               try {
+                 ir[i] = (${wrapType})v;
+               } catch (java.lang.NullPointerException e) {
+                 __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, v);
+               }
              }
            }
          """
@@ -1346,7 +1386,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
                if((__dj_class_mode & 0x2) != 0) {
                  __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) );
                } else {
-                 ir[i] = (${wrapType}) ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) ;
+                 try {
+                   ir[i] = (${wrapType}) ( ${if(isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) ;
+                 } catch (java.lang.NullPointerException e) {
+                   __dj_class_manager.writeField_${jvmtyp}(i + ${baseFieldCount}, ( ${if (isPrimitive) s"((${baseType})v).${wrapType}Value()" else "v"} ) );
+                 }
                }
              }
            """
@@ -1361,7 +1405,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if(id < ${baseFieldCount}) {
                return super.__dj_readFieldID_${jvmtyp}(id);
              } else {
-               return ir[id - ${baseFieldCount}];
+               try {
+                 return ir[id - ${baseFieldCount}];
+               } catch (java.lang.NullPointerException e) {
+                 return ${if(jvmtyp == "A") "null" else makeDummyValue(primType)};
+               }
              }
            }
          """
@@ -1373,7 +1421,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              if(id < ${baseFieldCount}) {
                super.__dj_writeFieldID_${jvmtyp}(id, val);
              } else {
-               ir[id - ${baseFieldCount}] = val;
+               try {
+                 ir[id - ${baseFieldCount}] = val;
+               } catch (java.lang.NullPointerException e) {
+                 // up to caller to determine if this worked
+               }
              }
            }
          """
@@ -1416,8 +1468,6 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
         if(isPrimitive) s"man.put_value_${jvmtyp}(arr[i]);" else "arr[i] = man.put_object(arr[i]);"
          }
           }
-
-
         }
         """
 
@@ -1425,10 +1475,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
         public void __dj_deserialize_obj(edu.berkeley.dj.internal.SerializeManager man) {
           super.__dj_deserialize_obj(man);
           int len = man.get_value_I();
-          this.ir = new ${inner_arr_typ}[len];
+          ${inner_arr_typ}[] arr = new ${inner_arr_typ}[len];
           for(int i = 0; i < len; i++) {
-            ${if(isPrimitive) s"this.ir[i] = man.get_value_${jvmtyp}();" else "this.ir[i] = man.get_object(this.ir[i]);"}
+            ${if(isPrimitive) s"arr[i] = man.get_value_${jvmtyp}();" else "arr[i] = man.get_object(arr[i]);"}
           }
+          this.ir = arr;
         }
         """
 

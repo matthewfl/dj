@@ -28,32 +28,6 @@ public class DistributedRunner {
         }
     }
 
-    @RewriteAddAccessorMethods
-    @RewriteUseAccessorMethods
-    @RewriteAddSerialization
-    static private class dFutureRunner<T> extends ObjectBase implements Runnable {
-
-        private DistributedFuture<T> f;
-        private Callable<T> c;
-
-        dFutureRunner(DistributedFuture<T> f, Callable<T> c) {
-            this.f = f;
-            this.c = c;
-        }
-
-        @Override
-        public void run() {
-            Callable<T> cc = c;
-            DistributedFuture<T> ff = f;
-            try {
-                f.success(c.call());
-            } catch (Throwable e) {
-                e.printStackTrace();
-                f.failure(e);
-            }
-        }
-    }
-
     static public <T> Future<T> runOnRemote(int id, Callable<T> c) {
         DistributedFuture<T> ff = new DistributedFuture<>();
 
@@ -83,6 +57,32 @@ public class DistributedRunner {
             throw e;
         } finally {
             ThreadHelpers.unregisterWorkerThread();
+        }
+    }
+
+    @RewriteAddAccessorMethods
+    @RewriteUseAccessorMethods
+    @RewriteAddSerialization
+    static private class dFutureRunner<T> extends ObjectBase implements Runnable {
+
+        private DistributedFuture<T> f;
+        private Callable<T> c;
+
+        dFutureRunner(DistributedFuture<T> f, Callable<T> c) {
+            this.f = f;
+            this.c = c;
+        }
+
+        @Override
+        public void run() {
+            Callable<T> cc = c;
+            DistributedFuture<T> ff = f;
+            try {
+                f.success(c.call());
+            } catch (Throwable e) {
+                e.printStackTrace();
+                f.failure(e);
+            }
         }
     }
 
@@ -139,7 +139,10 @@ public class DistributedRunner {
                     return value;
                 }
                 ObjectHelpers.wait(this);
-                return get();
+                assert(done);
+                if(err != null)
+                    throw new ExecutionException(err);
+                return value;
             } finally {
                 ObjectHelpers.monitorExit(this);
             }
