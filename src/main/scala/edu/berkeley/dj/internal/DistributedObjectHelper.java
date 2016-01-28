@@ -1067,8 +1067,9 @@ public class DistributedObjectHelper {
             try { Thread.sleep(500); } catch(InterruptedException e) {}
             InternalInterface.debug("failed to locate object to move: "+id);
         } else {
-            assert(h.__dj_class_manager.isLocal());
-            moveObject(h, to);
+            if(h.__dj_class_manager.isLocal())
+                moveObject(h, to);
+            // ignore otherwise
         }
     }
 

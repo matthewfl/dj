@@ -536,6 +536,8 @@ final public class ClassManager extends WeakReference<ObjectBase> {
         // notifications to send is local
         // the monitor thread is also local
 
+        assert(monitor_lock_count == 0);
+
         if(cached_copies == null) {
             man.put_value_I(0);
         } else {
@@ -560,6 +562,8 @@ final public class ClassManager extends WeakReference<ObjectBase> {
             }
         }
 
+        // we are losing one remote ref in the machine that is getting this object
+        // and gaining another remote ref from this machine
         int cref;
         do {
             cref = reference_count;

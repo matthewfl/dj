@@ -99,26 +99,34 @@ public class DistributedRunner {
 
         void success(T v) {
             ObjectHelpers.monitorEnter(this);
+            assert(v != null);
+            T vv = null;
             try {
                 value = v;
-//                unsafe.storeFence();
+                unsafe.storeFence();
                 done = true;
+                vv = value;
                 ObjectHelpers.notifyAll(this);
             } finally {
                 ObjectHelpers.monitorExit(this);
             }
+            assert(vv != null);
         }
 
         void failure(Throwable e) {
             ObjectHelpers.monitorEnter(this);
+            assert(e != null);
+            Throwable vv = null;
             try {
                 err = e;
-//                unsafe.storeFence();
+                unsafe.storeFence();
                 done = true;
+                vv = err;
                 ObjectHelpers.notifyAll(this);
             } finally {
                 ObjectHelpers.monitorExit(this);
             }
+            assert(vv != null);
         }
 
         @Override
