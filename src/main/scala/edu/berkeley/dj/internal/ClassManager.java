@@ -3,8 +3,10 @@ package edu.berkeley.dj.internal;
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
 import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
+import sun.misc.Unsafe;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
@@ -17,9 +19,11 @@ import java.util.UUID;
 @RewriteAllBut(nonModClasses = {
         "java/util/UUID",
         "java/nio/ByteBuffer",
-        "java/nio/Buffer"
-}) // tmp
-final public class ClassManager {
+        "java/nio/Buffer",
+        "sun/misc/Unsafe",
+        "java/lang/ref/",
+})
+final public class ClassManager extends WeakReference<ObjectBase> {
 
     // TODO: this is inheriting from ObjectBase that means that we have two extra fields here
     // that we don't need, so remove that
@@ -44,15 +48,20 @@ final public class ClassManager {
     int[] cached_copies = null;
 
     // will need a week pointer to the object base
-    ObjectBase managedObject;
+//    ObjectBase managedObject;
+
+    // remote machine reference count
+    int reference_count = 0;
 
     ClassManager(Object00DJ o) {
-        managedObject = (ObjectBase)o;
+        super((ObjectBase)o, DistributedObjectHelper.gcRefQueue);
+//        managedObject = (ObjectBase)o;
         distributedObjectId = UUID.randomUUID();
     }
 
     ClassManager(Object00DJ o, UUID id, int owner) {
-        managedObject = (ObjectBase)o;
+        super((ObjectBase)o, DistributedObjectHelper.gcRefQueue);
+//        managedObject = (ObjectBase)o;
         distributedObjectId = id;
         owning_machine = owner;
     }
@@ -64,7 +73,7 @@ final public class ClassManager {
     // TODO: I suppose that the identifier for the field can be a short, since that would be a limitation
     // on the class already
 
-    protected int getMode() { return  managedObject.__dj_getClassMode(); }
+    protected int getMode() { return  get().__dj_getClassMode(); }
 
     public void writeField_Z(int id, boolean v) {
         ByteBuffer b = requestRemote(id, 1);
@@ -170,10 +179,12 @@ final public class ClassManager {
     }
 
 
+    // these are getting called from the wrapped methods, so they should not fail when accessing the object
     private ByteBuffer requestRead(int fid, int op) {
         int owner = owning_machine;
 //        int mode = managedObject.__dj_class_mode;
         //InternalInterface.debug("read request "+fid+" "+op+" "+owner+" "+distributedObjectId);
+        ObjectBase managedObject = get();
         if(owner == -1) {
             // we are sending this request to ourselves, this is likely the result of synchronization with serialization
             ByteBuffer ret = DistributedObjectHelper.readFieldSwitch(managedObject, op, fid);
@@ -201,6 +212,7 @@ final public class ClassManager {
 
     private void requestWrite(ByteBuffer bb, int op, int fid) {
         int owner = owning_machine;
+        ObjectBase managedObject = get();
         int mode = managedObject.__dj_class_mode;
         if(owner == -1) {
             // we are sending this to ourselves
@@ -344,6 +356,7 @@ final public class ClassManager {
 
     void sendANotification() {
         // send 1 notification
+        ObjectBase managedObject = get();
         synchronized (managedObject) {
             synchronized (this) {
                 if(waitingMachines != null && waitingMachines.length > 0) {
@@ -372,6 +385,7 @@ final public class ClassManager {
         // there is nothing to do
         if(notifications_to_send == 0)
             return;
+        ObjectBase managedObject = get();
         synchronized (managedObject) {
             if(notifications_to_send == -1) {
                 if(waitingMachines != null)
@@ -390,6 +404,7 @@ final public class ClassManager {
 
     public void dj_wait() throws InterruptedException {
         checkHasLock();
+        ObjectBase managedObject = get();
         if((getMode() & CONSTS.IS_NOT_MASTER) == 0) {
             // we are master
             //assert(monitor_lock_count != 0 && monitor_thread == Thread00.currentThread());
@@ -439,6 +454,7 @@ final public class ClassManager {
 
     public void acquireMonitor() {
         //synchronized (this) {
+        ObjectBase managedObject = get();
             if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // we have to communicate with the master
                 // first get the lock on the local object
@@ -471,7 +487,8 @@ final public class ClassManager {
 
     public void releaseMonitor() {
         //synchronized (this) {
-            if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
+        ObjectBase managedObject = get();
+        if((managedObject.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // communicate with the master
                 synchronized (managedObject) {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
@@ -496,6 +513,7 @@ final public class ClassManager {
     }
 
     private void checkHasLock() {
+        ObjectBase managedObject = get();
         synchronized (managedObject) {
             if(monitor_lock_count == 0 || monitor_thread != Thread00DJ.currentThread())
                 throw new IllegalMonitorStateException();
@@ -542,6 +560,12 @@ final public class ClassManager {
             }
         }
 
+        int cref;
+        do {
+            cref = reference_count;
+        } while(!unsafe.compareAndSwapInt(this, class_manager_ref_field_offset, cref, 0));
+
+        man.put_value_I(cref);
 
     }
 
@@ -571,9 +595,29 @@ final public class ClassManager {
                     waitingMachines[i] = val;
             }
         }
+
+        int delta = man.get_value_I();
+        int cref;
+        int nref;
+        do {
+            cref = reference_count;
+            nref = cref + delta;
+        } while(!unsafe.compareAndSwapInt(this, class_manager_ref_field_offset, cref, nref));
     }
 
 
     // there should be some seralization methods added to the class
 
+
+    static private Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
+
+    static final int class_manager_ref_field_offset;
+    static {
+        int v = -1;
+        try {
+            v = (int)unsafe.objectFieldOffset(ClassManager.class.getDeclaredField("reference_count"));
+        } catch (NoSuchFieldException e) {
+        }
+        class_manager_ref_field_offset = v;
+    }
 }

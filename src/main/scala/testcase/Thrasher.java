@@ -57,7 +57,7 @@ public class Thrasher {
         int[] allHosts = InternalInterface.getInternalInterface().getAllHosts();
         Future<Integer> callRes[] = new Future[num_hosts];
 
-        for(int cnt = 0; cnt < 10; cnt++) {
+        for(int cnt = 0; cnt < 30; cnt++) {
             final int cntf = cnt;
             System.out.println("inc all slots");
             for (int i = 0; i < num_hosts; i++) {

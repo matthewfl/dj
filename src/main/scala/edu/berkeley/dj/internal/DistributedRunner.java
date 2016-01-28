@@ -1,5 +1,6 @@
 package edu.berkeley.dj.internal;
 
+import sun.misc.Unsafe;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.concurrent.*;
@@ -7,7 +8,9 @@ import java.util.concurrent.*;
 /**
  * Created by matthewfl
  */
-@RewriteAllBut(nonModClasses = {})
+@RewriteAllBut(nonModClasses = {
+        "sun/misc/Unsafe",
+})
 public class DistributedRunner {
 
     private DistributedRunner() {}
@@ -98,6 +101,7 @@ public class DistributedRunner {
             ObjectHelpers.monitorEnter(this);
             try {
                 value = v;
+//                unsafe.storeFence();
                 done = true;
                 ObjectHelpers.notifyAll(this);
             } finally {
@@ -109,6 +113,7 @@ public class DistributedRunner {
             ObjectHelpers.monitorEnter(this);
             try {
                 err = e;
+//                unsafe.storeFence();
                 done = true;
                 ObjectHelpers.notifyAll(this);
             } finally {
@@ -136,13 +141,15 @@ public class DistributedRunner {
                 if (done) {
                     if (err != null)
                         throw new ExecutionException(err);
-                    return value;
+                    T v = value;
+                    return v;
                 }
                 ObjectHelpers.wait(this);
                 assert(done);
                 if(err != null)
                     throw new ExecutionException(err);
-                return value;
+                T v = value;
+                return v;
             } finally {
                 ObjectHelpers.monitorExit(this);
             }
@@ -163,5 +170,7 @@ public class DistributedRunner {
         }
     }
 
+
+    private static final Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
 
 }

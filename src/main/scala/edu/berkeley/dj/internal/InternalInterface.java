@@ -160,6 +160,8 @@ public class InternalInterface {
 
     public void updateObjectLocation(UUID id, int target, int to) { throw new InterfaceException(); }
 
+    public void changeReferenceCount(UUID id, int delta, int to) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -393,6 +395,11 @@ final class InternalInterfaceWrap extends InternalInterface {
         invoke("updateObjectLocation", new Class[]{UUID.class,int.class,int.class}, id, target, to);
     }
 
+    @Override
+    public void changeReferenceCount(UUID id, int delta, int to) {
+        invoke("changeReferenceCount", new Class[]{UUID.class, int.class, int.class}, id, delta, to);
+    }
+
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
@@ -443,6 +450,7 @@ final class InternalInterfaceWrap extends InternalInterface {
                 case 11:
                     return StaticFieldHelper.getAllStaticFields((String) args[0]);
                 case 12:
+                    // write of static field
                     StaticFieldHelper.recvWriteField((ByteBuffer) args[0]);
                     return null;
                 case 13:
@@ -457,6 +465,9 @@ final class InternalInterfaceWrap extends InternalInterface {
                     return IOHelper.recvConstructLocalIO((int) args[0], (ByteBuffer) args[1]);
                 case 17:
                     return IOHelper.recvCallMethod((int) args[0], (ByteBuffer) args[1]);
+                case 18:
+                    DistributedObjectHelper.changeReferenceCount((ByteBuffer) args[0]);
+                    return null;
             }
             return null;
         } catch(NetworkForwardRequest e) {

@@ -261,4 +261,12 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(machine, 104, buf)
   }
 
+  def changeReferenceCount(id: UUID, delta: Int, machine: Int): Unit = {
+    val buf = ByteBuffer.allocate(20)
+    buf.putLong(id.getMostSignificantBits)
+    buf.putLong(id.getLeastSignificantBits)
+    buf.putInt(delta)
+    manager.networkInterface.send(machine, 113, buf)
+  }
+
 }

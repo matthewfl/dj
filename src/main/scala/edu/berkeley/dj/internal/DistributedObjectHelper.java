@@ -2,9 +2,12 @@ package edu.berkeley.dj.internal;
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00DJ;
+import sun.misc.Unsafe;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -26,6 +29,8 @@ import java.util.UUID;
         "java/io/ObjectInputStream",
         "java/io/OutputStream",
         "java/io/InputStream",
+        "sun/misc/Unsafe",
+        "java/lang/ref/"
 })
 public class DistributedObjectHelper {
 
@@ -88,8 +93,6 @@ public class DistributedObjectHelper {
                 ret.putInt(extradata.length);
                 ret.put(extradata);
             } else {
-                ret.putInt(-2);
-                ret.putInt(extradata.length);
                 ret.put(extradata);
             }
         }
@@ -137,15 +140,42 @@ public class DistributedObjectHelper {
     }
 
 
-    // TODO: support gc of this, use a weak reference in the case that we are not the owning machine
-    static private HashMap<UUID, Object00DJ> localDistributedObjects = new HashMap<>();
+    // this will contain the object itself or the class manager
+    // the class manager contains a weak reference to the object itself
+    // so if it gets gc, then we can know and notify the true master that we have
+    // lost the reference
+    static private HashMap<UUID, Object> localDistributedObjects = new HashMap<>();
 
-    static private ObjectBase getLocalObject(UUID id) {
+    static final ReferenceQueue<Object> gcRefQueue = new ReferenceQueue<>();
+
+     static private ObjectBase getLocalObject(UUID id) {
         synchronized (localDistributedObjects) {
             // TODO: check if it is a weak reference and get the actual object that it points to instead
-            return (ObjectBase)localDistributedObjects.get(id);
+            Object o = localDistributedObjects.get(id);
+            if(o instanceof WeakReference) {
+                return (ObjectBase) ((WeakReference)o).get();
+            }
+            return (ObjectBase)o;
         }
     }
+
+    static private void makeWeakRef(ObjectBase ob) {
+        synchronized (localDistributedObjects) {
+            assert(ob.__dj_class_manager != null);
+            Object cur = localDistributedObjects.get(ob.__dj_class_manager.distributedObjectId);
+            if(!(cur instanceof ClassManager))
+                localDistributedObjects.put(ob.__dj_class_manager.distributedObjectId, ob.__dj_class_manager);
+        }
+    }
+
+    static private void makeStongRef(ObjectBase ob) {
+        synchronized (localDistributedObjects) {
+            assert(ob.__dj_class_manager != null);
+            //Object cur = localDistributedObjects.get(ob.__dj_class_manager.distributedObjectId);
+            localDistributedObjects.put(ob.__dj_class_manager.distributedObjectId, ob);
+        }
+    }
+
 
     // give the Object some uuid so that it will be distributed
     static public void makeDistributed(ObjectBase o) {
@@ -190,10 +220,10 @@ public class DistributedObjectHelper {
     }
 
     static public Object getObject(DistributedObjectId id) {
-        Object00DJ h;
-        synchronized (localDistributedObjects) {
-            h = localDistributedObjects.get(id.identifier);
-        }
+        Object00DJ h = getLocalObject(id.identifier);
+//        synchronized (localDistributedObjects) {
+//            h = localDistributedObjects.get(id.identifier);
+//        }
         if(h != null)
             return h;
         // we do not have some proxy of this object locally so we need to construct some proxy for it
@@ -220,11 +250,12 @@ public class DistributedObjectHelper {
                     // check again if we now have the object
                     // if we do, then return that instead
                     // the other objects will end up getting collected shortly
-                    h = localDistributedObjects.get(id.identifier);
+                    h = getLocalObject(id.identifier);
                     if(h != null)
                         return h;
                     localDistributedObjects.put(id.identifier, obj);
                 }
+                InternalInterface.getInternalInterface().changeReferenceCount(id.identifier, 1, id.lastKnownHost);
                 JITWrapper.recordProxyObjectCreated(obj);
                 return obj;
             }
@@ -575,10 +606,7 @@ public class DistributedObjectHelper {
     }
 
     static public void updateObjectLocation(UUID id, int machine_location) {
-        Object00DJ h;
-        synchronized (localDistributedObjects) {
-            h = localDistributedObjects.get(id);
-        }
+        Object00DJ h = getLocalObject(id);
         if(h == null)
             return;
         // this is the master machine, we should not be telling it where the owner is
@@ -610,10 +638,10 @@ public class DistributedObjectHelper {
     static public ByteBuffer readField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
         int fid = req.getInt();
-        ObjectBase h;
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
+        ObjectBase h = getLocalObject(id);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
         if(h == null)
             throw new InterfaceException();
         int mode;
@@ -697,8 +725,10 @@ public class DistributedObjectHelper {
                 ret = ByteBuffer.allocate(8);
                 ret.putDouble(h.__dj_readFieldID_D(fid));
                 return ret;
-            case 18: // OBJECT
-                return DistributedObjectHelper.getDistributedId(h.__dj_readFieldID_A(fid)).toBB();
+            case 18: {// OBJECT
+                Object o = h.__dj_readFieldID_A(fid);
+                return DistributedObjectHelper.getDistributedId(o).toBB();
+            }
             default:
                 throw new InterfaceException();
         }
@@ -709,10 +739,10 @@ public class DistributedObjectHelper {
     static public void writeField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
         int fid = req.getInt();
-        ObjectBase h;
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
+        ObjectBase h = getLocalObject(id);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
         if(h == null)
             throw new InterfaceException();
         int mode;
@@ -790,9 +820,10 @@ public class DistributedObjectHelper {
         UUID id = new UUID(obj.getLong(), obj.getLong());
         ObjectBase h;
         int notify_cnt = obj.getInt();
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
+        h = getLocalObject(id);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
         if(h == null)
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
@@ -826,10 +857,10 @@ public class DistributedObjectHelper {
 
     static public boolean lockMonitor(ByteBuffer obj, boolean spin) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
-        ObjectBase h;
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
+        ObjectBase h = getLocalObject(id);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
         if(h == null)
             throw new InterfaceException();
         while(true) {
@@ -866,11 +897,11 @@ public class DistributedObjectHelper {
 
     static public void unlockMonitor(ByteBuffer obj) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
-        ObjectBase h;
         int notify_cnt = obj.getInt();
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
+        ObjectBase h = getLocalObject(id);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
         if(h == null)
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
@@ -913,10 +944,10 @@ public class DistributedObjectHelper {
     static public void recvNotify(ByteBuffer obj) {
         // the master is sending us a notification for some object
         UUID id = new UUID(obj.getLong(), obj.getLong());
-        ObjectBase h;
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
+        ObjectBase h = getLocalObject(id);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
         if(h == null)
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
@@ -1025,10 +1056,10 @@ public class DistributedObjectHelper {
     static public void recvMoveReq(ByteBuffer req) {
         int to = req.getInt();
         DistributedObjectId id = new DistributedObjectId(req);
-        ObjectBase h;
-        synchronized (localDistributedObjects) {
-            h = (ObjectBase)localDistributedObjects.get(id);
-        }
+        ObjectBase h = getLocalObject(id.identifier);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id.identifier);
+//        }
         if(h == null) {
             // there is something wrong since we should have owned this object??
             // the object could have received another command already to move it?
@@ -1072,6 +1103,58 @@ public class DistributedObjectHelper {
 //        }
     }
 
+
+    static public void changeReferenceCount(ByteBuffer buf) {
+        UUID id = new UUID(buf.getLong(), buf.getLong());
+        int delta = buf.getInt();
+        ObjectBase h = getLocalObject(id);
+//        synchronized (localDistributedObjects) {
+//            h = (ObjectBase)localDistributedObjects.get(id);
+//        }
+        if(h == null)
+            throw new InterfaceException();
+
+        if(!h.__dj_class_manager.isLocal()) {
+            int owner = h.__dj_class_manager.owning_machine;
+            if(owner != -1)
+                throw new NetworkForwardRequest(owner);
+        }
+
+        int cref;
+        int nval;
+        do {
+            cref = h.__dj_class_manager.reference_count;
+            nval = cref + delta;
+        } while(!unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_ref_field_offset, cref, nval));
+        if(nval < 0) {
+            throw new DJError();
+        }
+        if(nval == 0) {
+            // then we no longer need the reference to this object
+            InternalInterface.debug("should delete this object: "+id);
+        }
+    }
+
+    static private void manageGCQueue() {
+        while(true) {
+            try {
+                ClassManager ref = (ClassManager)gcRefQueue.remove();
+                if(ref.owning_machine != -1) // this means that it is master?
+                    InternalInterface.getInternalInterface().changeReferenceCount(ref.distributedObjectId, -1, ref.owning_machine);
+            } catch(InterruptedException e) {}
+        }
+    }
+
+    static private final Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
+
+    static {
+        ThreadHelpers.runAsync(new Runnable() {
+            @Override
+            public void run() {
+                DistributedObjectHelper.manageGCQueue();
+            }
+        });
+    }
 
 
 }

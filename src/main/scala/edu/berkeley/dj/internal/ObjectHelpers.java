@@ -117,6 +117,7 @@ public class ObjectHelpers {
 
     public static void monitorExit(Object o) {
         // TODO: need to handle the case where something is holding the monitor while something is becoming distributed
+        unsafe.fullFence();
         if(o instanceof ObjectBase) {
             ObjectBase ob = (ObjectBase)o;
             if(ob.__dj_class_manager != null) {
