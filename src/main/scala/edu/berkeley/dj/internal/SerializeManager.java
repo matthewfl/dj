@@ -179,6 +179,7 @@ public class SerializeManager {
 }
 
 
+
 class Deserialization extends SerializeManager {
 
     private ByteBuffer buff;
@@ -240,6 +241,7 @@ class Deserialization extends SerializeManager {
                     // this should never happen since we are just expecting a reference
                     throw new RuntimeException();
                 }
+                ob.__dj_class_mode &= ~CONSTS.CURRENTLY_DESERIALIZING;
             } else {
                 // this should never happen since the heads of an object should always be an objectBase type
                 throw new DJError();
@@ -293,11 +295,36 @@ class Deserialization extends SerializeManager {
     }
 }
 
+// want to check that actually the same obj, not that they think are the same
+// also using the objects hashcode method could invoke remote accesses and be slow
+class ObjectHashCodeWrap {
+
+    final Object obj;
+
+    ObjectHashCodeWrap(Object o) {
+        obj = o;
+    }
+
+    @Override
+    public int hashCode() {
+        return System.identityHashCode(obj);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        try {
+            return ((ObjectHashCodeWrap)o).obj == obj;
+        } catch (ClassCastException e) {
+            return false;
+        }
+    }
+}
+
 class Serialization extends SerializeManager {
 
     private ByteBuffer buff;
 
-    private HashSet<Object> seen = new HashSet<>();
+    private HashSet<ObjectHashCodeWrap> seen = new HashSet<>();
 
     private ArrayDeque<ObjectBase> nextObj = new ArrayDeque<>();
 
@@ -329,7 +356,7 @@ class Serialization extends SerializeManager {
     // that way the state of the object has change then it would still end up getting redirected correctly
 
     void run(ObjectBase base) {
-        seen.add(base);
+        seen.add(new ObjectHashCodeWrap(base));
         nextObj.add(base);
         for(int i = 0; i < depth_left; i++) {
             ArrayDeque<ObjectBase> objs = nextObj;
@@ -342,6 +369,7 @@ class Serialization extends SerializeManager {
                         throw new SerializeException("object is not local, can't serialize", o);
                     continue;
                 }
+                o.__dj_class_mode |= CONSTS.CURRENTLY_SERIALIZING;
                 current_action = act;
                 buff.putInt(act.ordinal());
                 unsafe.fullFence();
@@ -365,12 +393,12 @@ class Serialization extends SerializeManager {
                                 // serialization step otherwise we may null out a field before we get to serialize it
                                 o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
                                 unsafe.storeFence();
-                                o.__dj_empty_obj();
                                 break;
                             }
                         }
                         try { Thread.sleep(2); } catch (InterruptedException e) {}
                     }
+                    o.__dj_empty_obj();
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER || act == SerializationAction.TRY_MOVE_OBJ_MASTER) {
                     synchronized (o) {
                         int lock_cnt;// = o.__dj_class_manager.monitor_lock_count;
@@ -379,6 +407,7 @@ class Serialization extends SerializeManager {
                                 throw new SerializeException("Object is currently locked", o);
                             else {
                                 buff.position(buff.position() - 4); // remove the act ind that was added to buff
+                                o.__dj_class_mode |= CONSTS.WAS_LOCKED;
                                 continue;
                             }
                         }
@@ -394,8 +423,8 @@ class Serialization extends SerializeManager {
                         o.__dj_class_manager.dj_serialize_obj(this, act);
                         o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
                         unsafe.storeFence();
-                        o.__dj_empty_obj();
                     }
+                    o.__dj_empty_obj();
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
                     synchronized (o) {
                         if(o.__dj_class_manager.monitor_lock_count != 0) {
@@ -435,6 +464,7 @@ class Serialization extends SerializeManager {
                 } else {
                     throw new DJError();
                 }
+                o.__dj_class_mode &= ~CONSTS.CURRENTLY_SERIALIZING;
             }
         }
     }
@@ -444,16 +474,17 @@ class Serialization extends SerializeManager {
         // multiple times
         DistributedObjectHelper.DistributedObjectId id = DistributedObjectHelper.getDistributedId(o);
         buff.put(id.toArr());
-        if(!seen.contains(o)) {
-            seen.add(o);
+        ObjectHashCodeWrap ohw = new ObjectHashCodeWrap(o);
+        if(!seen.contains(ohw)) {
+            seen.add(ohw);
             if(o instanceof ObjectBase)
                 nextObj.add((ObjectBase)o);
         }
-        if(current_action == SerializationAction.MOVE_OBJ_MASTER ||
-                current_action == SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
-            // we are emptying out this object and moving the master elsewhere
-            return null;
-        }
+//        if(current_action == SerializationAction.MOVE_OBJ_MASTER ||
+//                current_action == SerializationAction.MOVE_OBJ_BLOCK_TIL_READY) {
+//            // we are emptying out this object and moving the master elsewhere
+//            return null;
+//        }
         return o;
     }
 

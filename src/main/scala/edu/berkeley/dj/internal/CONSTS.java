@@ -29,4 +29,7 @@ public class CONSTS {
     // if this is an empty object, eg a proxy to a remote machine (not a cache or master)
     public static final int IS_PROXY_OBJ = 0x1000;
 
+
+    public static final int CURRENTLY_SERIALIZING = 0x2000;
+    public static final int WAS_LOCKED = 0x4000;
 }
