@@ -32,4 +32,5 @@ public class CONSTS {
 
     public static final int CURRENTLY_SERIALIZING = 0x2000;
     public static final int WAS_LOCKED = 0x4000;
+
 }

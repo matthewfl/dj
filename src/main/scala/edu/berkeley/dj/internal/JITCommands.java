@@ -27,19 +27,24 @@ public class JITCommands {
         DistributedObjectHelper.moveObject((ObjectBase)self, target);
     }
 
+    // use a field reference to determine where to move an object
+    static public void moveObjectFieldRef(Object from, int field, int target) {
+        DistributedObjectHelper.moveObjectFieldRef((ObjectBase)from, field, target);
+    }
+
     // make a read only cache of some object on target machine
     static public void cacheObject(Object self, int target) {
-
+        DistributedObjectHelper.makeCacheOfObject((ObjectBase)self, target);
     }
 
     static public void removeCacheObject(Object self, int target) {
-
+        DistributedObjectHelper.removeCache((ObjectBase)self, target);
     }
 
     // send a command to the runtime to rewrite a method to have the RPC header
     // and reload the class with the new code
     static public void makeMethodRPC(String clsname, String methodSignature) {
-
+        RPCHelpers.makeMethodRPC(clsname, methodSignature);
     }
 
     // when the system get some work submitted to something like a ForkJoinPool

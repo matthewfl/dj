@@ -162,6 +162,12 @@ public class InternalInterface {
 
     public void changeReferenceCount(UUID id, int delta, int to) { throw new InterfaceException(); }
 
+    public void moveObjectFieldRef(int target, ByteBuffer buf) { throw new InterfaceException(); }
+
+    public void sendMakeCache(int target, ByteBuffer buf) { throw new InterfaceException(); }
+
+    public void sendRemoveCache(int target, ByteBuffer buf) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -400,6 +406,14 @@ final class InternalInterfaceWrap extends InternalInterface {
         invoke("changeReferenceCount", new Class[]{UUID.class, int.class, int.class}, id, delta, to);
     }
 
+    @Override
+    public void moveObjectFieldRef(int target, ByteBuffer buf) {
+        invoke("moveObjectFieldRef", new Class[] {int.class, ByteBuffer.class}, target, buf);
+    }
+
+    public void sendMakeCache(int target, ByteBuffer buf) {
+        invoke("sendMakeCache", new Class[]{int.class, ByteBuffer.class}, target, buf);
+    }
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
@@ -467,6 +481,12 @@ final class InternalInterfaceWrap extends InternalInterface {
                     return IOHelper.recvCallMethod((int) args[0], (ByteBuffer) args[1]);
                 case 18:
                     DistributedObjectHelper.changeReferenceCount((ByteBuffer) args[0]);
+                    return null;
+                case 19:
+                    DistributedObjectHelper.recvMoveFiedReq((ByteBuffer)args[0]);
+                    return null;
+                case 20:
+                    DistributedObjectHelper.recvMakeCacheObject((ByteBuffer)args[0]);
                     return null;
             }
             return null;

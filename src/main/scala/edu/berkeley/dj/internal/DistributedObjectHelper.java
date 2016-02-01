@@ -1012,6 +1012,33 @@ public class DistributedObjectHelper {
         }
     }
 
+    static public void moveObjectFieldRef(ObjectBase obj, int field, int target) {
+        Object fieldVal;
+        try {
+            fieldVal = obj.__dj_readFieldID_A(target);
+        } catch (DJError e) {
+            // then this field does not exist as an object type
+            // and trying to move it is meaning less
+            return;
+        }
+        int mode = obj.__dj_class_mode;
+        if((mode & CONSTS.REMOTE_READS) != 0) {
+            // the object that we have found is not the one that we are looking for and we should redirect
+            // this operation
+            int owner = obj.__dj_class_manager.owning_machine;
+            if(owner != -1) {
+                byte[] arr = getDistributedId(obj).toArr();
+                ByteBuffer buf = ByteBuffer.allocate(arr.length + 8);
+                buf.putInt(target);
+                buf.putInt(field);
+                buf.put(arr);
+
+            }
+        }
+        if(fieldVal instanceof ObjectBase)
+            moveObject((ObjectBase)fieldVal, target);
+    }
+
     static int sendObjs = 0;
     static int recvObjs = 0;
     static int finRecvObjs = 0;
@@ -1070,6 +1097,29 @@ public class DistributedObjectHelper {
             if(h.__dj_class_manager.isLocal())
                 moveObject(h, to);
             // ignore otherwise
+        }
+    }
+
+    static public void recvMoveFiedReq(ByteBuffer req) {
+        int to = req.getInt();
+        int field = req.getInt();
+        DistributedObjectId id = new DistributedObjectId(req);
+        ObjectBase h = getLocalObject(id.identifier);
+        if(h == null) {
+            // failed to find the object that we are looking for
+            return;
+        }
+        Object val;
+        try {
+            val = h.__dj_readFieldID_A(field);
+        } catch (DJError e) {
+            // could not find the field to read
+            return;
+        }
+        int mode = h.__dj_class_mode;
+        if((mode & CONSTS.REMOTE_READS) == 0 && val instanceof ObjectBase) {
+            // the field read is valid, so we can try and move that object now
+            moveObject((ObjectBase)val, to);
         }
     }
 
@@ -1145,6 +1195,184 @@ public class DistributedObjectHelper {
             } catch(InterruptedException e) {}
         }
     }
+
+    static public void makeCacheOfObject(ObjectBase self, int where) {
+        int mode = self.__dj_class_mode;
+        if(where == InternalInterface.getInternalInterface().getSelfId()) {
+            // this is from self
+            if((mode & CONSTS.REMOTE_READS) == 0) {
+                // then we must already have a cache of this object
+                return;
+            }
+            byte[] arr = getDistributedId(self).toArr();
+            ByteBuffer buf = ByteBuffer.allocate(arr.length + 4);
+            buf.putInt(where);
+            buf.put(arr);
+            throw new NotImplementedException();
+            // return;
+        } else {
+            if((mode & CONSTS.IS_NOT_MASTER) != 0) {
+                // then we need to redirect this request
+                throw new NotImplementedException();
+            }
+            ByteBuffer so = SerializeManager.serialize(self, new SerializeManager.SerializationController() {
+                @Override
+                public SerializeManager.SerializationAction getAction(Object o) {
+                    if (o == self)
+                        return SerializeManager.SerializationAction.MAKE_OBJ_CACHE;
+                    else
+                        return SerializeManager.SerializationAction.MAKE_REFERENCE;
+                    //return null;
+                }
+            }, 1, where);
+            if(so.limit() != 0) {
+                InternalInterface.getInternalInterface().sendSerializedObject(so, where);
+                lastMovedSend = self;
+                lastBufferSend = so;
+                //sendObjsL.add(obj);
+                sendObjs++;
+                self.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+            }
+
+//            int[] ncache;
+//            int[] ocache;
+//            boolean done_setting = false;
+//            do {
+//                ocache = self.__dj_class_manager.cached_copies;
+//                if(ocache == null) {
+//                    ncache = new int[]{where};
+//                } else {
+//                    ncache = new int[ocache.length + 1];
+//                    for(int i = 0; i < ocache.length; i++) {
+//                        // this machine is already listed in the cache list
+//                        if(ocache[i] == where) {
+//                            done_setting = true;
+//                        }
+//                        ncache[i] = ocache[i];
+//                    }
+//                    ncache[ocache.length] = where;
+//                }
+//            } while(!done_setting && !unsafe.compareAndSwapObject(self.__dj_class_manager,
+//                    ClassManager.class_manager_cache_copies_offset, ocache, ncache));
+//            if(!done_setting) {
+//                int mode2 = self.__dj_class_mode;
+//                if ((mode2 & CONSTS.IS_NOT_MASTER) != 0) {
+//                    // this machine is no longer the master
+//                    // so we need to redirect the request
+//                }
+//            }
+//            // at this point we just need to send the content of this object
+        }
+
+    }
+
+    static void recvMakeCacheObject(ByteBuffer buf) {
+        int where = buf.getInt();
+        DistributedObjectId id = new DistributedObjectId(buf);
+        ObjectBase obj = getLocalObject(id.identifier);
+        makeCacheOfObject(obj, where);
+    }
+
+    static public void removeCache(ObjectBase obj, int where) {
+        int mode = obj.__dj_class_mode;
+        if(where == InternalInterface.getInternalInterface().getSelfId()) {
+            // then we are removing it from self
+            if((mode & CONSTS.IS_NOT_MASTER) == 0)
+                // this machine is currently the master
+                return;
+            // should use a compare and swap for the mode here
+            int m = obj.__dj_class_mode;
+            m &= ~(CONSTS.IS_CACHED_COPY);
+            m |= CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ;
+            obj.__dj_class_mode = m;
+            unsafe.fullFence();
+            obj.__dj_empty_obj();
+            DistributedObjectId id = getDistributedId(obj);
+            byte[] ida = id.toArr();
+            ByteBuffer buf = ByteBuffer.allocate(ida.length + 4);
+            buf.putInt(4);
+            buf.put(ida);
+            InternalInterface.getInternalInterface().sendRemoveCache(id.lastKnownHost, buf);
+            return;
+        }
+        if((mode & CONSTS.IS_NOT_MASTER) == 0) {
+            // then we are the master machine
+            boolean successful_update = false;
+            synchronized (SerializeManager.serializeLock) {
+                if((obj.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0) {
+                    int ocache[] = obj.__dj_class_manager.cached_copies;
+                    if(ocache == null)
+                        throw new DJError();
+                    int ncache[] = new int[ocache.length - 1];
+                    for(int i = 0, j = 0; i < ocache.length; i++) {
+                        if(ocache[i] != where)
+                            ncache[j++] = ocache[i];
+                    }
+                    obj.__dj_class_manager.cached_copies = ncache;
+                    successful_update = true;
+                }
+                // we are no longer the master, and we are not the machine that we are looking for
+            }
+            if(successful_update) {
+                DistributedObjectId id = getDistributedId(obj);
+                byte[] ida = id.toArr();
+                ByteBuffer buf = ByteBuffer.allocate(ida.length + 4);
+                buf.putInt(where);
+                buf.put(ida);
+                InternalInterface.getInternalInterface().sendRemoveCache(where, buf);
+                return;
+            }
+        }
+        // then this is the wrong machine and we should send something to both the master and the client
+        DistributedObjectId id = getDistributedId(obj);
+        byte[] ida = id.toArr();
+        ByteBuffer buf = ByteBuffer.allocate(ida.length + 4);
+        buf.putInt(where);
+        buf.put(ida);
+        InternalInterface.getInternalInterface().sendRemoveCache(where, buf);
+        if(where != id.lastKnownHost) {
+            InternalInterface.getInternalInterface().sendRemoveCache(id.lastKnownHost, buf);
+        }
+    }
+
+    static public void recvRemoveCache(ByteBuffer buf) {
+        int where = buf.getInt();
+        DistributedObjectId id = new DistributedObjectId(buf);
+        ObjectBase obj = getLocalObject(id.identifier);
+        if(where == InternalInterface.getInternalInterface().getSelfId()) {
+            // then we are the one that has the cache of this object
+            int mode = obj.__dj_class_mode;
+            if((mode & CONSTS.IS_NOT_MASTER) != 0) {
+                // then we need to remove the cache from this object
+                int m = obj.__dj_class_mode;
+                m &= ~(CONSTS.IS_CACHED_COPY);
+                m |= CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ;
+                obj.__dj_class_mode = m;
+                unsafe.fullFence();
+                obj.__dj_empty_obj();
+            }
+        } else {
+            // then we should be the master of this object
+            synchronized (SerializeManager.serializeLock) {
+                int mode = obj.__dj_class_mode;
+                if((mode & CONSTS.IS_NOT_MASTER) != 0) {
+                    // need to forward this to the master
+                    int owner = obj.__dj_class_manager.owning_machine;
+                    if(owner != -1)
+                        throw new NetworkForwardRequest(owner);
+                }
+                int ocache[] = obj.__dj_class_manager.cached_copies;
+                int ncache[] = new int[ocache.length - 1];
+                for(int i = 0, j = 0; i < ocache.length; i++) {
+                    if(ocache[i] != where) {
+                        ncache[j++] = ocache[i];
+                    }
+                }
+                obj.__dj_class_manager.cached_copies = ncache;
+            }
+        }
+    }
+
 
     static private final Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
 

@@ -7,5 +7,8 @@ package testcase.demo;
  */
 public class SimpleSite {
 
+    public static void main(String[] args) {
 
+
+    }
 }

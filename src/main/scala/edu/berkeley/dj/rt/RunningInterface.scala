@@ -269,4 +269,14 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(machine, 113, buf)
   }
 
+  def moveObjectFieldRef(target: Int, buf: ByteBuffer): Unit = {
+    manager.networkInterface.send(target, 114, buf)
+  }
+
+  def sendMakeCache(machine: Int, buf: ByteBuffer): Unit = {
+    manager.networkInterface.send(machine, 115, buf)
+  }
+
+
+
 }

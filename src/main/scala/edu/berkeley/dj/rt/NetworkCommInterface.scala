@@ -85,6 +85,14 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         // reference count update
         man.runningInterface.callIn(18, ByteBuffer.wrap(msg))
       }
+      case 114 => {
+        // move an object using a field id reference
+        man.runningInterface.callIn(19, ByteBuffer.wrap(msg))
+      }
+      case 115 => {
+        // recv request to cache an object
+        man.runningInterface.callIn(20, ByteBuffer.wrap(msg))
+      }
     }
   } catch {
     case e: NetworkForwardRequest => {

@@ -108,7 +108,7 @@ public class SerializeManager {
     }
 
 
-    static private Object serializeLock = new Object();
+    static Object serializeLock = new Object();
 
     public static ByteBuffer serialize(Object base, SerializationController controller, int depth, int target_machine) {
         synchronized (serializeLock) {
@@ -233,6 +233,9 @@ class Deserialization extends SerializeManager {
                     ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
                     int m = ob.__dj_class_mode;
+                    if((m & CONSTS.REMOTE_READS) == 0) {
+                        throw new DJError();
+                    }
                     m |= CONSTS.IS_CACHED_COPY | CONSTS.DESERIALIZED_HERE;
                     m &= ~(CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ);
                     unsafe.fullFence();

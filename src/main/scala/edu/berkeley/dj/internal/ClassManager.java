@@ -616,6 +616,7 @@ final public class ClassManager extends WeakReference<ObjectBase> {
     static private Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
 
     static final int class_manager_ref_field_offset;
+    static final int class_manager_cache_copies_offset;
     static {
         int v = -1;
         try {
@@ -623,5 +624,10 @@ final public class ClassManager extends WeakReference<ObjectBase> {
         } catch (NoSuchFieldException e) {
         }
         class_manager_ref_field_offset = v;
+        v = -1;
+        try {
+            v = (int)unsafe.objectFieldOffset(ClassManager.class.getDeclaredField("cached_copies"));
+        } catch(NoSuchFieldException e) {}
+        class_manager_cache_copies_offset = v;
     }
 }

@@ -1,5 +1,7 @@
 package edu.berkeley.dj.internal;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
@@ -184,6 +186,11 @@ public class RPCHelpers {
             buf.get(ret[i]);
         }
         return ret;
+    }
+
+
+    static public void makeMethodRPC(String clsname, String methodSignature) {
+        throw new NotImplementedException();
     }
 
 
