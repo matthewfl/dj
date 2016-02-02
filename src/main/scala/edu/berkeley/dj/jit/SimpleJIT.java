@@ -30,7 +30,7 @@ public class SimpleJIT implements JITInterface {
 
         if(this == self)
             return;
-        InternalInterface.debug("got remote read notification");
+//        InternalInterface.debug("got remote read notification");
     }
 
     @Override

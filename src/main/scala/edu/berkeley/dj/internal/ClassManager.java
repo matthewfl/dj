@@ -181,6 +181,7 @@ final public class ClassManager extends WeakReference<ObjectBase> {
 
     // these are getting called from the wrapped methods, so they should not fail when accessing the object
     private ByteBuffer requestRead(int fid, int op) {
+        long startTime = InternalLogger.getTime();
         int owner = owning_machine;
 //        int mode = managedObject.__dj_class_mode;
         //InternalInterface.debug("read request "+fid+" "+op+" "+owner+" "+distributedObjectId);
@@ -198,8 +199,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
         }
         ByteBuffer bb = requestRemote(fid, 0);
         JITWrapper.recordRemoteRead(managedObject, fid, owner);
-        return InternalInterface.getInternalInterface().readField(bb, op, owner);
-
+        ByteBuffer ret = InternalInterface.getInternalInterface().readField(bb, op, owner);
+        InternalLogger.addReadTime(InternalLogger.getTime() - startTime);
+        return ret;
     }
 
     private ByteBuffer requestRemote(int fid, int exces) {
@@ -211,6 +213,7 @@ final public class ClassManager extends WeakReference<ObjectBase> {
     }
 
     private void requestWrite(ByteBuffer bb, int op, int fid) {
+        long startTime = InternalLogger.getTime();
         int owner = owning_machine;
         ObjectBase managedObject = get();
         int mode = managedObject.__dj_class_mode;
@@ -231,6 +234,7 @@ final public class ClassManager extends WeakReference<ObjectBase> {
         }
         JITWrapper.recordRemoteWrite(managedObject, fid, owner);
         InternalInterface.getInternalInterface().writeField(bb, op, owner);
+        InternalLogger.addWriteTime(InternalLogger.getTime() - startTime);
     }
 
 

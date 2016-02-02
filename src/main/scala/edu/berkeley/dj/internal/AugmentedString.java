@@ -95,4 +95,6 @@ public class AugmentedString {
     public static char[] toCharArray(Object self) {
         return ((String)self).toCharArray();
     }
+
+    public static byte[] getBytes(Object self) { return ((String)self).getBytes(); }
 }

@@ -152,9 +152,9 @@ class IOManager (val manager: Manager) {
         ???
       } else {
         // I guess that we can directly access the array then
-        if (arr_type.isPrimitive) {
+        if (arr_type.getComponentType.isPrimitive) {
           // so this allows for two direction changes....
-          return arr_field.get("ir")
+          return arr_field.get(obj)
         } else {
           // need to make a copy of the array and convert all the objects
           ???
@@ -303,7 +303,51 @@ class IOManager (val manager: Manager) {
     }
 
     if(cls.isArray) {
+      var baseType: Class[_] = cls
+      var dimCnt = 0
+      while(baseType.isArray) {
+        baseType = baseType.getComponentType
+        dimCnt += 1
+      }
+      val cname = baseType.getName
+      var protect = false
+      if(dimCnt != 1)
+        ???
+      var nname = cname
+      if(protectedName(baseType.getName)) {
+        // then there might be a new name for this class
+        val n = manager.classRename(cname.replace(".", "/"))
+        if(!(nname == null || cname.replace(".", "/") == n)) {
+          // there is a new name that we are using for replacing this
+          protect = true
+          nname = n.replace("/", ".")
+        }
+      }
+      if(baseType.isPrimitive || (baseType.getClassLoader == null && !protect)) {
+        // this is the same
+        return obj
+      }
+
+      // need to make a new array and copy over the elements while converting them
       ???
+
+      // we just need to convert the base type to dj, we don't have to deal with making an arrayclazz type here
+
+      //
+//      val ncls = manager.loader.loadClass(aname)
+//      val ninst = ncls.newInstance().asInstanceOf[Object]
+//      val irf = ncls.getDeclaredField("ir")
+//      if(baseType.isPrimitive || (baseType.getClassLoader == null && !protect)) {
+//        // then we can just use the same object
+//        irf.set(ninst, obj)
+//      } else {
+//        // make a new array and copy the contents over using the converter
+//        ???
+//      }
+//      return ninst
+
+//      val aname = config.arrayprefix + cls.getName + "_" + dimCnt
+      //???
     }
     ???
     null

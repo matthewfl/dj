@@ -79,6 +79,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     // some string stuff
     ("getChars", "(IILedu/berkeley/dj/internal/arrayclazz/Character_1;I)V", "java.lang.String") -> ("getChars", s"${config.internalPrefix}AugmentedString"),
     ("toCharArray", "()Ledu/berkeley/dj/internal/arrayclazz/Character_1;", "java.lang.String") -> ("toCharArray", s"${config.internalPrefix}AugmentedString"),
+    ("getBytes", "()Ledu/berkeley/dj/internal/arrayclazz/Byte_1;", "java.lang.String") -> ("getBytes", s"${config.internalPrefix}AugmentedString"),
 
     // array internal stuff
   // TODO: this method is the wrong one to replace since it is internal to the reflect class which we are not rewriting....
@@ -1433,7 +1434,9 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       }
     }
     if(!makeInterface) {
-      cls.addConstructor(CtNewConstructor.defaultConstructor(cls))
+      val conn = CtNewConstructor.defaultConstructor(cls)
+      conn.setModifiers(conn.getModifiers | Modifier.PUBLIC)
+      cls.addConstructor(conn)
 
       // the constructors will have to go onto the classes since javassist doesn't support having static methods
       // on interfaces
@@ -1552,6 +1555,13 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
                            }
                            """
         cls.addConstructor(CtNewConstructor.make(con_code, cls))
+      } else {
+        // this constructor is not public
+        // so we should not be sharing it with other machines
+        val ann = con.getAnnotation(classOf[DJIOTargetMachineArgPosition])
+        if(ann != null) {
+          throw new DJIOException(s"DJIO class '${source_cls.getName}' should only have @DJIOTargetMachineArgPosition on public constructors")
+        }
       }
     }
 
@@ -1587,6 +1597,10 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
 
     // TODO: serialize/deserialize methods
     // TODO: remote reads and write methods??
+    //// not going to have reading and writing fields in this first iteration
+    //// so there is no need to have access methods
+
+    addArrayWrapMethods(cls)
 
 
     cls

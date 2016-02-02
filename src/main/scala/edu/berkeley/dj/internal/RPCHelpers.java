@@ -60,6 +60,7 @@ public class RPCHelpers {
     // TODO: make this more efficient and avoid so many copies
 
     public static ByteBuffer callRemote(Object self_, String clsname, String name, String[] params, Object[] args) {
+        InternalLogger.countRPC();
         ObjectBase self = (ObjectBase)self_;
 
         int params_length = 0;

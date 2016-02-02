@@ -20,7 +20,7 @@ public class Thrasher {
 
         long rnd = 1;
 
-        int dcnt = 500; //10000;
+        int dcnt = 500000; //10000;
 
         // wait until we have enough hosts to start this system
         while(InternalInterface.getInternalInterface().getAllHosts().length < num_hosts) {

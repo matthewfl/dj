@@ -56,22 +56,9 @@ class RunningInterface (private val config: Config, private val manager: Manager
   def threadId = Thread.currentThread().getId
 
   def startThread(obj: Object) = {
-    // TODO: change this to use a threadpool that is specific to this application
-    // atm this is using the implict threadpool from scala
     manager.threadPool.submit {
       callIn(1, obj)
     }
-    /*Future {
-      callIn(1, obj)
-    }*/
-    /*
-    val thread = new Thread() {
-      override def run() = {
-        callIn(1, obj)
-      }
-    }
-    thread.start()
-    */
   }
 
   // some sort of locking when distribuited

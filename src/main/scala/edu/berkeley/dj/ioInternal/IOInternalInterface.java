@@ -47,16 +47,18 @@ class IOInternalInterfaceWrap extends IOInternalInterface {
     private Object invoke(String name, Class[] sig, Object... obj) {
         try {
             return cls.getMethod(name, sig).invoke(base, obj);
+        } catch(InvocationTargetException e) {
+            e.getTargetException().printStackTrace();
+            throw new DJIOException("Method '"+name+"' failed to invoke", e);
         } catch(NoSuchMethodException|
-                IllegalAccessException|
-                InvocationTargetException e) {
+                IllegalAccessException e) {
             throw new DJIOException("Method '"+name+"' failed to invoke", e);
         }
     }
 
     @Override
     public Object call(Object from, String method, String[] argsType, Object[] args) {
-        return invoke("callDJMethod", new Class[]{Object.class,String.class,String[].class,Object[].class}, from, method, argsType, args);
+        return invoke("callDJMethod", new Class[]{Object.class, String.class, String[].class, Object[].class}, from, method, argsType, args);
     }
 
 

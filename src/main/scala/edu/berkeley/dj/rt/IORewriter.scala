@@ -1,4 +1,4 @@
-package edu.berkeley.dj.rt
+   package edu.berkeley.dj.rt
 
 import javassist.bytecode.Descriptor
 import javassist._
@@ -20,7 +20,9 @@ private[rt] class IORewriter (private val manager: MasterManager) extends Rewrit
 //  val proxySuffix = "_dj_io_proxy"
 
   private def reassociateClass(cls: CtClass) = {
-    if(cls.getClassPool != runningPool) {
+    val p = cls.getClassPool
+    // if p is null then this is a system class and we don't want to try and move it
+    if(p != runningPool && p != null && !cls.isFrozen) {
       // prime the cache of the class before we move it to a new pool
       cls.getClassFile
       cls.setClassPool2(runningPool)
@@ -95,7 +97,7 @@ private[rt] class IORewriter (private val manager: MasterManager) extends Rewrit
       }
 
       val (cast_prefix, cast_suffix) = if (rtype.isPrimitive) {
-        (s"((edu.berkeley.dj.internal.coreclazz.${rtype.asInstanceOf[CtPrimitiveType].getWrapperName})", s").${rtype.getName}Value()")
+        (s"((${rtype.asInstanceOf[CtPrimitiveType].getWrapperName})", s").${rtype.getName}Value()")
       } else {
         (s"(${rtype.getName})", "")
       }
@@ -112,7 +114,14 @@ private[rt] class IORewriter (private val manager: MasterManager) extends Rewrit
            }
          """
 
-      cls.addMethod(CtNewMethod.make(code, cls))
+      try {
+        cls.addMethod(CtNewMethod.make(code, cls))
+      } catch {
+        case e: CannotCompileException => {
+          println(e)
+          throw e
+        }
+      }
     }
 
     cls
