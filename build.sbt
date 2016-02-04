@@ -44,3 +44,5 @@ excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
 // normally they wouldn't have their code included
 libraryDependencies += "org.eclipse.jetty" % "jetty-server" % "9.3.6.v20151106"
 libraryDependencies += "net.imglib2" % "imglib2" % "2.6.0"
+libraryDependencies += "net.imagej" % "ij" % "1.50e"
+//libraryDependencies += "org.scijava" % "scijava-common" % "2.50.1"

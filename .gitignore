@@ -2,4 +2,4 @@ out/
 target/
 jd-gui.cfg
 .sbt-launch.jar
-
+lib/

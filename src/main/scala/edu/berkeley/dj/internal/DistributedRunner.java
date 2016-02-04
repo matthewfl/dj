@@ -45,6 +45,8 @@ public class DistributedRunner {
 
         }
 
+        InternalInterface.debug("returning from runOnRemote");
+
         return ff;
     }
 

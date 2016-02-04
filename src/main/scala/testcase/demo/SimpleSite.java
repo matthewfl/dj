@@ -80,7 +80,9 @@ public class SimpleSite {
                 sb.append("</ul>");
                 return sb.toString().getBytes();
             } else {
-                return new String("test123").getBytes();
+                byte[] cnt = fwrap.getByteContents();
+
+                return new String("test123 "+cnt.length).getBytes();
             }
         }
     }

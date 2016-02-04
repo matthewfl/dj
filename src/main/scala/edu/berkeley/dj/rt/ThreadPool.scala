@@ -17,29 +17,40 @@ class ThreadPool extends ForkJoinPool(Runtime.getRuntime.availableProcessors() *
   // make sure that there is some thread running otherwise start up new threads
   private val watch_thread = new Thread(new Runnable {
     override def run(): Unit = {
-      while (true) {
-        Thread.sleep(1000) // 1 sec
-        if (ThreadPool.this.getPoolSize - ThreadPool.this.getRunningThreadCount > numProcessors) {
-          // at least 2/3 of the threads are blocked on something
-          // start the next runner in a new thread to make sure that we don't cap out
-          val next = ThreadPool.this.pollSubmission2
-          if(next != null) {
-            val nt = new Thread(new Runnable {
-              override def run(): Unit = {
-                try { next.invoke }
-                catch { case e: Exception => {
-                  println("Running thread had exception:")
-                  e.printStackTrace()
-                }}
-              }
-            })
-            nt.start()
+      try {
+        while (true) {
+          Thread.sleep(1000) // 1 sec
+          if (ThreadPool.this.getPoolSize - ThreadPool.this.getRunningThreadCount >= numProcessors) {
+            // at least 2/3 of the threads are blocked on something
+            // start the next runner in a new thread to make sure that we don't cap out
+            val next = ThreadPool.this.pollSubmission2
+            if (next != null) {
+              val nt = new Thread(new Runnable {
+                override def run(): Unit = {
+                  try {
+                    next.invoke
+                  }
+                  catch {
+                    case e: Exception => {
+                      println("Running thread had exception:")
+                      e.printStackTrace()
+                    }
+                  }
+                }
+              })
+              nt.setDaemon(false)
+              nt.setName(ThreadPool.this.toString + "_extra_thread")
+              nt.start()
+            }
           }
         }
+      } finally {
+        println("Something failed in the thread pool")
       }
     }
   })
   watch_thread.setDaemon(true)
+  watch_thread.setName(toString + "_extra_work_watcher")
   watch_thread.start()
 
 //  def submit(lambda: => Unit) = {
