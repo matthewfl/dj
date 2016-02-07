@@ -248,6 +248,16 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.send(machine, 104, buf)
   }
 
+
+  def updateObjectLocationAll(id: UUID, target: Int): Unit = {
+    val buf = ByteBuffer.allocate(20)
+    buf.putLong(id.getMostSignificantBits)
+    buf.putLong(id.getLeastSignificantBits)
+    buf.putInt(target)
+    manager.networkInterface.sendAll(104, buf)
+  }
+
+
   def changeReferenceCount(id: UUID, delta: Int, machine: Int): Unit = {
     val buf = ByteBuffer.allocate(20)
     buf.putLong(id.getMostSignificantBits)
@@ -263,6 +273,18 @@ class RunningInterface (private val config: Config, private val manager: Manager
   def sendMakeCache(machine: Int, buf: ByteBuffer): Unit = {
     manager.networkInterface.send(machine, 115, buf)
   }
+
+
+  def relocateObject(id: UUID): Unit = {
+    // if we somehow have lost an object
+    // send a command to determine what this object's state is on all machines
+    // _Hopefully_ only used for debugging
+    val buf = ByteBuffer.allocate(16)
+    buf.putLong(id.getMostSignificantBits)
+    buf.putLong(id.getLeastSignificantBits)
+    manager.networkInterface.sendAll(116, buf)
+  }
+
 
 
 

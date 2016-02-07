@@ -6014,7 +6014,7 @@ Presentations</pre>
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="[[Distributed Objects]] [[Garbage collection]] Runtime" title="$:/StoryList">
+<div list="[[Previous work]] Introduction Documentation Presentations" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6511,7 +6511,7 @@ To counter act this, we change all references to classes that are in these prote
 
 * [[slides|http://matthewfl.com/wp/wp-content/uploads/2015/12/dj-slides-201509.pdf]] from technical presentation in September 2015</pre>
 </div>
-<div created="20150602090411877" creator="matthewfl" modified="20150602171754556" modifier="matthewfl" tags="" title="Previous work">
+<div created="20150602090411877" creator="matthewfl" modified="20160206074040685" modifier="matthewfl" tags="" title="Previous work" type="">
 <pre>Previous work for distributed Java JVM:
 
 * [[Jessica2|http://i.cs.hku.hk/~clwang/projects/JESSICA2.html]]
@@ -6537,7 +6537,10 @@ Previous work for distributed languages:
 ** New programming language from cray
 ** attempts to separate the distributed origination concerns from the writing the code concerns by allowing distributing mechanisms to be written as a library.
 ** Also uses [[GasNet|http://gasnet.lbl.gov/]] for unified memory access.
-</pre>
+
+* [[Grappa|http://grappa.io/]]
+** Uses a modified LLVM compiler to statically modify programs
+** focuses on graph problems by moving the thread towards the data instead of relocating the data</pre>
 </div>
 <div created="20150521213601188" creator="matthewfl" modified="20150521214241570" modifier="matthewfl" title="Proxy generator">
 <pre>When we are using the [[Namespace rewriter]], we end up changing the name for a number of classes.  However, the JVM still requires that some classes maintain the same name as it needs to link up native methods.  To make this continue to work, we create proxy classes that wrap the original class and pass all method invocations back to the original class.</pre>

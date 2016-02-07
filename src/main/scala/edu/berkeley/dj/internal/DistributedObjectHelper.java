@@ -606,14 +606,19 @@ public class DistributedObjectHelper {
     }
 
     static public void updateObjectLocation(UUID id, int machine_location) {
-        Object00DJ h = getLocalObject(id);
+        ObjectBase h = getLocalObject(id);
         if(h == null)
             return;
         // this is the master machine, we should not be telling it where the owner is
-        if((h.__dj_getClassMode() & CONSTS.IS_NOT_MASTER) == 0)
+        if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
             return;
-//        InternalInterface.debug("update location: "+id);
-        h.__dj_getManager().owning_machine = machine_location;
+        int oldLoc;
+        do {
+            oldLoc = h.__dj_class_manager.owning_machine;
+            if(oldLoc == -1 || (h.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
+                return; // this is the master machine, so we should not update it
+        } while(!unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_owning_machine_offset,
+                oldLoc, machine_location));
     }
 
     static public void sendUpdateObjectLocation(UUID id, int machine_location, int to) {
@@ -660,7 +665,7 @@ public class DistributedObjectHelper {
             if(h == lastReadLoop) {
                 InternalInterface.debug("in loop "+id+" "+mode);
                 printState(h);
-//                throw new RuntimeException();
+                InternalInterface.getInternalInterface().relocateObject(id);
                 try { Thread.sleep(50); } catch(InterruptedException e) {}
             }
             lastReadLoop = h;
@@ -760,6 +765,7 @@ public class DistributedObjectHelper {
             if(h == lastWriteLoop) {
                 InternalInterface.debug("In a loop "+id+" "+mode);
                 printState(h);
+                InternalInterface.getInternalInterface().relocateObject(id);
 //                throw new RuntimeException();
                 try { Thread.sleep(50); } catch(InterruptedException e) {}
             }
@@ -1032,7 +1038,7 @@ public class DistributedObjectHelper {
                 buf.putInt(target);
                 buf.putInt(field);
                 buf.put(arr);
-
+                InternalInterface.getInternalInterface().moveObjectFieldRef(owner, buf);
             }
         }
         if(fieldVal instanceof ObjectBase)
@@ -1100,7 +1106,7 @@ public class DistributedObjectHelper {
         }
     }
 
-    static public void recvMoveFiedReq(ByteBuffer req) {
+    static void recvMoveFiedReq(ByteBuffer req) {
         int to = req.getInt();
         int field = req.getInt();
         DistributedObjectId id = new DistributedObjectId(req);
@@ -1121,6 +1127,9 @@ public class DistributedObjectHelper {
             // the field read is valid, so we can try and move that object now
             moveObject((ObjectBase)val, to);
         }
+        // don't try and redirect, since by this point the system likely has
+        // already submitted another move request for this object
+        // since it has already had the request redirected once
     }
 
     static Object recvLock = new Object();
@@ -1370,6 +1379,20 @@ public class DistributedObjectHelper {
                 }
                 obj.__dj_class_manager.cached_copies = ncache;
             }
+        }
+    }
+
+
+    static void locateObject(ByteBuffer buf) {
+        UUID id = new UUID(buf.getLong(), buf.getLong());
+        ObjectBase obj = getLocalObject(id);
+        if(obj == null) {
+            InternalInterface.debug("Object not located: "+id);
+        } else {
+            int mode = obj.__dj_class_mode;
+            InternalInterface.debug("Object located: "+id+" "+mode);
+            if((mode & CONSTS.IS_NOT_MASTER) == 0)
+                InternalInterface.getInternalInterface().updateObjectLocationAll(id, InternalInterface.getInternalInterface().getSelfId());
         }
     }
 

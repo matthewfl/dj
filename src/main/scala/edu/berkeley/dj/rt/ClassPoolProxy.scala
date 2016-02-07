@@ -68,7 +68,9 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
           e.isInstanceOf[UnsupportedOperationException] ||
           e.isInstanceOf[CannotCompileException] ||
           classname.contains("BigDec") ||
-          classname.contains("ObjectOutputStream"))
+          classname.contains("ObjectOutputStream") ||
+          classname.contains("java.awt")
+        )
           e.printStackTrace()
         null
       }

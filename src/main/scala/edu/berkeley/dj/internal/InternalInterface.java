@@ -160,6 +160,8 @@ public class InternalInterface {
 
     public void updateObjectLocation(UUID id, int target, int to) { throw new InterfaceException(); }
 
+    public void updateObjectLocationAll(UUID id, int target) { throw new InterfaceException(); }
+
     public void changeReferenceCount(UUID id, int delta, int to) { throw new InterfaceException(); }
 
     public void moveObjectFieldRef(int target, ByteBuffer buf) { throw new InterfaceException(); }
@@ -167,6 +169,8 @@ public class InternalInterface {
     public void sendMakeCache(int target, ByteBuffer buf) { throw new InterfaceException(); }
 
     public void sendRemoveCache(int target, ByteBuffer buf) { throw new InterfaceException(); }
+
+    public void relocateObject(UUID id) { throw new InterfaceException(); }
 
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
@@ -402,6 +406,11 @@ final class InternalInterfaceWrap extends InternalInterface {
     }
 
     @Override
+    public void updateObjectLocationAll(UUID id, int target) {
+        invoke("updateObjectLocationAll", new Class[]{UUID.class, int.class}, id, target);
+    }
+
+    @Override
     public void changeReferenceCount(UUID id, int delta, int to) {
         invoke("changeReferenceCount", new Class[]{UUID.class, int.class, int.class}, id, delta, to);
     }
@@ -411,9 +420,17 @@ final class InternalInterfaceWrap extends InternalInterface {
         invoke("moveObjectFieldRef", new Class[] {int.class, ByteBuffer.class}, target, buf);
     }
 
+    @Override
     public void sendMakeCache(int target, ByteBuffer buf) {
         invoke("sendMakeCache", new Class[]{int.class, ByteBuffer.class}, target, buf);
     }
+
+    @Override
+    public void relocateObject(UUID id) {
+        invoke("relocateObject", new Class[]{UUID.class}, id);
+    }
+
+
 
     /*public void printStdout(int i) throws InterfaceException {
         // for use by the print stream
@@ -487,6 +504,9 @@ final class InternalInterfaceWrap extends InternalInterface {
                     return null;
                 case 20:
                     DistributedObjectHelper.recvMakeCacheObject((ByteBuffer)args[0]);
+                    return null;
+                case 21:
+                    DistributedObjectHelper.locateObject((ByteBuffer)args[0]);
                     return null;
             }
             return null;

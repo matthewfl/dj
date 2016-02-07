@@ -172,25 +172,30 @@ public class JITWrapper {
             if(r.stack != null)
                 s = new StackRepresentation(r.stack);
             if(self != null) {
-                switch(r.type) {
-                    case RemoteRead:
-                        get().recordRemoteRead(self, self_id, r.target_machine, (int)r.info, s);
-                        break;
-                    case RemoteWrite:
-                        get().recordRemoteWrite(self, self_id, r.target_machine, (int)r.info, s);
-                        break;
-                    case RemoteRPC:
-                        get().recordRemoteRPC(self, self_id, r.target_machine, s);
-                        break;
-                    case ReceiveRemoteRead:
-                        get().recordReceiveRemoteRead(self, r.target_machine, self_id, (int)r.info);
-                        break;
-                    case ReceiveRemoteWrite:
-                        get().recordReceiveRemoteWrite(self, r.target_machine, self_id, (int)r.info);
-                        break;
-                    default:
-                        System.err.println("Got unknown type");
-                        throw new RuntimeException();
+                try {
+                    switch (r.type) {
+                        case RemoteRead:
+                            get().recordRemoteRead(self, self_id, r.target_machine, (int) r.info, s);
+                            break;
+                        case RemoteWrite:
+                            get().recordRemoteWrite(self, self_id, r.target_machine, (int) r.info, s);
+                            break;
+                        case RemoteRPC:
+                            get().recordRemoteRPC(self, self_id, r.target_machine, s);
+                            break;
+                        case ReceiveRemoteRead:
+                            get().recordReceiveRemoteRead(self, r.target_machine, self_id, (int) r.info);
+                            break;
+                        case ReceiveRemoteWrite:
+                            get().recordReceiveRemoteWrite(self, r.target_machine, self_id, (int) r.info);
+                            break;
+                        default:
+                            System.err.println("Got unknown type");
+                            throw new RuntimeException();
+                    }
+                } catch (Throwable e) {
+                    System.err.println("Error from JIT");
+                    e.printStackTrace(System.err);
                 }
             }
             //InternalInterface.debug("got operation");

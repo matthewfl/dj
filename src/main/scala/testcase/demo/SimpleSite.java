@@ -2,6 +2,11 @@ package testcase.demo;
 
 import edu.berkeley.dj.internal.InternalInterface;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+
 /**
  * Created by matthewfl
  *
@@ -65,7 +70,7 @@ public class SimpleSite {
             } else {
                 // we are going to be returning some rendered image
 //                return "image";
-                return "text";
+                return "text/html";
             }
         }
 
@@ -82,6 +87,12 @@ public class SimpleSite {
             } else {
                 byte[] cnt = fwrap.getByteContents();
 
+                BufferedImage img;
+                try {
+                    img = ImageIO.read(new ByteArrayInputStream(cnt));
+                } catch (IOException e) {
+                    return new String("failed").getBytes();
+                }
                 return new String("test123 "+cnt.length).getBytes();
             }
         }

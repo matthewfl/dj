@@ -169,8 +169,30 @@ class Arrays (next: Transformer,
 
     } else if(c == MULTIANEWARRAY) {
       // TODO:
-      println("multinewarray not implemented yet")
-      ???
+      val tindx = it.u16bitAt(pos + 1)
+      val dim = it.byteAt(pos + 3)
+      val typ = cp.getClassInfo(tindx)
+      //assert(typ(0) == 'L')
+      val tname = if(typ.endsWith(";") && typ.startsWith("L")) {
+        typ.substring(1, typ.length - 1)
+      } else {
+        typ
+      }.replace('/', '.')
+      val mthref = if(tname.startsWith(config.arrayprefix)) {
+        // this class has already been converted to our array names, so we need to determine what the size of this array is
+        val uindx = tname.lastIndexOf("_")
+        val cnt = tname.substring(uindx + 1).toInt
+        val baseType = tname.substring(config.arrayprefix.length, uindx)
+        val clsref = cp.addClassInfo(config.arrayprefix + baseType + "_impl_"+(cnt))
+        cp.addMethodrefInfo(clsref, "newInstance_"+dim, s"(${"I"*dim})L${config.arrayprefix + baseType + "_" + (cnt)};".replace('.', '/'))
+      } else {
+//        val clsref = cp.addClassInfo(config.arrayprefix + tname + "_impl_1")
+//        cp.addMethodrefInfo(clsref, "newInstance_"+dim, s"(${"I"*dim})L${(config.arrayprefix + tname + "_1").replace('.', '/')};")
+        ???
+      }
+      it.writeByte(INVOKESTATIC, pos)
+      it.write16bit(mthref, pos + 1)
+      it.writeByte(NOP, pos + 3)
 
     } else if(c == BASTORE) { // byte and boolean
       val ct = frame.getStack(frame.getTopIndex- 2)

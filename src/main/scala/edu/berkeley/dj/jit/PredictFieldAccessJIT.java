@@ -35,6 +35,10 @@ public class PredictFieldAccessJIT extends MoveOnUseJIT {
     private void determineNextField (Object self, int fid, int machine) {
         Class<?> cls = self.getClass();
         HashMap<Integer, Integer> map = getFidMap().get(cls);
+        if(map == null) {
+            map = new HashMap<>();
+            getFidMap().put(cls, map);
+        }
         ObjectHashCodeWrap hcw = new ObjectHashCodeWrap(self);
         Integer lfid = getLastField().get(hcw);
         if(lfid != null) {
@@ -45,8 +49,10 @@ public class PredictFieldAccessJIT extends MoveOnUseJIT {
         }
         getLastField().put(hcw, fid);
         Integer next = map.get(fid);
-        if(next != null)
+        if(next != null) {
+            //InternalInterface.debug("predicting next field access: "+fid+"->"+next);
             JITCommands.moveObjectFieldRef(self, next, machine);
+        }
     }
 
     @Override

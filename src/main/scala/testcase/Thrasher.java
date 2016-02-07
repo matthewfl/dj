@@ -2,6 +2,7 @@ package testcase;
 
 import edu.berkeley.dj.internal.DistributedRunner;
 import edu.berkeley.dj.internal.InternalInterface;
+import edu.berkeley.dj.internal.InternalLogger;
 import edu.berkeley.dj.internal.ObjectBase;
 
 import java.util.LinkedList;
@@ -16,11 +17,11 @@ import java.util.concurrent.Future;
 public class Thrasher {
 
     public static void main(String[] args) throws Exception {
-        int num_hosts = 2;
+        int num_hosts = 3;
 
         long rnd = 1;
 
-        int dcnt = 5000; //10000;
+        int dcnt = 50000; //10000;
 
         // wait until we have enough hosts to start this system
         while(InternalInterface.getInternalInterface().getAllHosts().length < num_hosts) {
@@ -58,6 +59,7 @@ public class Thrasher {
         Future<Integer> callRes[] = new Future[num_hosts];
 
         for(int cnt = 0; cnt < 30; cnt++) {
+            long start_time = System.nanoTime();
             final int cntf = cnt;
             System.out.println("inc all slots");
             for (int i = 0; i < num_hosts; i++) {
@@ -155,6 +157,25 @@ public class Thrasher {
                 }
             }
             System.out.println("done running all checks, failed: " + failed + " "+cnt);
+
+            long end_time = System.nanoTime();
+            Future<String> statsRes[] = new Future[num_hosts];
+            for(int i = 0; i < num_hosts; i++) {
+                statsRes[i] = DistributedRunner.runOnRemote(allHosts[i], new Callable<String>() {
+                    @Override
+                    public String call() throws Exception {
+                        String s = InternalLogger.getLogger().toString();
+                        InternalInterface.debug("STAT: "+s);
+                        return s;
+                    }
+                });
+            }
+            StringBuilder sb = new StringBuilder();
+            for(int i = 0; i < num_hosts; i++) {
+                sb.append("\t"+i+": "+statsRes[i].get());
+            }
+            sb.append("\ttime:"+((double)(end_time-start_time))/1000/1000);
+            System.out.println("STAT:"+sb);
         }
     }
 

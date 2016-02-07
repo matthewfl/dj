@@ -24,7 +24,8 @@ object RealMain {
     "cluster_conn" -> "dummy", // will start up two processes in the same jvm
     //"cluster_seed" -> "10.7.0.5,10.7.0.1,10.7.0.17",  (just take this from a system.getProperty
     "mode" -> "master",
-    "djit" -> "edu.berkeley.dj.jit.SimpleJIT" // the classname of the jit to use
+    "djit" -> "edu.berkeley.dj.jit.SimpleJIT", // the classname of the jit to use
+    "num_dummy_clients" -> "1"
   )
 
   def help = {
@@ -141,10 +142,11 @@ object RealMain {
 
         val dummy_f = if(arguments("cluster_conn") == "dummy") {
           // start up a dummy connection so we can at least have to different systems talking with eachother
-          Future {
-            val comm = new NetworkManager(arguments("cluster_code"), "dummy")
-            comm.runClient
-          }
+          for(i <- 0 until arguments("num_dummy_clients").toInt) yield
+            Future {
+              val comm = new NetworkManager(arguments("cluster_code"), "dummy")
+              comm.runClient
+            }
         } else null
 
         val config = new Config(

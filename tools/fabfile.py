@@ -42,7 +42,7 @@ def copy():
 
 @parallel
 def start_client():
-    run("tmux new -d -s dj-session-{fab_code}-{hash} 'java -Xmx2g -Ddj.cluster_seed={hosts} -jar /tmp/{fab_code}/{target} -mode client -cluster_conn hazelcast -cluster_code {code} 2>&1 > /tmp/dj-log-{fab_code}-{short_code}-{hash}' > /dev/null".format(
+    run("tmux new -d -s dj-session-{fab_code}-{hash} 'java -Xmx2g -Ddj.cluster_seed={hosts} -jar /tmp/{fab_code}/{target} -mode client -cluster_conn hazelcast -cluster_code {code} &>/tmp/dj-log-{fab_code}-{short_code}-{hash}' > /dev/null".format(
         target=target,
         #id=env.hosts.index(env.host),
         hosts=env.dj_hosts,
@@ -53,7 +53,7 @@ def start_client():
     ))
 
 def start_master():
-    run("tmux new -d -s dj-session-master-{fab_code} 'java {extra_java_args} -Xmx2g -Ddj.cluster_seed={hosts} -jar /tmp/{fab_code}/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp /tmp/{fab_code}/{program_jar} -maincls {main_cls} -djit {djit_cls} -debug_clazz_bytecode /tmp/djcls-{fab_code}/ 2>&1 > /tmp/dj-log-master-{fab_code}-{short_code}-{hash}' > /dev/null".format(
+    run("tmux new -d -s dj-session-master-{fab_code} 'java {extra_java_args} -Xmx2g -Ddj.cluster_seed={hosts} -jar /tmp/{fab_code}/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp /tmp/{fab_code}/{program_jar} -maincls {main_cls} -djit {djit_cls} -debug_clazz_bytecode /tmp/djcls-{fab_code}/  &>/tmp/dj-log-master-{fab_code}-{short_code}-{hash}' > /dev/null".format(
         target=target,
         code=code,
         hosts=env.dj_hosts,
@@ -81,7 +81,7 @@ def start():
     env.dj_hosts = ','.join([h.split('@')[-1] for h in env.hosts])
     client_r = execute(start_client, hosts=env.hosts)
     time.sleep(7)
-    local("tmux new -d -s dj-session-master-{fab_code} 'java {extra_java_args} -Xmx2g -Ddj.cluster_seed={hosts} -jar ../target/scala-2.11/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp ../target/scala-2.11/{target} -maincls {main_cls} -djit {djit_cls} -debug_clazz_bytecode /tmp/djcls/ 2>&1 >> /tmp/dj-log-master-{fab_code}' > /dev/null".format(
+    local("tmux new -d -s dj-session-master-{fab_code} 'java {extra_java_args} -Xmx2g -Ddj.cluster_seed={hosts} -jar ../target/scala-2.11/{target} -mode master -cluster_conn hazelcast -cluster_code {code} -cp ../target/scala-2.11/{target} -maincls {main_cls} -djit {djit_cls} -debug_clazz_bytecode /tmp/djcls/ &>>/tmp/dj-log-master-{fab_code}' > /dev/null".format(
         target=target,
         code=code,
         hosts=env.dj_hosts,

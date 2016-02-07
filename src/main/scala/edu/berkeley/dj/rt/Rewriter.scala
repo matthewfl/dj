@@ -611,7 +611,14 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
              }
            """
 
-          mth.insertBefore(code)
+          try {
+            mth.insertBefore(code)
+          } catch {
+            case e: CannotCompileException => {
+              println("Failed to compile")
+              throw e
+            }
+          }
         }
       }
     }
@@ -756,19 +763,29 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
 
     modifyStaticInit(cls, mana)
     rewriteUsedClasses(cls)
-    if (isInheritedFromBase(cls)) {
+    try {
       modifyArrays(cls, mana)
       addRPCRedirects(cls)
       if(nativeM != null)
         addOverwrittenNativeMethods(cls, nativeM)
       //addMethods(cls, addedMethods)
       transformClass(cls)
-    } else {
-      // this is really annoying, some classes are not inherited from objectbase
-      // and if we end up trying to work with them then they will end up not being able to find
-      // the fields on objectbase that it needs for various operations to work
-      System.err.println("cls is not inherited from objectbase and we are trying to work with it: "+cls.getName)
-      ???
+      if (!isInheritedFromBase(cls)) {
+        // this is really annoying, some classes are not inherited from objectbase
+        // and if we end up trying to work with them then they will end up not being able to find
+        // the fields on objectbase that it needs for various operations to work
+
+        System.err.println("cls is not inherited from objectbase and we are trying to work with it: " + cls.getName)
+        ???
+      }
+    } catch {
+      case e: Throwable => {
+        if (!isInheritedFromBase(cls)) {
+          // how in the world did we end up here
+          System.err.println("cls is not inherited from objectbase and we are trying to work with it: " + cls.getName)
+        }
+        throw e
+      }
     }
   }
 
@@ -1451,6 +1468,23 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
        """
       cls.addMethod(CtMethod.make(static_constructor, cls))
 
+      for(cnti <- 2 to cnt) {
+        val inner_name_i = config.arrayprefix + baseType + "_" + (cnt - cnti)
+        val args = (0 until cnti).map(v => s"int i$v").mkString(", ")
+        val argsD = (1 until cnti).map(v => s"i$v").mkString(", ")
+        val static_constructor_i =
+          s"""
+             public static ${inner_name_i} newInstance_${cnti}($args) {
+             ${clsname} ret = new ${clsname}();
+             ret.ir = new ${inner_arr_typ}[i0];
+             for(int ii = 0; ii < i0; ii++) {
+               ret.ir[ii] = ${inner_arr_typ}.newInstance_${cnti - 1}($argsD);
+             }
+             return ret;
+           """
+
+        cls.addMethod(CtMethod.make(static_constructor, cls))
+      }
 
       // serialization methods
 
