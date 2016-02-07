@@ -619,6 +619,7 @@ public class DistributedObjectHelper {
                 return; // this is the master machine, so we should not update it
         } while(!unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_owning_machine_offset,
                 oldLoc, machine_location));
+        InternalInterface.debug("successful update of object location: "+id+" to "+machine_location);
     }
 
     static public void sendUpdateObjectLocation(UUID id, int machine_location, int to) {
@@ -638,6 +639,7 @@ public class DistributedObjectHelper {
     }
 
     static Object lastReadLoop = null;
+    static int lastReadLoopCnt = 0;
 
     // this is receiving the remote reads on the network, so it is already on the slow path
     static public ByteBuffer readField(int op, int from, ByteBuffer req) {
@@ -658,15 +660,26 @@ public class DistributedObjectHelper {
             // TODO: update the location from the machine that made the request
             // already exists the code for recving the update
             int owner = h.__dj_class_manager.owning_machine;
-            if(owner == InternalInterface.getInternalInterface().getSelfId() || owner == -1) {
+            int selfid = InternalInterface.getInternalInterface().getSelfId();
+            if(owner ==  selfid || owner == -1) {
                 InternalInterface.debug("trying to resolve machine to self");
             }
-            sendUpdateObjectLocation(id, owner, from);
             if(h == lastReadLoop) {
-                InternalInterface.debug("in loop "+id+" "+mode);
+                InternalInterface.debug("in loop "+id+" "+mode+" "+selfid);
                 printState(h);
                 InternalInterface.getInternalInterface().relocateObject(id);
-                try { Thread.sleep(50); } catch(InterruptedException e) {}
+                try { Thread.sleep(10 << lastReadLoopCnt); } catch(InterruptedException e) {}
+                lastReadLoopCnt++;
+                if(lastReadLoopCnt > 7)
+                    lastReadLoopCnt = 7;
+            } else {
+                lastReadLoopCnt = 0;
+                // try alert the other machine able the new location
+                if(owner == -1) {
+                    if(from != selfid)
+                        sendUpdateObjectLocation(id, selfid, from);
+                } else
+                    sendUpdateObjectLocation(id, owner, from);
             }
             lastReadLoop = h;
             if(owner != -1) // check twice
@@ -740,6 +753,7 @@ public class DistributedObjectHelper {
     }
 
     static Object lastWriteLoop = null;
+    static int lastWriteLoopCnt = 0;
 
     static public void writeField(int op, int from, ByteBuffer req) {
         UUID id = new UUID(req.getLong(), req.getLong());
@@ -758,16 +772,27 @@ public class DistributedObjectHelper {
             assert(h.__dj_class_manager.distributedObjectId.equals(id));
 
             int owner = h.__dj_class_manager.owning_machine;
-            if(owner == InternalInterface.getInternalInterface().getSelfId() || owner == -1) {
+            int selfid = InternalInterface.getInternalInterface().getSelfId();
+            if(owner ==  selfid || owner == -1) {
                 InternalInterface.debug("trying to resolve machine to self "+owner);
             }
-//            sendUpdateObjectLocation(id, h.__dj_class_manager.owning_machine, from);
+
             if(h == lastWriteLoop) {
-                InternalInterface.debug("In a loop "+id+" "+mode);
+                InternalInterface.debug("In a loop "+id+" "+mode+" "+selfid);
                 printState(h);
                 InternalInterface.getInternalInterface().relocateObject(id);
 //                throw new RuntimeException();
-                try { Thread.sleep(50); } catch(InterruptedException e) {}
+                try { Thread.sleep(10 << lastWriteLoopCnt); } catch(InterruptedException e) {}
+                lastWriteLoopCnt++;
+                if(lastWriteLoopCnt > 7)
+                    lastWriteLoopCnt = 7;
+            } else {
+                lastWriteLoopCnt = 0;
+                if(owner == -1) {
+                    if(from != selfid)
+                        sendUpdateObjectLocation(id, selfid, from);
+                } else
+                    sendUpdateObjectLocation(id, owner, from);
             }
             lastWriteLoop = h;
             if(owner != -1)
@@ -976,11 +1001,13 @@ public class DistributedObjectHelper {
         }
         if(!obj.__dj_class_manager.isLocal() /*owning_machine != -1*/) {
             // we don't own this object, send a message to the owning machine to move it
+            int owner = obj.__dj_class_manager.owning_machine;
             byte[] ida = id.toArr();
             ByteBuffer b = ByteBuffer.allocate(ida.length + 4);
             b.putInt(to);
             b.put(ida);
-            InternalInterface.getInternalInterface().sendMoveObject(b, obj.__dj_class_manager.owning_machine);
+            if(owner != -1)
+                InternalInterface.getInternalInterface().sendMoveObject(b, owner);
         } else {
             if(to == InternalInterface.getInternalInterface().getSelfId()) {
                 // already on desired machine
@@ -1390,9 +1417,11 @@ public class DistributedObjectHelper {
             InternalInterface.debug("Object not located: "+id);
         } else {
             int mode = obj.__dj_class_mode;
-            InternalInterface.debug("Object located: "+id+" "+mode);
-            if((mode & CONSTS.IS_NOT_MASTER) == 0)
-                InternalInterface.getInternalInterface().updateObjectLocationAll(id, InternalInterface.getInternalInterface().getSelfId());
+            int self = InternalInterface.getInternalInterface().getSelfId();
+            InternalInterface.debug("Object located: "+id+" "+mode + " " +self);
+            if((mode & CONSTS.IS_NOT_MASTER) == 0) {
+                InternalInterface.getInternalInterface().updateObjectLocationAll(id, self);
+            }
         }
     }
 
