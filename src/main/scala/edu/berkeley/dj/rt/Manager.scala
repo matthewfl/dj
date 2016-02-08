@@ -94,16 +94,17 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
     }
   }
 
+  private var nmanager: NetworkManager = null
+
   def startMain (mainClass : String, args : Array[String]) = {
     if(config.debug_clazz_bytecode != null) {
       //CtClass.debugDump = config.debug_clazz_bytecode
       MethodInfo.doPreverify = true
     }
-    val nmanager = new NetworkManager(config.cluster_code, config.cluster_conn_mode)
+    nmanager = new NetworkManager(config.cluster_code, config.cluster_conn_mode)
     val cls = loader.loadClass("edu.berkeley.dj.internal.PreMain")
     runningInterface = new RunningInterface(config, this)
     networkInterface = nmanager.getApplication(config.uuid, true, new NetworkCommInterface(this))
-    nmanager.createNewApp(config.uuid)
 
     // HACK: some complication with using getDeclaredMethod from scala
     val premain = cls.getDeclaredMethods.filter(_.getName == "premain")(0)
@@ -119,6 +120,11 @@ private[rt] class MasterManager (val config: Config, classpaths: String) extends
         throw e
       }
     }
+  }
+
+  private[rt] def startNetwork () = {
+    // this will create instances on other machines
+    nmanager.createNewApp(config.uuid)
   }
 }
 

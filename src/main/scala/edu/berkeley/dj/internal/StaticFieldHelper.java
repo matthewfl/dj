@@ -296,6 +296,13 @@ public class StaticFieldHelper {
     }
 
     static public boolean initStaticFields(String classname) {
+        if(classname.startsWith("edu.berkeley.dj.internal.coreclazz.java.lang.")) {
+            for(String s : allowedStaticInit) {
+                if(classname.equals("edu.berkeley.dj.internal.coreclazz.java.lang." + s))
+                    return true;
+            }
+            InternalInterface.debug("not initing: "+classname);
+        }
         if(InternalInterface.getInternalInterface().isMaster()) {
             loadedClasses.add(classname);
             return true;
@@ -306,6 +313,29 @@ public class StaticFieldHelper {
             return false;
         }
     }
+
+    // this is for performance reasons
+    // eg with Integer, it caches values from -128 to 128, so we don't want
+    // those classes to require network calls to locate their true value
+    final static private String[] allowedStaticInit = {
+            "Number",
+            "Boolean",
+            "Byte",
+            "Byte$ByteCache",
+            "Character",
+            "Character$CharacterCache",
+            "Short",
+            "Short$ShortCache",
+            "Integer",
+            "Integer$IntegerCache",
+            "Long",
+            "Long$LongCache",
+            "Float",
+            "Float$FloatCache",
+            "Double",
+            "Double$DoubleCache",
+            "Math",
+    };
 
 
 }

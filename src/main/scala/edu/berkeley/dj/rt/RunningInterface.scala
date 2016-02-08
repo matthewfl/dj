@@ -285,6 +285,10 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.networkInterface.sendAll(116, buf)
   }
 
+  def startNetwork = {
+    manager.asInstanceOf[MasterManager].startNetwork()
+  }
+
 
 
 

@@ -15,10 +15,17 @@ public class PreMain {
         Class<?> dcls = PreMain.class.getClassLoader().loadClass(djitcls);
         JITWrapper.setJIT((JITInterface)dcls.newInstance());
 
-        // load the main class
-        Class cls = PreMain.class.getClassLoader().loadClass(maincls);
+
         Class<?> strcls = Class.forName("edu.berkeley.dj.internal.arrayclazz.java.lang.String_1");
         Object aargs = ArrayHelpers.makeDJArray(args);
+
+        // load the main class
+        Class cls = PreMain.class.getClassLoader().loadClass(maincls);
+
+        // register this program on all remote machines
+        InternalInterface.getInternalInterface().startNetwork();
+
+        // call the main method
         cls.getDeclaredMethod("main", new Class[]{strcls}).invoke(null, new Object[]{ aargs });
         ThreadHelpers.exitThread();
     }

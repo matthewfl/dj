@@ -172,6 +172,8 @@ public class InternalInterface {
 
     public void relocateObject(UUID id) { throw new InterfaceException(); }
 
+    public void startNetwork() { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -428,6 +430,11 @@ final class InternalInterfaceWrap extends InternalInterface {
     @Override
     public void relocateObject(UUID id) {
         invoke("relocateObject", new Class[]{UUID.class}, id);
+    }
+
+    @Override
+    public void startNetwork() {
+        invoke("startNetwork", new Class[]{});
     }
 
 

@@ -7,7 +7,7 @@ import edu.berkeley.dj.internal.StackRepresentation;
 /**
  * Created by matthewfl
  *
- * Simple jit for managing distribuited programs that will randomlly allocate items or using trivial method
+ * Simple jit for managing distributed programs that will randomly allocate items or using trivial method
  */
 public class SimpleJIT implements JITInterface {
 
