@@ -144,6 +144,7 @@ object RealMain {
           // start up a dummy connection so we can at least have to different systems talking with eachother
           for(i <- 0 until arguments("num_dummy_clients").toInt) yield
             Future {
+              println(s"creating dummy client $i")
               val comm = new NetworkManager(arguments("cluster_code"), "dummy")
               comm.runClient
             }

@@ -25,7 +25,6 @@ public class CONSTS {
 
     public static final int CURRENTLY_DESERIALIZING = 0x400;
     public static final int SERIALIZED_OBJ_SENT = 0x800;
-
     // if this is an empty object, eg a proxy to a remote machine (not a cache or master)
     public static final int IS_PROXY_OBJ = 0x1000;
 

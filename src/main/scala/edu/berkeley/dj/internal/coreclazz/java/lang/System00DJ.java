@@ -46,11 +46,11 @@ public class System00DJ {
         }
     };
 
-    public static void setIn(InputStream in) {}
+    public static void setIn(InputStream in) { throw new NotImplementedException(); }
 
-    public static void setOut(PrintStream out) {}
+    public static void setOut(PrintStream out) { throw new NotImplementedException(); }
 
-    public static void setErr(PrintStream err) {}
+    public static void setErr(PrintStream err) { throw new NotImplementedException(); }
 
     public static Console console() { return null; }
 
@@ -58,7 +58,7 @@ public class System00DJ {
         throw new IOException();
     }
 
-    public static void setSecurityManager(final SecurityManager s) {}
+    public static void setSecurityManager(final SecurityManager s) { throw new SecurityException(); }
 
     public static SecurityManager getSecurityManager() {
         // TODO: have some wrapper for the security manager

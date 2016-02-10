@@ -87,7 +87,13 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     ("newInstance", "(Ljava/lang/Class;Ledu/berkeley/dj/internal/arrayclazz/Integer_1;)Ljava/lang/Object;", "java.lang.reflect.Array") -> ("newInstance", s"${config.internalPrefix}ArrayHelpers"),
 
   // throwable
-    ("printStackTrace", "(Ledu/berkeley/dj/internal/coreclazz/java/io/PrintStream;)V", "java.lang.Throwable") -> ("printStackTrace", s"${config.internalPrefix}ExceptionHelper")
+    ("printStackTrace", "(Ledu/berkeley/dj/internal/coreclazz/java/io/PrintStream;)V", "java.lang.Throwable") -> ("printStackTrace", s"${config.internalPrefix}ExceptionHelper"),
+
+    // fcking hack that allows to avoid initing the system class prematurely
+    ("identityHashCode", "(Ljava/lang/Object;)I", "edu.berkeley.dj.internal.coreclazz.java.lang.System") -> ("identityHashCode", "java.lang.System"),
+    ("nanoTime", "()J", "edu.berkeley.dj.internal.coreclazz.java.lang.System") -> ("nanoTime", "java.lang.System"),
+    ("currentTimeMillis", "()J", "edu.berkeley.dj.internal.coreclazz.java.lang.System") -> ("currentTimeMillis", "java.lang.System")
+
 
     // rewrite the string init method since this is package private
     // this just gets the field inside the class and sets it to the char array

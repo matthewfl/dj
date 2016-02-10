@@ -116,7 +116,9 @@ class DummyHost(val man: NetworkManager) extends NetworkHost {
       DummyHost.nextHostId
     }
     val r = new DummyComm(recever, identifier, this, id)
-    DummyHost.comms.put((identifier,id), r)
+    DummyHost.comms.synchronized {
+      DummyHost.comms.put((identifier, id), r)
+    }
     r
   }
 
@@ -147,7 +149,9 @@ class DummyHost(val man: NetworkManager) extends NetworkHost {
     }
   }
 
-  DummyHost.hosts += this
+  DummyHost.hosts.synchronized {
+    DummyHost.hosts += this
+  }
 
 }
 

@@ -619,7 +619,7 @@ public class DistributedObjectHelper {
                 return; // this is the master machine, so we should not update it
         } while(!unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_owning_machine_offset,
                 oldLoc, machine_location));
-        InternalInterface.debug("successful update of object location: "+id+" to "+machine_location);
+        //InternalInterface.debug("successful update of object location: "+id+" to "+machine_location);
     }
 
     static public void sendUpdateObjectLocation(UUID id, int machine_location, int to) {
@@ -698,7 +698,6 @@ public class DistributedObjectHelper {
                 throw new NetworkForwardRequest(owner);
             throw new NetworkForwardRequest(InternalInterface.getInternalInterface().getSelfId()); // ga
         }
-            //throw new DJError();
         JITWrapper.recordReceiveRemoteRead(h, fid, from);
         return ret;
 
@@ -1380,10 +1379,14 @@ public class DistributedObjectHelper {
             int mode = obj.__dj_class_mode;
             if((mode & CONSTS.IS_NOT_MASTER) != 0) {
                 // then we need to remove the cache from this object
-                int m = obj.__dj_class_mode;
-                m &= ~(CONSTS.IS_CACHED_COPY);
-                m |= CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ;
-                obj.__dj_class_mode = m;
+                int m;
+                int oldm;
+                do {
+                    oldm = m = obj.__dj_class_mode;
+                    m &= ~(CONSTS.IS_CACHED_COPY);
+                    m |= CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ;
+//                    obj.__dj_class_mode = m;
+                } while(!unsafe.compareAndSwapInt(obj, DistributedObjectHelper.object_base_mode_field_offset, oldm, m));
                 unsafe.fullFence();
                 obj.__dj_empty_obj();
             }
@@ -1398,6 +1401,16 @@ public class DistributedObjectHelper {
                         throw new NetworkForwardRequest(owner);
                 }
                 int ocache[] = obj.__dj_class_manager.cached_copies;
+                if(ocache.length == 1) {
+                    assert(ocache[0] == where);
+                    int m;
+                    int oldm;
+                    do {
+                        oldm = m = obj.__dj_class_mode;
+                        m &= ~(CONSTS.REMOTE_WRITES);
+                    } while(!unsafe.compareAndSwapInt(obj, object_base_mode_field_offset, oldm, m));
+                    obj.__dj_class_manager.cached_copies = null;
+                }
                 int ncache[] = new int[ocache.length - 1];
                 for(int i = 0, j = 0; i < ocache.length; i++) {
                     if(ocache[i] != where) {
@@ -1428,6 +1441,8 @@ public class DistributedObjectHelper {
 
     static private final Unsafe unsafe = InternalInterface.getInternalInterface().getUnsafe();
 
+    static final int object_base_mode_field_offset;
+
     static {
         ThreadHelpers.runAsync(new Runnable() {
             @Override
@@ -1435,6 +1450,12 @@ public class DistributedObjectHelper {
                 DistributedObjectHelper.manageGCQueue();
             }
         });
+        int v = -1;
+        try {
+            v = (int)unsafe.objectFieldOffset(ObjectBase.class.getDeclaredField("__dj_class_mode"));
+        } catch(NoSuchFieldException e) {}
+        object_base_mode_field_offset = v;
+
     }
 
 

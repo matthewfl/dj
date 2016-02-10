@@ -383,12 +383,17 @@ class Serialization extends SerializeManager {
                             if(o.__dj_class_manager.monitor_lock_count == 0) {
                                 // the object is ready to be serialized
                                 unsafe.loadFence();
-                                int m = o.__dj_class_mode;
-                                m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
-                                InternalInterface.debug("moved blocked:"+id);
-                                o.__dj_class_manager.owning_machine = target_machine;
-                                //if(o.__dj_class_manager.monitor_lock_count)
-                                o.__dj_class_mode = m;
+                                int m;
+                                int oldm;
+                                do {
+                                    oldm = m = o.__dj_class_mode;
+                                    m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
+                                    InternalInterface.debug("moved blocked:"+id);
+                                    o.__dj_class_manager.owning_machine = target_machine;
+                                    //if(o.__dj_class_manager.monitor_lock_count)
+//                                    o.__dj_class_mode = m;
+                                } while(!unsafe.compareAndSwapInt(o, DistributedObjectHelper.object_base_mode_field_offset, oldm, m));
+
                                 unsafe.fullFence();
                                 o.__dj_serialize_obj(this);
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
@@ -415,12 +420,16 @@ class Serialization extends SerializeManager {
                             }
                         }
                         unsafe.loadFence();
-                        int m = o.__dj_class_mode;
-                        m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
+                        int m;
+                        int oldm;
+                        do {
+                            oldm = m = o.__dj_class_mode;
+                            m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
 //                        InternalInterface.debug("moved throw:"+id);
-                        o.__dj_class_manager.owning_machine = target_machine;
-                        //if(o.__dj_class_manager.monitor_lock_count)
-                        o.__dj_class_mode = m;
+                            o.__dj_class_manager.owning_machine = target_machine;
+                            //if(o.__dj_class_manager.monitor_lock_count)
+//                            o.__dj_class_mode = m;
+                        } while(!unsafe.compareAndSwapInt(o, DistributedObjectHelper.object_base_mode_field_offset, oldm, m));
                         unsafe.fullFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
@@ -438,11 +447,15 @@ class Serialization extends SerializeManager {
                         } else {
                             throw new NotImplementedError();
                         }
-                        int m = o.__dj_class_mode;
-                        m |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
-                        InternalInterface.debug("move leave cache: "+id);
-                        o.__dj_class_manager.owning_machine = target_machine;
-                        o.__dj_class_mode = m;
+                        int m;
+                        int oldm;
+                        do {
+                            oldm = m = o.__dj_class_mode;
+                            m |= CONSTS.IS_NOT_MASTER | CONSTS.IS_CACHED_COPY | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
+                            InternalInterface.debug("move leave cache: "+id);
+                            o.__dj_class_manager.owning_machine = target_machine;
+//                            o.__dj_class_mode = m;
+                        } while(!unsafe.compareAndSwapInt(o, DistributedObjectHelper.object_base_mode_field_offset, oldm, m));
                         unsafe.fullFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
@@ -450,9 +463,13 @@ class Serialization extends SerializeManager {
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
                     if(o.__dj_class_manager.cached_copies == null) {
                         o.__dj_class_manager.cached_copies = new int[] {target_machine};
-                        int m = o.__dj_class_mode;
-                        m |= CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
-                        o.__dj_class_mode = m;
+                        int m;
+                        int oldm;
+                        do {
+                            oldm = m = o.__dj_class_mode;
+                            m |= CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
+//                            o.__dj_class_mode = m;
+                        } while(!unsafe.compareAndSwapInt(o, DistributedObjectHelper.object_base_mode_field_offset, oldm, m));
                     } else {
                         int[] na = new int[o.__dj_class_manager.cached_copies.length];
                         Array.copy(o.__dj_class_manager.cached_copies, 0, na, 0, o.__dj_class_manager.cached_copies.length);
