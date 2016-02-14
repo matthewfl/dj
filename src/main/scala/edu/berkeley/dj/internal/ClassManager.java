@@ -199,7 +199,13 @@ final public class ClassManager extends WeakReference<ObjectBase> {
         }
         ByteBuffer bb = requestRemote(fid, 0);
         JITWrapper.recordRemoteRead(managedObject, fid, owner);
-        ByteBuffer ret = InternalInterface.getInternalInterface().readField(bb, op, owner);
+        ByteBuffer ret;
+        try {
+            ret = InternalInterface.getInternalInterface().readField(bb, op, owner);
+        } catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
         InternalLogger.addReadTime(InternalLogger.getTime() - startTime);
         return ret;
     }
@@ -578,6 +584,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
     }
 
     void dj_deserialize_obj(SerializeManager man, SerializeManager.SerializationAction act) {
+
+        assert(cached_copies == null);
+
         int cached_length = man.get_value_I();
         if(cached_length == 0){
             cached_copies = null;
@@ -589,6 +598,8 @@ final public class ClassManager extends WeakReference<ObjectBase> {
         }
 
         int selfId = InternalInterface.getInternalInterface().getSelfId();
+
+        assert(waitingMachines == null);
 
         int waiting_length = man.get_value_I();
         if(waiting_length == 0) {

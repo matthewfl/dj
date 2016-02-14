@@ -395,7 +395,7 @@ class Serialization extends SerializeManager {
                                 } while(!unsafe.compareAndSwapInt(o, DistributedObjectHelper.object_base_mode_field_offset, oldm, m));
 
                                 unsafe.fullFence();
-                                o.__dj_serialize_obj(this);
+                                o.__dj_serialize_obj(this); 
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
                                 // indicates that the object should be empty, so we write it after we have performed the
                                 // serialization step otherwise we may null out a field before we get to serialize it

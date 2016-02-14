@@ -19,7 +19,14 @@ public interface Base {
 
     void set_java_lang_Object(int i, Object v);
 
-    static int length(Base b) { return b.length(); }
+    static int length(Base b) {
+        long time = System.nanoTime();
+        try {
+            return b.length();
+        } catch(NullPointerException e) {
+            throw e;
+        }
+    }
 
 
 }

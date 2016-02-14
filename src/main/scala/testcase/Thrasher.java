@@ -28,6 +28,8 @@ public class Thrasher {
             Thread.sleep(1000);
         }
 
+        Thread.sleep(5000);
+
         TData root = new TData();
         root.counts = new int[num_hosts];
         root.children = new TData[1];
@@ -88,7 +90,10 @@ public class Thrasher {
                             InternalInterface.getInternalInterface().debug("worker task "+z+" at "+c);
                         }
                         n.counts[slot]++;
+                        int modep = ((ObjectBase)(Object)n).__dj_class_mode;
+                        long time = System.nanoTime();
                         for (int j = 0; j < n.children.length; j++) {
+                            int modeq = ((ObjectBase)(Object)n).__dj_class_mode;
                             incSlot(n.children[j], slot);
                         }
                     }
@@ -127,7 +132,10 @@ public class Thrasher {
                             r++;
                             System.out.println("Failed when checking slot " + slot + " on instance: " + n);
                         }
+                        int modep = ((ObjectBase)(Object)n).__dj_class_mode;
+                        long time = System.nanoTime();
                         for (int j = 0; j < n.children.length; j++) {
+                            int modeq = ((ObjectBase)(Object)n).__dj_class_mode;
                             r += checkSlot(n.children[j], slot, val);
                         }
                         return r;

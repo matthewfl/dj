@@ -7,7 +7,6 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
 import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -150,10 +149,10 @@ public class DistributedObjectHelper {
 
      static private ObjectBase getLocalObject(UUID id) {
         synchronized (localDistributedObjects) {
-            // TODO: check if it is a weak reference and get the actual object that it points to instead
+            // check if it is a weak reference and get the actual object that it points to instead
             Object o = localDistributedObjects.get(id);
-            if(o instanceof WeakReference) {
-                return (ObjectBase) ((WeakReference)o).get();
+            if(o instanceof ClassManager) {
+                return ((ClassManager)o).get();
             }
             return (ObjectBase)o;
         }
@@ -168,7 +167,7 @@ public class DistributedObjectHelper {
         }
     }
 
-    static private void makeStongRef(ObjectBase ob) {
+    static private void makeStrongRef(ObjectBase ob) {
         synchronized (localDistributedObjects) {
             assert(ob.__dj_class_manager != null);
             //Object cur = localDistributedObjects.get(ob.__dj_class_manager.distributedObjectId);
@@ -239,7 +238,10 @@ public class DistributedObjectHelper {
                 Class<?> cls = Class.forName(new String(id.extradata));
                 ObjectBase obj = (ObjectBase) Unsafe00DJ.getUnsafe().allocateInstance(cls);
                 assert(id.lastKnownHost != -1);
-                assert(id.lastKnownHost != InternalInterface.getInternalInterface().getSelfId());
+                if(id.lastKnownHost == InternalInterface.getInternalInterface().getSelfId()) {
+                    // ga wtf
+                    InternalInterface.getInternalInterface().relocateObject(id.identifier);
+                }
                 obj.__dj_class_manager = new ClassManager(obj, id.identifier, id.lastKnownHost);
                 obj.__dj_class_mode |= CONSTS.OBJECT_INITED |
                         CONSTS.REMOTE_READS |
@@ -667,7 +669,8 @@ public class DistributedObjectHelper {
             if(h == lastReadLoop) {
                 InternalInterface.debug("in loop "+id+" "+mode+" "+selfid);
                 printState(h);
-                InternalInterface.getInternalInterface().relocateObject(id);
+                if(lastReadLoopCnt == 0 || lastReadLoopCnt > 5)
+                    InternalInterface.getInternalInterface().relocateObject(id);
                 try { Thread.sleep(10 << lastReadLoopCnt); } catch(InterruptedException e) {}
                 lastReadLoopCnt++;
                 if(lastReadLoopCnt > 7)
@@ -779,7 +782,8 @@ public class DistributedObjectHelper {
             if(h == lastWriteLoop) {
                 InternalInterface.debug("In a loop "+id+" "+mode+" "+selfid);
                 printState(h);
-                InternalInterface.getInternalInterface().relocateObject(id);
+                if(lastWriteLoopCnt == 0 || lastWriteLoopCnt > 5)
+                    InternalInterface.getInternalInterface().relocateObject(id);
 //                throw new RuntimeException();
                 try { Thread.sleep(10 << lastWriteLoopCnt); } catch(InterruptedException e) {}
                 lastWriteLoopCnt++;
@@ -869,6 +873,7 @@ public class DistributedObjectHelper {
             }
         }
 
+        assert(h.__dj_class_manager.monitor_lock_count == 1);
         h.__dj_class_manager.addMachineToWaiting(machine);
         h.__dj_class_manager.monitor_lock_count = 0;
         h.__dj_class_manager.processNotifications();
@@ -1086,6 +1091,7 @@ public class DistributedObjectHelper {
     static LinkedList<Object> recvObjsL = new LinkedList<Object>();
 
     static public void printState(Object look) {
+        /*
         InternalInterface.debug("DOH state: "+preSendObj+" "+sendObjs+" "+recvObjs+" "+finRecvObjs+" "+recvFinal);
         if(lastMovedSend != null)
             InternalInterface.debug("last move send:"+((ObjectBase)lastMovedSend).__dj_class_manager.distributedObjectId);
@@ -1110,6 +1116,7 @@ public class DistributedObjectHelper {
             if(ll.get(i) == look)
                 InternalInterface.debug("found object at: "+i);
         }
+        */
     }
 
     static public void recvMoveReq(ByteBuffer req) {
@@ -1422,18 +1429,21 @@ public class DistributedObjectHelper {
         }
     }
 
+    static private Object locateObjLock = new Object();
 
     static void locateObject(ByteBuffer buf) {
-        UUID id = new UUID(buf.getLong(), buf.getLong());
-        ObjectBase obj = getLocalObject(id);
-        if(obj == null) {
-            InternalInterface.debug("Object not located: "+id);
-        } else {
-            int mode = obj.__dj_class_mode;
-            int self = InternalInterface.getInternalInterface().getSelfId();
-            InternalInterface.debug("Object located: "+id+" "+mode + " " +self);
-            if((mode & CONSTS.IS_NOT_MASTER) == 0) {
-                InternalInterface.getInternalInterface().updateObjectLocationAll(id, self);
+        synchronized (locateObjLock) {
+            UUID id = new UUID(buf.getLong(), buf.getLong());
+            ObjectBase obj = getLocalObject(id);
+            if (obj == null) {
+//            InternalInterface.debug("Object not located: "+id);
+            } else {
+                int mode = obj.__dj_class_mode;
+                int self = InternalInterface.getInternalInterface().getSelfId();
+//            InternalInterface.debug("Object located: "+id+" "+mode + " " +self);
+                if ((mode & CONSTS.IS_NOT_MASTER) == 0) {
+                    InternalInterface.getInternalInterface().updateObjectLocationAll(id, self);
+                }
             }
         }
     }

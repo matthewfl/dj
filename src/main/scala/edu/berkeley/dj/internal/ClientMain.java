@@ -6,9 +6,15 @@ package edu.berkeley.dj.internal;
 public class ClientMain {
 
     static public void prestart(Object ii) {
-        InternalInterface._setIsClient();
-        InternalInterface.setInternalInterface(ii);
-        InternalInterface.debug("Client main has started");
-        InternalInterface.getInternalInterface().registerClient();
+        try {
+            InternalInterface._setIsClient();
+            InternalInterface.setInternalInterface(ii);
+            InternalInterface.debug("Client main has started");
+            InternalInterface.getInternalInterface().registerClient();
+        } catch(Exception e) {
+            System.err.println("Failed to properly start client");
+            e.printStackTrace();
+            throw e;
+        }
     }
 }
