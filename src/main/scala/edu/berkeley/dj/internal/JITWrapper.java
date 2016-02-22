@@ -67,7 +67,10 @@ public class JITWrapper {
 
         RecordedOperation(OperationType type, Object self, Throwable stack, Object info, int target_machine) {
             this.type = type;
-            this.self = new WeakReference<>(self);
+//            if(self instanceof ObjectBase)
+//                this.self = (WeakReference<ObjectBase>)((ObjectBase)self).__dj_class_manager;
+//            else
+                this.self = new WeakReference<>(self);
             if(stack != null) {
                 this.stack = stack.getStackTrace();
             } else {

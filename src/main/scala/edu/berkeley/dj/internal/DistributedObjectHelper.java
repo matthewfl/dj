@@ -659,6 +659,14 @@ public class DistributedObjectHelper {
 
             assert(h.__dj_class_manager.distributedObjectId.equals(id));
 
+            if((mode & CONSTS.IS_READY_FOR_LOCAL_READS) != 0) {
+                int om;
+                do {
+                    om = h.__dj_class_mode;
+                    mode = om & ~(CONSTS.REMOTE_READS | CONSTS.IS_READY_FOR_LOCAL_READS);
+                } while(!unsafe.compareAndSwapInt(h, DistributedObjectHelper.object_base_mode_field_offset, om, mode));
+            }
+
             // TODO: update the location from the machine that made the request
             // already exists the code for recving the update
             int owner = h.__dj_class_manager.owning_machine;
@@ -687,8 +695,9 @@ public class DistributedObjectHelper {
             lastReadLoop = h;
             if(owner != -1) // check twice
                 throw new NetworkForwardRequest(owner);
-            if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0)
-                throw new DJError(); // invalid state, idk what to do
+            int cmode = h.__dj_class_mode;
+            if((cmode & CONSTS.REMOTE_READS) != 0)
+                throw new DJError("invalid state "+CONSTS.str(cmode) + "..." + CONSTS.str(mode)); // invalid state, idk what to do
         }
         ByteBuffer ret = readFieldSwitch(h, op, fid);
         if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0) {

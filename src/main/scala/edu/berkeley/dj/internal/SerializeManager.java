@@ -213,20 +213,20 @@ class Deserialization extends SerializeManager {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
                     int m = ob.__dj_class_mode;
                     if(ob.__dj_class_manager.cached_copies == null) {
-                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.IS_PROXY_OBJ);
+                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_WRITES | CONSTS.IS_PROXY_OBJ);
                     } else {
-                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ);
+                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_PROXY_OBJ);
                     }
-                    m |= CONSTS.DESERIALIZED_HERE;
+                    m |= CONSTS.DESERIALIZED_HERE | CONSTS.IS_READY_FOR_LOCAL_READS;
                     unsafe.fullFence();
-                    ob.__dj_class_mode = m;
                     ob.__dj_class_manager.owning_machine = -1; // signify self
+                    ob.__dj_class_mode = m;
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
                     //int m = ob.__dj_class_mode;
                     // we know that there must have been a cache left behind, so will still have "remote_writes"
                     int m = ob.__dj_class_mode;
-                    m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ);
+                    m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_READY_FOR_LOCAL_READS | CONSTS.IS_PROXY_OBJ);
                     m |= CONSTS.DESERIALIZED_HERE;
                     unsafe.fullFence();
                     ob.__dj_class_mode = m;

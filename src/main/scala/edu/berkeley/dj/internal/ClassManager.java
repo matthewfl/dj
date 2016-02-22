@@ -190,7 +190,17 @@ final public class ClassManager extends WeakReference<ObjectBase> {
             // we are sending this request to ourselves, this is likely the result of synchronization with serialization
             ByteBuffer ret = DistributedObjectHelper.readFieldSwitch(managedObject, op, fid);
             int mode2 = managedObject.__dj_class_mode;
-            if((mode2 & CONSTS.REMOTE_READS) == 0) {
+            if((mode2 & CONSTS.REMOTE_READS) == 0 || (mode2 & CONSTS.IS_READY_FOR_LOCAL_READS) != 0) {
+                // this is to deal with a race between the deserialization
+                // set the flags to allow not calling back into the class manager for this object
+                if((mode2 & CONSTS.IS_READY_FOR_LOCAL_READS) != 0) {
+                    int om;
+                    int nm;
+                    do {
+                        om = managedObject.__dj_class_mode;
+                        nm = om & ~(CONSTS.REMOTE_READS | CONSTS.IS_READY_FOR_LOCAL_READS);
+                    } while(!unsafe.compareAndSwapInt(managedObject, DistributedObjectHelper.object_base_mode_field_offset, om, nm));
+                }
                 ret.position(0);
                 return ret;
             }

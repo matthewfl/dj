@@ -1,5 +1,8 @@
 package edu.berkeley.dj.internal;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 /**
  * Created by matthewfl
  */
@@ -13,6 +16,7 @@ public class CONSTS {
 
     public static final int IS_NOT_MASTER = 0x04;
 //    public static final int IS_MASTER = 0x08;
+    public static final int IS_READY_FOR_LOCAL_READS = 0x80;
     public static final int OBJECT_INITED = 0x10;
     public static final int PERFORM_RPC_REDIRECTS = 0x20;
     public static final int IS_CACHED_COPY = 0x40;
@@ -31,5 +35,21 @@ public class CONSTS {
 
     public static final int CURRENTLY_SERIALIZING = 0x2000;
     public static final int WAS_LOCKED = 0x4000;
+
+    public static String str(int i) {
+        Field[] fs = CONSTS.class.getDeclaredFields();
+        String ret = "";
+        for(Field f : fs) {
+            if(f.getType() == int.class && Modifier.isStatic(f.getModifiers())) {
+                try {
+                    if ((f.getInt(null) & i) != 0) {
+                        ret += f.getName() + " ";
+                    }
+                } catch(IllegalAccessException e) {
+                }
+            }
+        }
+        return ret;
+    }
 
 }
