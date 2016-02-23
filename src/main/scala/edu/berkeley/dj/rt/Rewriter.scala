@@ -378,6 +378,19 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
 
         val isLocalOnly = field.getAnnotation(classOf[RewriteLocalFieldOnly]) != null
 
+        val defaultValue = redirect_method_type match {
+          case "A" => "null"
+          case "Z" => "false"
+          case "C" => "'\\0'"
+          case "B" => "(byte)0"
+          case "S" => "(short)0"
+          case "I" => "0"
+          case "J" => "0L"
+          case "F" => "0.0f"
+          case "D" => "0.0"
+          case _ => ???
+        }
+
         if (!Modifier.isStatic(modifiers) /*&& cls.getName.contains("StringIndexer")*/ ) {
           val (write_method, read_method) = if(!isLocalOnly) {
             (// write method
@@ -387,17 +400,27 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
                     self.``${name}`` = val;
                     mode = self.${cls_mode} | mode;
                     if((mode & 0x02) != 0) {
-                      ${if(redirect_method_type == "A")  s"if((mode & 0x1000) != 0) { self.``${name}`` = null; }" else ""}
+                      if((mode & 0x1000) != 0) {
+                        self.``${name}`` = ${defaultValue};
+                      }
                       self.${cls_manager}.writeField_${redirect_method_type}(${field_id}, ${if(redirect_method_type=="A") "(java.lang.Object)" else ""} val);
                     }
                   }
                   """,
               // read method
+              // if the value is not equal to the default, then that means that the object must not be in an empty state
+              // as such, we can not perform the read field check
+              // the serialization methods will empty out an object and set everything to the default
+              // if it is no longer suppose to contain a copy of the data
               s"""
                static ${accessMod} ${typ_name} ``${config.fieldPrefix}read_field_${name}`` (${cls_name} self) {
                  ${typ_name} val = self.``${name}``;
-                 if((self.${cls_mode} & 0x01) != 0) {
-                   val = (${typ_name})self.${cls_manager}.readField_${redirect_method_type}(${field_id});
+                 if(val == ${defaultValue}) {
+                   if((self.${cls_mode} & 0x01) != 0) {
+                     val = (${typ_name})self.${cls_manager}.readField_${redirect_method_type}(${field_id});
+                   } else {
+                     val = self.``${name}``;
+                   }
                  }
                  return val;
                }
@@ -510,6 +533,19 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
           val p = f.getType.asInstanceOf[CtPrimitiveType]
           serialize_obj_method += s"man.put_value_${p.getDescriptor} ( this.${f.getName} );\n"
           deserialize_obj_method += s"this.${f.getName} = man.get_value_${p.getDescriptor} ();\n"
+          import CtClass._
+          val default = p match {
+            case `booleanType` => "false"
+            case `charType` => "'\\0'"
+            case `byteType` => "(byte)0"
+            case `shortType` => "(short)0"
+            case `intType` => "0"
+            case `longType` => "0L"
+            case `floatType` => "0.0f"
+            case `doubleType` => "0.0"
+            case _ => ???
+          }
+          empty_obj_method += s"this.${f.getName} = ${default};\n"
         }
       }
     }
@@ -942,7 +978,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
         case `voidType` => "" // ???
         case `booleanType` => "false"
         case `byteType` => "0"
-        case `charType` => "' '"
+        case `charType` => "'\\0'"
         case `shortType` => "0"
         case `intType` => "0"
         case `longType` => "0L"

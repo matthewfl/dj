@@ -38,7 +38,7 @@ public class CONSTS {
 
     public static String str(int i) {
         Field[] fs = CONSTS.class.getDeclaredFields();
-        String ret = "";
+        String ret = Integer.toHexString(i) + " ";
         for(Field f : fs) {
             if(f.getType() == int.class && Modifier.isStatic(f.getModifiers())) {
                 try {

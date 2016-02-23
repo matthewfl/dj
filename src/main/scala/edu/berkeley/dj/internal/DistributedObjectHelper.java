@@ -653,27 +653,24 @@ public class DistributedObjectHelper {
 //        }
         if(h == null)
             throw new InterfaceException();
-        int mode;
-        if(((mode = h.__dj_class_mode) & CONSTS.REMOTE_READS) != 0) {
+        int mode = h.__dj_class_mode;
+        while((mode & CONSTS.REMOTE_READS) != 0) {
             // need to redirect the request elsewhere
 
             assert(h.__dj_class_manager.distributedObjectId.equals(id));
 
+            int omode = mode;
             if((mode & CONSTS.IS_READY_FOR_LOCAL_READS) != 0) {
-                int om;
-                do {
-                    om = h.__dj_class_mode;
-                    mode = om & ~(CONSTS.REMOTE_READS | CONSTS.IS_READY_FOR_LOCAL_READS);
-                } while(!unsafe.compareAndSwapInt(h, DistributedObjectHelper.object_base_mode_field_offset, om, mode));
+                mode = updateMode(h, 0, CONSTS.REMOTE_READS | CONSTS.IS_READY_FOR_LOCAL_READS);
             }
 
             // TODO: update the location from the machine that made the request
             // already exists the code for recving the update
             int owner = h.__dj_class_manager.owning_machine;
             int selfid = InternalInterface.getInternalInterface().getSelfId();
-            if(owner ==  selfid || owner == -1) {
-                InternalInterface.debug("trying to resolve machine to self");
-            }
+//            if(owner == selfid || owner == -1) {
+//                InternalInterface.debug("trying to resolve machine to self");
+//            }
             if(h == lastReadLoop) {
                 InternalInterface.debug("in loop "+id+" "+mode+" "+selfid);
                 printState(h);
@@ -695,9 +692,11 @@ public class DistributedObjectHelper {
             lastReadLoop = h;
             if(owner != -1) // check twice
                 throw new NetworkForwardRequest(owner);
-            int cmode = h.__dj_class_mode;
-            if((cmode & CONSTS.REMOTE_READS) != 0)
-                throw new DJError("invalid state "+CONSTS.str(cmode) + "..." + CONSTS.str(mode)); // invalid state, idk what to do
+//            int cmode = h.__dj_class_mode;
+//            if((cmode & CONSTS.REMOTE_READS) != 0)
+//                throw new DJError("invalid state "+CONSTS.str(cmode) + "..." + CONSTS.str(mode) + " omode:"+CONSTS.str(omode) + " owner:"+h.__dj_class_manager.owning_machine); // invalid state, idk what to do
+            try { Thread.sleep(2); } catch (InterruptedException e) {}
+            mode = readMode(h);
         }
         ByteBuffer ret = readFieldSwitch(h, op, fid);
         if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0) {
@@ -1047,7 +1046,8 @@ public class DistributedObjectHelper {
                     lastBufferSend = so;
                     //sendObjsL.add(obj);
                     sendObjs++;
-                    obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+//                    obj.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+                    updateMode(obj, CONSTS.SERIALIZED_OBJ_SENT, 0);
                 }
             } catch(Throwable e) {
                 e.printStackTrace();
@@ -1282,7 +1282,8 @@ public class DistributedObjectHelper {
                 lastBufferSend = so;
                 //sendObjsL.add(obj);
                 sendObjs++;
-                self.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+//                self.__dj_class_mode |= CONSTS.SERIALIZED_OBJ_SENT;
+                updateMode(self, CONSTS.SERIALIZED_OBJ_SENT, 0);
             }
 
 //            int[] ncache;
@@ -1332,10 +1333,11 @@ public class DistributedObjectHelper {
                 // this machine is currently the master
                 return;
             // should use a compare and swap for the mode here
-            int m = obj.__dj_class_mode;
-            m &= ~(CONSTS.IS_CACHED_COPY);
-            m |= CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ;
-            obj.__dj_class_mode = m;
+//            int m = obj.__dj_class_mode;
+//            m &= ~(CONSTS.IS_CACHED_COPY);
+//            m |= CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ;
+//            obj.__dj_class_mode = m;
+            updateMode(obj, CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ, CONSTS.IS_CACHED_COPY);
             unsafe.fullFence();
             obj.__dj_empty_obj();
             DistributedObjectId id = getDistributedId(obj);
@@ -1455,6 +1457,21 @@ public class DistributedObjectHelper {
                 }
             }
         }
+    }
+
+
+    static int updateMode(ObjectBase obj, int set, int unset) {
+        int mode;
+        int omode;
+        do {
+            omode = obj.__dj_class_mode;
+            mode = omode & ~unset | set;
+        } while(!unsafe.compareAndSwapInt(obj, object_base_mode_field_offset, omode, mode));
+        return mode;
+    }
+
+    static public int readMode(ObjectBase obj) {
+        return unsafe.getIntVolatile(obj, object_base_mode_field_offset);
     }
 
 

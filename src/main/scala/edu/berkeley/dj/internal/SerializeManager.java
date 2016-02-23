@@ -206,45 +206,56 @@ class Deserialization extends SerializeManager {
             }
             if(o instanceof ObjectBase) {
                 ObjectBase ob = (ObjectBase)o;
-                ob.__dj_class_mode |= CONSTS.CURRENTLY_DESERIALIZING;
+                DistributedObjectHelper.updateMode(ob, CONSTS.CURRENTLY_DESERIALIZING, 0);
+//                ob.__dj_class_mode |= CONSTS.CURRENTLY_DESERIALIZING;
                 assert(ob.__dj_class_manager.distributedObjectId.equals(id.identifier));
                 ob.__dj_deserialize_obj(this);
                 if(act == SerializationAction.MOVE_OBJ_MASTER || act == SerializationAction.TRY_MOVE_OBJ_MASTER) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
-                    int m = ob.__dj_class_mode;
-                    if(ob.__dj_class_manager.cached_copies == null) {
-                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_WRITES | CONSTS.IS_PROXY_OBJ);
-                    } else {
-                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_PROXY_OBJ);
-                    }
-                    m |= CONSTS.DESERIALIZED_HERE | CONSTS.IS_READY_FOR_LOCAL_READS;
-                    unsafe.fullFence();
-                    ob.__dj_class_manager.owning_machine = -1; // signify self
-                    ob.__dj_class_mode = m;
+                    int m, om;
+                    do {
+                        om = m = ob.__dj_class_mode;
+                        if (ob.__dj_class_manager.cached_copies == null) {
+                            m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_WRITES | CONSTS.IS_PROXY_OBJ);
+                        } else {
+                            m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_PROXY_OBJ);
+                        }
+                        m |= CONSTS.DESERIALIZED_HERE | CONSTS.IS_READY_FOR_LOCAL_READS;
+//                        unsafe.fullFence();
+                        ob.__dj_class_manager.owning_machine = -1; // signify self
+//                        ob.__dj_class_mode = m;
+                    } while(!unsafe.compareAndSwapInt(ob, DistributedObjectHelper.object_base_mode_field_offset, om, m));
                 } else if(act == SerializationAction.MOVE_OBJ_MASTER_LEAVE_CACHE) {
                     ob.__dj_class_manager.dj_deserialize_obj(this, act);
                     //int m = ob.__dj_class_mode;
                     // we know that there must have been a cache left behind, so will still have "remote_writes"
-                    int m = ob.__dj_class_mode;
-                    m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_READY_FOR_LOCAL_READS | CONSTS.IS_PROXY_OBJ);
-                    m |= CONSTS.DESERIALIZED_HERE;
-                    unsafe.fullFence();
-                    ob.__dj_class_mode = m;
+                    int m, om;
+                    do {
+                        om = m = ob.__dj_class_mode;
+                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_READY_FOR_LOCAL_READS | CONSTS.IS_PROXY_OBJ);
+                        m |= CONSTS.DESERIALIZED_HERE;
+//                    unsafe.fullFence();
+//                        ob.__dj_class_mode = m;
+                    } while(!unsafe.compareAndSwapInt(ob, DistributedObjectHelper.object_base_mode_field_offset, om, m));
                     ob.__dj_class_manager.owning_machine = -1; // signify self
                 } else if(act == SerializationAction.MAKE_OBJ_CACHE) {
-                    int m = ob.__dj_class_mode;
-                    if((m & CONSTS.REMOTE_READS) == 0) {
-                        throw new DJError();
-                    }
-                    m |= CONSTS.IS_CACHED_COPY | CONSTS.DESERIALIZED_HERE;
-                    m &= ~(CONSTS.REMOTE_READS | CONSTS.IS_PROXY_OBJ);
-                    unsafe.fullFence();
-                    ob.__dj_class_mode = m;
+                    int om, m;
+                    do {
+                        om = m = ob.__dj_class_mode;
+                        if ((m & CONSTS.REMOTE_READS) == 0) {
+                            throw new DJError();
+                        }
+                        m |= CONSTS.IS_CACHED_COPY | CONSTS.DESERIALIZED_HERE | CONSTS.IS_READY_FOR_LOCAL_READS;
+                        m &= ~(CONSTS.IS_PROXY_OBJ);
+//                        unsafe.fullFence();
+//                        ob.__dj_class_mode = m;
+                    } while(!unsafe.compareAndSwapInt(ob, DistributedObjectHelper.object_base_mode_field_offset, om, m));
                 } else if(act == SerializationAction.MAKE_REFERENCE) {
                     // this should never happen since we are just expecting a reference
                     throw new RuntimeException();
                 }
-                ob.__dj_class_mode &= ~CONSTS.CURRENTLY_DESERIALIZING;
+                DistributedObjectHelper.updateMode(ob, 0, CONSTS.CURRENTLY_DESERIALIZING);
+//                ob.__dj_class_mode &= ~CONSTS.CURRENTLY_DESERIALIZING;
             } else {
                 // this should never happen since the heads of an object should always be an objectBase type
                 throw new DJError();
@@ -372,7 +383,8 @@ class Serialization extends SerializeManager {
                         throw new SerializeException("object is not local, can't serialize", o);
                     continue;
                 }
-                o.__dj_class_mode |= CONSTS.CURRENTLY_SERIALIZING;
+//                o.__dj_class_mode |= CONSTS.CURRENTLY_SERIALIZING;
+                DistributedObjectHelper.updateMode(o, CONSTS.CURRENTLY_SERIALIZING, 0);
                 current_action = act;
                 buff.putInt(act.ordinal());
                 unsafe.fullFence();
@@ -399,7 +411,8 @@ class Serialization extends SerializeManager {
                                 o.__dj_class_manager.dj_serialize_obj(this, act);
                                 // indicates that the object should be empty, so we write it after we have performed the
                                 // serialization step otherwise we may null out a field before we get to serialize it
-                                o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
+//                                o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
+                                DistributedObjectHelper.updateMode(o, CONSTS.IS_PROXY_OBJ, 0);
                                 unsafe.storeFence();
                                 break;
                             }
@@ -415,7 +428,8 @@ class Serialization extends SerializeManager {
                                 throw new SerializeException("Object is currently locked", o);
                             else {
                                 buff.position(buff.position() - 4); // remove the act ind that was added to buff
-                                o.__dj_class_mode |= CONSTS.WAS_LOCKED;
+                                DistributedObjectHelper.updateMode(o, CONSTS.WAS_LOCKED, 0);
+//                                o.__dj_class_mode |= CONSTS.WAS_LOCKED;
                                 continue;
                             }
                         }
@@ -433,7 +447,8 @@ class Serialization extends SerializeManager {
                         unsafe.fullFence();
                         o.__dj_serialize_obj(this);
                         o.__dj_class_manager.dj_serialize_obj(this, act);
-                        o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
+//                        o.__dj_class_mode |= CONSTS.IS_PROXY_OBJ;
+                        DistributedObjectHelper.updateMode(o, CONSTS.IS_PROXY_OBJ, 0);
                         unsafe.storeFence();
                     }
                     o.__dj_empty_obj();
@@ -484,7 +499,8 @@ class Serialization extends SerializeManager {
                 } else {
                     throw new DJError();
                 }
-                o.__dj_class_mode &= ~CONSTS.CURRENTLY_SERIALIZING;
+                DistributedObjectHelper.updateMode(o, 0, CONSTS.CURRENTLY_SERIALIZING);
+//                o.__dj_class_mode &= ~CONSTS.CURRENTLY_SERIALIZING;
             }
         }
     }
