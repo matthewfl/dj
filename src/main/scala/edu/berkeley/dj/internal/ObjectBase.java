@@ -6,7 +6,7 @@ import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
  * Created by matthewfl
  *
  * This becomes super class of the new "base class" that will represent objects
- * it will have to override methods such as lock or wait to make them work in a distribuited fashion
+ * it will have to override methods such as lock or wait to make them work in a distributed fashion
  */
 @RewriteClassRef(
         oldName = "edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ",
@@ -51,8 +51,9 @@ public class ObjectBase implements Object00DJ {
     // need to override any methods that would be on java.lang.Object
 
     public int hashCode() {
-        // TODO: make the hashCode check if this is a
-        // full copy
+        // TODO: make the hashCode check if this is a full copy
+        // this is going to return the system hash code, so that is going to end up different
+        // on all machines
         return super.hashCode();
     }
 

@@ -205,9 +205,15 @@ public class DistributedObjectHelper {
     static public DistributedObjectId getDistributedId(ObjectBase o) {
         makeDistributed(o);
         int h = o.__dj_class_manager.owning_machine;
+        UUID id = o.__dj_class_manager.distributedObjectId;
+        // if there is a race between making an object distributed and this thread requesting an id
+        while(id == null) {
+            id = o.__dj_class_manager.distributedObjectId;
+            h = o.__dj_class_manager.owning_machine;
+        }
         if(h == -1)
             h = InternalInterface.getInternalInterface().getSelfId();
-        return new DistributedObjectId(o.__dj_class_manager.distributedObjectId, h, o.getClass().getName());
+        return new DistributedObjectId(id, h, o.getClass().getName());
     }
 
     static public DistributedObjectId getDistributedId(Object o) {
@@ -652,7 +658,7 @@ public class DistributedObjectHelper {
 //            h = (ObjectBase)localDistributedObjects.get(id);
 //        }
         if(h == null)
-            throw new InterfaceException();
+            throw new DJError("unable to find object: "+id);
         int mode = h.__dj_class_mode;
         while((mode & CONSTS.REMOTE_READS) != 0) {
             // need to redirect the request elsewhere
@@ -699,7 +705,8 @@ public class DistributedObjectHelper {
             mode = readMode(h);
         }
         ByteBuffer ret = readFieldSwitch(h, op, fid);
-        if((h.__dj_class_mode & CONSTS.REMOTE_READS) != 0) {
+        int amode = h.__dj_class_mode;
+        if((amode & CONSTS.REMOTE_READS) != 0) {
             // the fact that this has changed since we performed the last operation, means that if we redirect this
             // request at this very moment, then it is likely to race
             // this is already a network request, and doing it incorrectly could incur 2 extra trips
@@ -948,7 +955,7 @@ public class DistributedObjectHelper {
         if(h == null)
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
-            // objects should get moved when they are locked, so this should not happen
+            // objects should not get moved when they are locked, so this should not happen
             throw new RuntimeException();
         }
             // redirect to the correct machine
@@ -1005,6 +1012,7 @@ public class DistributedObjectHelper {
     }
 
 
+    // TODO: there should be a worker thread that does the serialization instead of using the JIT thread
     static public void moveObject(ObjectBase obj, int to) {
         DistributedObjectId id = getDistributedId(obj);
         if(obj.__dj_class_manager.owning_machine == to || id.isFinalObj()) {
@@ -1465,7 +1473,7 @@ public class DistributedObjectHelper {
         int omode;
         do {
             omode = obj.__dj_class_mode;
-            mode = omode & ~unset | set;
+            mode = (omode & ~unset) | set;
         } while(!unsafe.compareAndSwapInt(obj, object_base_mode_field_offset, omode, mode));
         return mode;
     }

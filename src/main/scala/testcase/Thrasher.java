@@ -29,7 +29,7 @@ public class Thrasher {
         }
 
         // hack that when running locally, we need to wait for some classes to load on the "remote" instances
-        Thread.sleep(5000);
+        Thread.sleep(15000);
 
         TData root = new TData();
         root.counts = new int[num_hosts];
