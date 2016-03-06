@@ -162,7 +162,19 @@ public class Thread00DJ implements Runnable {
 
     // create the main base thread
     public Thread00DJ(long i) {
-        if(i == 1) {
+        if(i == -1) {
+            name = "DJ dummy lock".toCharArray();
+            priority = NORM_PRIORITY;
+            group = new ThreadGroup00DJ();  // root thread group
+            daemon = false;
+            contextClassLoader = Thread00DJ.class.getClassLoader();
+            inheritedAccessControlContext = null;//AccessController00.getContext();
+            target = null;
+            stackSize = 1000; // TODO: manage stack size
+            tid = nextThreadID();
+            currentAlive = true;
+
+        } else if(i == 1) {
             name = "DJ main Thread".toCharArray();
             priority = NORM_PRIORITY;
             group = new ThreadGroup00DJ();  // root thread group
@@ -190,6 +202,8 @@ public class Thread00DJ implements Runnable {
             currentAlive = true;
         }
     }
+
+    public static Thread00DJ dummy_lock = new Thread00DJ(-1);
 
     static {
         if(InternalInterface.isMaster()) {

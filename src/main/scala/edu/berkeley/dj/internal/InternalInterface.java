@@ -478,9 +478,9 @@ final class InternalInterfaceWrap extends InternalInterface {
                     DistributedObjectHelper.waitingFrom((int) args[0], (ByteBuffer) args[1]);
                     return null;
                 case 8:
-                    return DistributedObjectHelper.lockMonitor((ByteBuffer) args[0], (boolean) args[1]);
+                    return DistributedObjectHelper.lockMonitor((ByteBuffer) args[0], (boolean) args[1], (int)args[2]);
                 case 9:
-                    DistributedObjectHelper.unlockMonitor((ByteBuffer) args[0]);
+                    DistributedObjectHelper.unlockMonitor((ByteBuffer) args[0], (int)args[1]);
                     return null;
                 case 10:
                     DistributedObjectHelper.recvNotify((ByteBuffer) args[0]);

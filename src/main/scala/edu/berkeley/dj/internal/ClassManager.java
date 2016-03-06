@@ -194,13 +194,15 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                 // this is to deal with a race between the deserialization
                 // set the flags to allow not calling back into the class manager for this object
                 if((mode2 & CONSTS.IS_READY_FOR_LOCAL_READS) != 0) {
-                    int om;
-                    int nm;
-                    do {
-                        om = managedObject.__dj_class_mode;
-                        nm = om & ~(CONSTS.REMOTE_READS | CONSTS.IS_READY_FOR_LOCAL_READS);
-                    } while(!unsafe.compareAndSwapInt(managedObject, DistributedObjectHelper.object_base_mode_field_offset, om, nm));
+//                    int om;
+//                    int nm;
+//                    do {
+//                        om = managedObject.__dj_class_mode;
+//                        nm = om & ~(CONSTS.REMOTE_READS | CONSTS.IS_READY_FOR_LOCAL_READS);
+//                    } while(!unsafe.compareAndSwapInt(managedObject, DistributedObjectHelper.object_base_mode_field_offset, om, nm));
+                    DistributedObjectHelper.updateMode(managedObject, 0, CONSTS.REMOTE_READS | CONSTS.IS_READY_FOR_LOCAL_READS);
                 }
+
                 ret.position(0);
                 return ret;
             }
@@ -483,7 +485,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                         if(monitor_lock_count != 0 && monitor_thread != Thread00DJ.currentThread()) {
                             continue;
                         }
-                        monitor_lock_count++;
+//                        monitor_lock_count++;
+                        int v = monitor_lock_count;
+                        assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1));
                         monitor_thread = Thread00DJ.currentThread();
                         break;
                     }
@@ -496,7 +500,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                         if (monitor_lock_count != 0 && monitor_thread != Thread00DJ.currentThread()) {
                             continue;
                         }
-                        monitor_lock_count++;
+//                        monitor_lock_count++;
+                        int v = monitor_lock_count;
+                        assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1));
                         monitor_thread = Thread00DJ.currentThread();
                         break;
                     }
@@ -512,8 +518,10 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                 // communicate with the master
                 synchronized (managedObject) {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
-                    monitor_lock_count--;
-                    if(monitor_lock_count == 0) {
+//                    monitor_lock_count--;
+                    int v = monitor_lock_count;
+                    assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1));
+                    if(v == 1) {
                         monitor_thread = null;
                         InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine, notifications_to_send);
                         notifications_to_send = 0;
@@ -522,8 +530,10 @@ final public class ClassManager extends WeakReference<ObjectBase> {
             } else {
                 synchronized (managedObject) {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
-                    monitor_lock_count--;
-                    if(monitor_lock_count == 0) {
+                    int v = monitor_lock_count;
+                    assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1));
+//                    monitor_lock_count--;
+                    if(v == 1) {
                         monitor_thread = null;
                         processNotifications();
                     }
@@ -643,6 +653,7 @@ final public class ClassManager extends WeakReference<ObjectBase> {
     static final int class_manager_ref_field_offset;
     static final int class_manager_cache_copies_offset;
     static final int class_manager_owning_machine_offset;
+    static final int class_manager_monitor_lock_offset;
     static {
         int v = -1;
         try {
@@ -660,5 +671,10 @@ final public class ClassManager extends WeakReference<ObjectBase> {
             v = (int)unsafe.objectFieldOffset(ClassManager.class.getDeclaredField("owning_machine"));
         } catch(NoSuchFieldException e) {}
         class_manager_owning_machine_offset = v;
+        v = -1;
+        try {
+            v = (int)unsafe.objectFieldOffset(ClassManager.class.getDeclaredField("monitor_lock_count"));
+        } catch(NoSuchFieldException e) {}
+        class_manager_monitor_lock_offset = v;
     }
 }

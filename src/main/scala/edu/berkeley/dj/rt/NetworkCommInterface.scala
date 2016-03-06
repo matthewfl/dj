@@ -47,7 +47,7 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
       }
       case 106 => {
         // unlock a monitor with some count of number of notifications
-        man.runningInterface.callIn(9, ByteBuffer.wrap(msg))
+        man.runningInterface.callIn(9, ByteBuffer.wrap(msg), from)
       }
       case 107 => {
         // recv a notification on an object
@@ -169,12 +169,12 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         }
         case 7 => {
           // lock an object
-          val res = man.runningInterface.callIn(8, ByteBuffer.wrap(msg), false).asInstanceOf[Boolean]
+          val res = man.runningInterface.callIn(8, ByteBuffer.wrap(msg), false, from).asInstanceOf[Boolean]
           if (!res) {
             // we did not lock
             Future {
               // this will block until it gets the lock
-              man.runningInterface.callIn(8, ByteBuffer.wrap(msg), true)
+              man.runningInterface.callIn(8, ByteBuffer.wrap(msg), true, from)
               Array[Byte]()
             }
           } else {

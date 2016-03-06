@@ -1,6 +1,7 @@
 package edu.berkeley.dj.internal;
 
 import edu.berkeley.dj.internal.coreclazz.java.lang.Object00DJ;
+import edu.berkeley.dj.internal.coreclazz.java.lang.Thread00DJ;
 import edu.berkeley.dj.internal.coreclazz.sun.misc.Unsafe00DJ;
 import sun.misc.Unsafe;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -621,10 +622,14 @@ public class DistributedObjectHelper {
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
             return;
         int oldLoc;
+        int lockCnt;
         do {
             oldLoc = h.__dj_class_manager.owning_machine;
-            if(oldLoc == -1 || (h.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
+            lockCnt = h.__dj_class_manager.monitor_lock_count;
+            // TODO: this should do something better when it owns a lock
+            if(oldLoc == -1 || (h.__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0 || lockCnt != 0)
                 return; // this is the master machine, so we should not update it
+//            assert(lockCnt == 0);
         } while(!unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_owning_machine_offset,
                 oldLoc, machine_location));
         //InternalInterface.debug("successful update of object location: "+id+" to "+machine_location);
@@ -905,7 +910,7 @@ public class DistributedObjectHelper {
         // TODO:
     }*/
 
-    static public boolean lockMonitor(ByteBuffer obj, boolean spin) {
+    static public boolean lockMonitor(ByteBuffer obj, boolean spin, int from) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
         ObjectBase h = getLocalObject(id);
 //        synchronized (localDistributedObjects) {
@@ -918,7 +923,9 @@ public class DistributedObjectHelper {
                 if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
                     throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
                 if(h.__dj_class_manager.monitor_lock_count == 0) {
-                    h.__dj_class_manager.monitor_lock_count = 1;
+                    assert(unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, 0, from + 0x100));
+//                    h.__dj_class_manager.monitor_lock_count = 1;
+                    h.__dj_class_manager.monitor_thread = Thread00DJ.dummy_lock;
                     return true;
                 }
             }
@@ -945,7 +952,7 @@ public class DistributedObjectHelper {
 //        }
     }
 
-    static public void unlockMonitor(ByteBuffer obj) {
+    static public void unlockMonitor(ByteBuffer obj, int from) {
         UUID id = new UUID(obj.getLong(), obj.getLong());
         int notify_cnt = obj.getInt();
         ObjectBase h = getLocalObject(id);
@@ -962,7 +969,8 @@ public class DistributedObjectHelper {
 //            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
 //            throw new NotImplementedException();
         synchronized (h) {
-            assert(h.__dj_class_manager.monitor_lock_count == 1);
+            assert(h.__dj_class_manager.monitor_lock_count == from + 0x100);
+            assert(h.__dj_class_manager.monitor_thread == Thread00DJ.dummy_lock);
             if(h.__dj_class_manager.notifications_to_send != -1) {
                 if(notify_cnt == -1) {
                     h.__dj_class_manager.notifications_to_send = -1;
@@ -970,7 +978,9 @@ public class DistributedObjectHelper {
                     h.__dj_class_manager.notifications_to_send += notify_cnt;
                 }
             }
-            h.__dj_class_manager.monitor_lock_count = 0;
+            assert(unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, from + 0x100, 0));
+            h.__dj_class_manager.monitor_thread = null;
+//            h.__dj_class_manager.monitor_lock_count = 0;
             h.__dj_class_manager.processNotifications();
         }
     }
@@ -1475,6 +1485,12 @@ public class DistributedObjectHelper {
             omode = obj.__dj_class_mode;
             mode = (omode & ~unset) | set;
         } while(!unsafe.compareAndSwapInt(obj, object_base_mode_field_offset, omode, mode));
+        if((CONSTS.REMOTE_READS & mode) == 0) {
+            assert((CONSTS.IS_PROXY_OBJ & mode) == 0);
+        }
+        if((CONSTS.IS_NOT_MASTER & mode) == 0) {
+            //if((CONSTS.))
+        }
         return mode;
     }
 

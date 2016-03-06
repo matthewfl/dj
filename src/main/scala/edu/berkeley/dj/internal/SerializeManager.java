@@ -232,8 +232,8 @@ class Deserialization extends SerializeManager {
                     int m, om;
                     do {
                         om = m = ob.__dj_class_mode;
-                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_READY_FOR_LOCAL_READS | CONSTS.IS_PROXY_OBJ);
-                        m |= CONSTS.DESERIALIZED_HERE;
+                        m &= ~(CONSTS.IS_NOT_MASTER | CONSTS.IS_PROXY_OBJ);
+                        m |= CONSTS.DESERIALIZED_HERE | CONSTS.IS_READY_FOR_LOCAL_READS;
 //                    unsafe.fullFence();
 //                        ob.__dj_class_mode = m;
                     } while(!unsafe.compareAndSwapInt(ob, DistributedObjectHelper.object_base_mode_field_offset, om, m));
@@ -400,6 +400,7 @@ class Serialization extends SerializeManager {
                                 do {
                                     oldm = m = o.__dj_class_mode;
                                     m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
+                                    m &= ~CONSTS.IS_READY_FOR_LOCAL_READS;
                                     InternalInterface.debug("moved blocked:"+id);
                                     o.__dj_class_manager.owning_machine = target_machine;
                                     //if(o.__dj_class_manager.monitor_lock_count)
@@ -439,6 +440,7 @@ class Serialization extends SerializeManager {
                         do {
                             oldm = m = o.__dj_class_mode;
                             m |= CONSTS.IS_NOT_MASTER | CONSTS.REMOTE_READS | CONSTS.REMOTE_WRITES | CONSTS.SERIALIZED_HERE;
+                            m &= ~CONSTS.IS_READY_FOR_LOCAL_READS;
 //                        InternalInterface.debug("moved throw:"+id);
                             o.__dj_class_manager.owning_machine = target_machine;
                             //if(o.__dj_class_manager.monitor_lock_count)
