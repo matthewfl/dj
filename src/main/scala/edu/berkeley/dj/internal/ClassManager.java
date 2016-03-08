@@ -388,8 +388,11 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                     } else {
                         InternalInterface.getInternalInterface().sendNotifyOnObject(
                                 objectId().array(), i);
-                        assert(monitor_lock_count == 0);
-                        monitor_lock_count = 1;
+                        boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, 0, 0x100 + i);
+                        assert(cas);
+                        monitor_thread = Thread00DJ.dummy_lock;
+//                        assert(monitor_lock_count == 0);
+//                        monitor_lock_count = 1;
                     }
                     if(waitingMachines.length > 1) {
                         int na[] = new int[waitingMachines.length - 1];
@@ -434,11 +437,16 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                 processNotifications();
                 addMachineToWaiting(-1);
                 int cnt = monitor_lock_count;
+                assert(monitor_thread == Thread00DJ.currentThread());
                 monitor_thread = null;
-                monitor_lock_count = 0;
+                boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, cnt, 0);
+                assert(cas);
+//                monitor_lock_count = 0;
                 //assert(notifications_to_send == 0);
                 managedObject.wait();
-                monitor_lock_count = cnt;
+                cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, 0, cnt);
+                assert(cas);
+//                monitor_lock_count = cnt;
                 monitor_thread = Thread00DJ.currentThread();
             }
         } else {
@@ -450,7 +458,17 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                     owning_machine, notifications_to_send);
                 notifications_to_send = 0;
                 //processNotifications();
+                assert(monitor_thread == Thread00DJ.currentThread());
+                int cnt = monitor_lock_count;
+                boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, cnt, 0);
+                assert(cas);
+                monitor_thread = null;
                 managedObject.wait();
+                // TODO: something else could attempt to get the lock here
+                // I guess that would be a thread that first acquires the local lock, and then attempts to grab the global lock
+                cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, 0, cnt);
+                assert(cas);
+                monitor_thread = Thread00DJ.currentThread();
             }
         }
         //managedObject.wait();
@@ -487,8 +505,14 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                         }
 //                        monitor_lock_count++;
                         int v = monitor_lock_count;
-                        assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1));
-                        monitor_thread = Thread00DJ.currentThread();
+                        boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1);
+                        assert(cas);
+                        Thread00DJ ct = Thread00DJ.currentThread();
+                        // then this thread already owns this lock
+                        // so we don't need to relock it again
+                        if(monitor_thread == ct)
+                            return;
+                        monitor_thread = ct;
                         break;
                     }
                 }
@@ -502,8 +526,12 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                         }
 //                        monitor_lock_count++;
                         int v = monitor_lock_count;
-                        assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1));
-                        monitor_thread = Thread00DJ.currentThread();
+                        boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1);
+                        assert(cas);
+                        Thread00DJ ct =  Thread00DJ.currentThread();
+                        if(monitor_thread == ct)
+                            return;
+                        monitor_thread = ct;
                         break;
                     }
                 }
@@ -520,7 +548,8 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
 //                    monitor_lock_count--;
                     int v = monitor_lock_count;
-                    assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1));
+                    boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1);
+                    assert(cas);
                     if(v == 1) {
                         monitor_thread = null;
                         InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine, notifications_to_send);
@@ -531,7 +560,8 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                 synchronized (managedObject) {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
                     int v = monitor_lock_count;
-                    assert(unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1));
+                    boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1);
+                    assert(cas);
 //                    monitor_lock_count--;
                     if(v == 1) {
                         monitor_thread = null;
@@ -545,8 +575,15 @@ final public class ClassManager extends WeakReference<ObjectBase> {
     private void checkHasLock() {
         ObjectBase managedObject = get();
         synchronized (managedObject) {
-            if(monitor_lock_count == 0 || monitor_thread != Thread00DJ.currentThread())
-                throw new IllegalMonitorStateException();
+            if(monitor_thread != Thread00DJ.currentThread() || monitor_lock_count == 0) {
+                int mode = getMode();
+                throw new IllegalMonitorStateException("DJ: lock count: " + monitor_lock_count +
+                        " matching current thread: " + (monitor_thread != Thread00DJ.currentThread()) +
+                        " owner: " + monitor_thread +
+                        " obj is null:" + (managedObject == null) +
+                        " mode: "+CONSTS.str(mode));
+            }
+
         }
     }
 

@@ -207,6 +207,7 @@ class Deserialization extends SerializeManager {
             if(o instanceof ObjectBase) {
                 ObjectBase ob = (ObjectBase)o;
                 DistributedObjectHelper.updateMode(ob, CONSTS.CURRENTLY_DESERIALIZING, CONSTS.IS_PROXY_OBJ);
+                assert(ob.__dj_class_manager.monitor_lock_count == 0);
 //                ob.__dj_class_mode |= CONSTS.CURRENTLY_DESERIALIZING;
                 assert(ob.__dj_class_manager.distributedObjectId.equals(id.identifier));
                 ob.__dj_deserialize_obj(this);

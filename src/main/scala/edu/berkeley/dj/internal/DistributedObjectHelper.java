@@ -893,9 +893,14 @@ public class DistributedObjectHelper {
             }
         }
 
+        assert(h.__dj_class_manager.monitor_lock_count == 0x100 + machine);
         assert(h.__dj_class_manager.monitor_lock_count == 1);
         h.__dj_class_manager.addMachineToWaiting(machine);
-        h.__dj_class_manager.monitor_lock_count = 0;
+
+//        h.__dj_class_manager.monitor_lock_count = 0;
+        boolean cas = unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, 0x100 + machine, 0);
+        assert(cas);
+        h.__dj_class_manager.monitor_thread = null;
         h.__dj_class_manager.processNotifications();
     }
 
@@ -920,10 +925,15 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         while(true) {
             synchronized (h) {
-                if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0)
-                    throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
+                if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
+                    int owner = h.__dj_class_manager.owning_machine;
+                    assert(owner != -1);
+                    InternalInterface.getInternalInterface().updateObjectLocationAll(id, owner);
+                    throw new NetworkForwardRequest(owner);
+                }
                 if(h.__dj_class_manager.monitor_lock_count == 0) {
-                    assert(unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, 0, from + 0x100));
+                    boolean cas = unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, 0, from + 0x100);
+                    assert(cas);
 //                    h.__dj_class_manager.monitor_lock_count = 1;
                     h.__dj_class_manager.monitor_thread = Thread00DJ.dummy_lock;
                     return true;
@@ -963,7 +973,12 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
             // objects should not get moved when they are locked, so this should not happen
-            throw new RuntimeException();
+
+            int owner = h.__dj_class_manager.owning_machine;
+            assert(owner != -1);
+            throw new NetworkForwardRequest(owner);
+            // TODO: XXXX: this should not be happeneing....
+//            throw new RuntimeException();
         }
             // redirect to the correct machine
 //            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
@@ -978,7 +993,8 @@ public class DistributedObjectHelper {
                     h.__dj_class_manager.notifications_to_send += notify_cnt;
                 }
             }
-            assert(unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, from + 0x100, 0));
+            boolean cas = unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, from + 0x100, 0);
+            assert(cas);
             h.__dj_class_manager.monitor_thread = null;
 //            h.__dj_class_manager.monitor_lock_count = 0;
             h.__dj_class_manager.processNotifications();

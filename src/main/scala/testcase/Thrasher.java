@@ -17,7 +17,7 @@ import java.util.concurrent.Future;
 public class Thrasher {
 
     public static void main(String[] args) throws Exception {
-        int num_hosts = 4;
+        int num_hosts = 3;
 
         long rnd = 1;
 
