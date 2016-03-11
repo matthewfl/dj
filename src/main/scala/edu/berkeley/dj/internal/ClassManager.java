@@ -186,7 +186,7 @@ final public class ClassManager extends WeakReference<ObjectBase> {
 //        int mode = managedObject.__dj_class_mode;
         //InternalInterface.debug("read request "+fid+" "+op+" "+owner+" "+distributedObjectId);
         ObjectBase managedObject = get();
-        if(owner == -1) {
+        while(owner == -1) {
             // we are sending this request to ourselves, this is likely the result of synchronization with serialization
             ByteBuffer ret = DistributedObjectHelper.readFieldSwitch(managedObject, op, fid);
             int mode2 = managedObject.__dj_class_mode;
@@ -207,7 +207,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                 return ret;
             }
             owner = owning_machine;
-            assert(owner != -1);
+//            assert(owner != -1);
+//            if(owner == -1)
+//                throw new AssertionError();
         }
         ByteBuffer bb = requestRemote(fid, 0);
         JITWrapper.recordRemoteRead(managedObject, fid, owner);
@@ -232,8 +234,8 @@ final public class ClassManager extends WeakReference<ObjectBase> {
 
     private void requestWrite(ByteBuffer bb, int op, int fid) {
         long startTime = InternalLogger.getTime();
-        int owner = owning_machine;
         ObjectBase managedObject = get();
+        int owner = owning_machine;
         int mode = managedObject.__dj_class_mode;
         if(owner == -1) {
             // we are sending this to ourselves
@@ -243,12 +245,17 @@ final public class ClassManager extends WeakReference<ObjectBase> {
             }
             bb.position(20); // 2*long + int
             DistributedObjectHelper.writeFieldSwitch(managedObject, bb, op, fid);
-            int mode2 = managedObject.__dj_class_mode;
-            if((mode2 & CONSTS.REMOTE_WRITES) == 0) {
-                return;
+            while(owner == -1) {
+                int mode2 = managedObject.__dj_class_mode;
+                if ((mode2 & CONSTS.REMOTE_WRITES) == 0) {
+                    return;
+                }
+                owner = owning_machine;
             }
-            owner = owning_machine;
             bb.position(0);
+//            if(owner == -1)
+//                throw new AssertionError();
+////            assert(owner != -1);
         }
         JITWrapper.recordRemoteWrite(managedObject, fid, owner);
         InternalInterface.getInternalInterface().writeField(bb, op, owner);

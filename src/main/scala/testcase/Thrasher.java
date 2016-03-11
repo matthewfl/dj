@@ -1,9 +1,6 @@
 package testcase;
 
-import edu.berkeley.dj.internal.DistributedRunner;
-import edu.berkeley.dj.internal.InternalInterface;
-import edu.berkeley.dj.internal.InternalLogger;
-import edu.berkeley.dj.internal.ObjectBase;
+import edu.berkeley.dj.internal.*;
 
 import java.util.LinkedList;
 import java.util.concurrent.Callable;
@@ -27,6 +24,9 @@ public class Thrasher {
         while(InternalInterface.getInternalInterface().getAllHosts().length < num_hosts) {
             Thread.sleep(1000);
         }
+
+        System.out.println("Thrasher program starting, hosts: "+num_hosts+" tree size:"+dcnt);
+        System.out.println("JIT in use: "+ JITWrapper.get().getClass().getName());
 
         // hack that when running locally, we need to wait for some classes to load on the "remote" instances
         Thread.sleep(15000);

@@ -518,6 +518,7 @@ final class InternalInterfaceWrap extends InternalInterface {
             }
             return null;
         } catch(NetworkForwardRequest e) {
+            InternalLogger.countForward();
             throw e;
         } catch (Throwable e) {
             e.printStackTrace();

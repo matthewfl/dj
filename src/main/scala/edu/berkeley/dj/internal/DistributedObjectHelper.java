@@ -642,13 +642,14 @@ public class DistributedObjectHelper {
             return;
         }
         if(to == machine_location) {
-            // if the remote machine truely owns it then it must be getting deserialized or
-            // changed, so we don't want to interfear
+            // if the remote machine truly owns it then it must be getting deserialize or
+            // changed, so we don't want to interfere
 //            InternalInterface.debug("trying to update object location to self machine");
             return;
         }
         assert(machine_location != -1);
         InternalInterface.getInternalInterface().updateObjectLocation(id, machine_location, to);
+        InternalLogger.countUpdateLoc();
     }
 
     static Object lastReadLoop = null;
@@ -882,8 +883,10 @@ public class DistributedObjectHelper {
             throw new InterfaceException();
         if((h.__dj_class_mode & CONSTS.IS_NOT_MASTER) != 0) {
             // we are not the master machine here, we should forward this request
-            throw new NetworkForwardRequest(h.__dj_class_manager.owning_machine);
-//            throw new NotImplementedException();
+            int owner = h.__dj_class_manager.owning_machine;
+            if(owner != -1)
+                throw new NetworkForwardRequest(owner);
+            // this should not really happen since the lock should be owned when this is getting locked?
         }
         if(h.__dj_class_manager.notifications_to_send != -1) {
             if(notify_cnt == -1) {

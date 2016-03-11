@@ -29,6 +29,9 @@ public class InternalLogger {
 
     AtomicLong rpcCount = new AtomicLong();
 
+    AtomicLong forwardRequests = new AtomicLong();
+
+    AtomicLong updateLocMsg = new AtomicLong();
 
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -55,7 +58,11 @@ public class InternalLogger {
         sb.append(Math.sqrt((wc * ws - wt * wt) / (wc * (wc - 1))) / 1000);
         sb.append(" ");
         sb.append(((double)writeTimeMax) / 1000);
-        sb.append("])");
+        sb.append("] forwardRequests=");
+        sb.append(forwardRequests);
+        sb.append(" updateLoc=");
+        sb.append(updateLocMsg);
+        sb.append(")");
 
         return sb.toString();
     }
@@ -87,5 +94,8 @@ public class InternalLogger {
         getLogger().rpcCount.addAndGet(1);
     }
 
+    public static void countForward() { getLogger().forwardRequests.addAndGet(1); }
+
+    public static void countUpdateLoc() { getLogger().updateLocMsg.addAndGet(1); }
 
 }
