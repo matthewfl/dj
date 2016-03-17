@@ -97,6 +97,14 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         // attempt to relocate an object
         man.runningInterface.callIn(21, ByteBuffer.wrap(msg))
       }
+      case 117 => {
+        val buf = ByteBuffer.wrap(msg)
+        val len1 = buf.getInt()
+        val len2 = buf.getInt()
+        val cls = new String(msg, 8, len1)
+        val mth = new String(msg, len1 + 8, len2)
+        man.runningInterface.makeMethodRPC(cls, mth)
+      }
     }
   } catch {
     case e: NetworkForwardRequest => {

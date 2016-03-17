@@ -62,6 +62,8 @@ public class InternalLogger {
         sb.append(forwardRequests);
         sb.append(" updateLoc=");
         sb.append(updateLocMsg);
+        sb.append(" rpc=");
+        sb.append(rpcCount);
         sb.append(")");
 
         return sb.toString();

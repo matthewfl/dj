@@ -1,7 +1,5 @@
 package edu.berkeley.dj.internal;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
@@ -191,7 +189,11 @@ public class RPCHelpers {
 
 
     static public void makeMethodRPC(String clsname, String methodSignature) {
-        throw new NotImplementedException();
+        InternalInterface.getInternalInterface().makeMethodRPC(clsname, methodSignature);
+        // TODO: set the flags on the instance to enable this method being rpc
+
+//        throw new NotImplementedException();
+
     }
 
 

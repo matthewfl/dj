@@ -174,6 +174,8 @@ public class InternalInterface {
 
     public void startNetwork() { throw new InterfaceException(); }
 
+    public void makeMethodRPC(String clsname, String methodSignature) { throw new InterfaceException(); }
+
     //protected ThreadLocal<Object> currentThread = new ThreadLocal<>();
 
     /*public Object threadGroup;
@@ -435,6 +437,11 @@ final class InternalInterfaceWrap extends InternalInterface {
     @Override
     public void startNetwork() {
         invoke("startNetwork", new Class[]{});
+    }
+
+    @Override
+    public void makeMethodRPC(String clsname, String methodSignature) {
+        invoke("makeMethodRPC", new Class[]{String.class, String.class}, clsname, methodSignature);
     }
 
 

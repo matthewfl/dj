@@ -1887,11 +1887,9 @@ private[rt] class MethodAnalysis (im: Map[MethodInfo, Array[Frame]]) {
     var i = 0
     while(sum < place) {
       if(i > arr.length) {
-        println("FFFFFFFFFFFFFFUCK")
         throw new RuntimeException()
       }
       sum += arr(i) + 1
-
       i += 1
     }
     if(i >= arr.length)

@@ -9,9 +9,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import java.io.*;
 import java.lang.ref.ReferenceQueue;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by matthewfl
@@ -275,23 +273,26 @@ public class DistributedObjectHelper {
     }
 
     static Object constructFinalObject(ByteBuffer buf) {
-        try {
+        //try {
             //buf.rewind();
             //buf.position(buf.position() - 4); // go back to the start of the message
-            int objectIdent = buf.getInt();
-            assert (objectIdent == -2); // check that this is of the correct type
-            int msglen = buf.getInt();
-            int cnamelen = buf.getInt();
-            String cname = new String(buf.array(), buf.position(), cnamelen);
-            buf.position(cnamelen + buf.position());
-            Class<?> cls = Class.forName(cname);
-            finalObjectConverter<?> conv = finalObjectConverters.get(cls);
-            if (conv == null)
-                throw new RuntimeException();
-            return conv.makeObject(buf);
-        } catch (ClassNotFoundException e) {
+        int objectIdent = buf.getInt();
+        assert (objectIdent == -2); // check that this is of the correct type
+        int msglen = buf.getInt();
+//            int cnamelen = buf.getInt();
+//            String cname = new String(buf.array(), buf.position(), cnamelen);
+        int id = buf.getInt();
+        //buf.position(//cnamelen + buf.position());
+
+            //Class<?> cls = Class.forName(cname);
+            //finalObjectConverter<?> conv = finalObjectConverters.get(cls);
+        finalObjectConverter<?> conv = finalObjectConvertersArr[id];
+        if (conv == null)
+            throw new RuntimeException();
+        return conv.makeObject(buf);
+        /*} catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
-        }
+        }*/
     }
 
     static DistributedObjectId makeFinalObjectId(Object o) {
@@ -310,12 +311,14 @@ public class DistributedObjectHelper {
             }
         }
         int size = conv.getSizeO(o);
-        byte[] cname = cls.getName().getBytes();
-        ByteBuffer a = ByteBuffer.allocate(4 + 4 + 4 + cname.length + size);
+        int id = conv.arrayLocation;
+//        byte[] cname = cls.getName().getBytes();
+        ByteBuffer a = ByteBuffer.allocate(4 + 4 + 4 /*+ cname.length*/ + size);
         a.putInt(-2);
-        a.putInt(cname.length + size + 4);
-        a.putInt(cname.length);
-        a.put(cname);
+        a.putInt(/*cname.length +*/ size + 4);
+//        a.putInt(cname.length);
+//        a.put(cname);
+        a.putInt(id);
         conv.makeIdO(o, a);
         a.flip();
         return new DistributedObjectId(a);
@@ -329,9 +332,12 @@ public class DistributedObjectHelper {
         public int getSizeO(Object o) { return getSize((T) o); }
         public void makeIdO(Object o, ByteBuffer b) { makeId((T)o, b); }
 
+        int arrayLocation;
+
     }
 
     static private final HashMap<Class<?>, finalObjectConverter<?>> finalObjectConverters = new HashMap<>();
+    static private final finalObjectConverter<?>[] finalObjectConvertersArr;
 
     // such a hack
     static private class NULLCLS {}
@@ -604,9 +610,25 @@ public class DistributedObjectHelper {
                 id.putDouble(o);
             }
         });
+
+        finalObjectConvertersArr = new finalObjectConverter[finalObjectConverters.size()];
+        int i = 0;
+        for(HashMap.Entry<Class<?>, finalObjectConverter<?>> e : finalObjectConverters.entrySet()) {
+            finalObjectConvertersArr[i++] = e.getValue();
+        }
+        Arrays.sort(finalObjectConvertersArr, new Comparator<finalObjectConverter<?>>() {
+            @Override
+            public int compare(finalObjectConverter<?> t0, finalObjectConverter<?> t1) {
+                return t0.getClass().getName().compareTo(t1.getClass().getName());
+            }
+        });
+        for(i = 0; i < finalObjectConvertersArr.length; i++) {
+            finalObjectConvertersArr[i].arrayLocation = i;
+        }
     }
 
     static public boolean isLocal(ObjectBase o) {
+        // compare the class mode? for IS_NOT_MASTER
         if(o.__dj_class_manager == null)
             return true;
         if(o.__dj_class_manager.owning_machine == -1)

@@ -235,7 +235,7 @@ class RunningInterface (private val config: Config, private val manager: Manager
   def proxyCreateIOObject(target: Int, req: ByteBuffer) = {
     ???
   }
-
+///
   def proxyCallIOMethod(target: Int, req: ByteBuffer) = {
     ???
   }
@@ -287,6 +287,21 @@ class RunningInterface (private val config: Config, private val manager: Manager
 
   def startNetwork = {
     manager.asInstanceOf[MasterManager].startNetwork()
+  }
+
+  def makeMethodRPC(clsname: String, methodSignature: String): Unit = {
+    if(manager.isMaster) {
+      ???
+    } else {
+      val b1 = clsname.getBytes()
+      val b2 = methodSignature.getBytes()
+      val buf = ByteBuffer.allocate(b1.length + b2.length + 8)
+      buf.putInt(b1.length)
+      buf.putInt(b2.length)
+      buf.put(b1)
+      buf.put(b2)
+      manager.networkInterface.send(0, 117, buf)
+    }
   }
 
 
