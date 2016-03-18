@@ -127,7 +127,7 @@ private[rt] class IORewriter (private val manager: MasterManager) extends Rewrit
     cls
   }
 
-  override def createCtClass(classname: String, addToCache: CtClass => Unit): CtClass = {
+  override def createCtClass(classname: String, addToCache: CtClass => Unit, proxypool: ClassPoolProxy): CtClass = {
     if(classname.endsWith(config.ioProxySuffix)) {
       // TODO: make this create a class that can proxy into the distribuited application
       return createProxyCls(classname)

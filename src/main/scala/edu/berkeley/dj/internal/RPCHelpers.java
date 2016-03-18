@@ -14,50 +14,50 @@ public class RPCHelpers {
         return InternalInterface.getInternalInterface().checkShouldRedirectMethod(clsname, id);
     }
 
-    public static Object call_A(Object self, String clsname, String name, String[] params, Object[] args) {
-        ByteBuffer b = callRemote(self, clsname, name, params, args);
+    public static Object call_A(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        ByteBuffer b = callRemote(self, clsname, name, params, args, targ);
         return DistributedObjectHelper.getObject(new DistributedObjectHelper.DistributedObjectId(b));
     }
 
-    public static boolean call_Z(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).get() == 1;
+    public static boolean call_Z(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).get() == 1;
     }
 
-    public static char call_C(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).getChar();
+    public static char call_C(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).getChar();
     }
 
-    public static byte call_B(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).get();
+    public static byte call_B(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).get();
     }
 
-    public static short call_S(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).getShort();
+    public static short call_S(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).getShort();
     }
 
-    public static int call_I(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).getInt();
+    public static int call_I(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).getInt();
     }
 
-    public static long call_J(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).getLong();
+    public static long call_J(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).getLong();
     }
 
-    public static float call_F(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).getFloat();
+    public static float call_F(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).getFloat();
     }
 
-    public static double call_D(Object self, String clsname, String name, String[] params, Object[] args) {
-        return callRemote(self, clsname, name, params, args).getDouble();
+    public static double call_D(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        return callRemote(self, clsname, name, params, args, targ).getDouble();
     }
 
-    public static void call_V(Object self, String clsname, String name, String[] params, Object[] args) {
-        callRemote(self, clsname, name, params, args);
+    public static void call_V(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        callRemote(self, clsname, name, params, args, targ);
     }
 
     // TODO: make this more efficient and avoid so many copies
 
-    public static ByteBuffer callRemote(Object self_, String clsname, String name, String[] params, Object[] args) {
+    public static ByteBuffer callRemote(Object self_, String clsname, String name, String[] params, Object[] args, int targ) {
         InternalLogger.countRPC();
         ObjectBase self = (ObjectBase)self_;
 
@@ -83,7 +83,13 @@ public class RPCHelpers {
             sendreq[i + 3 + params.length] = argId.toArr();
         }
 
-        int target_machine = self.__dj_class_manager.owning_machine;
+        int target_machine;// = self.__dj_class_manager.owning_machine;
+        if(targ == -1) {
+            target_machine = self.__dj_class_manager.owning_machine;
+        } else {
+            // this must have a class manager to get to this point since we would have pass the IS_NOT_MASTER check
+            target_machine = ((ObjectBase)args[targ]).__dj_class_manager.owning_machine;
+        }
         assert(target_machine != -1);
 
         ByteBuffer buf = fromArrays(sendreq);

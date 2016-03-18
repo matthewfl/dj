@@ -23,7 +23,9 @@ class ClassMode(val className: String) {
 
   def addMethodRedirectCheck(signature: String) = !ClassReloader.enabled
 
-  val redirectedMethods = new mutable.HashSet[String]()
+  def redirectBasedOffField(signature: String): Int = if(ClassReloader.enabled) redirectedMethods.getOrElse(signature, -3) else -3
+
+  val redirectedMethods = new mutable.HashMap[String,Int]()
 
 }
 

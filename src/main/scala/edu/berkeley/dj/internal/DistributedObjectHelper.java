@@ -16,6 +16,11 @@ import java.util.*;
  */
 @RewriteAllBut(nonModClasses = {
         "java/util/HashMap",
+        "java/util/Set",
+        "java/util/Iterator",
+        "java/util/Map",
+        "java/util/Comparator",
+        "java/util/Arrays",
         "java/nio/ByteBuffer",
         "java/util/UUID",
         "java/lang/Thread",
@@ -924,7 +929,9 @@ public class DistributedObjectHelper {
 
 //        h.__dj_class_manager.monitor_lock_count = 0;
         boolean cas = unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, 0x100 + machine, 0);
-        assert(cas);
+        if(!cas)
+            throw new RuntimeException("cas");
+//        assert(cas);
         h.__dj_class_manager.monitor_thread = null;
         h.__dj_class_manager.processNotifications();
     }
@@ -958,7 +965,9 @@ public class DistributedObjectHelper {
                 }
                 if(h.__dj_class_manager.monitor_lock_count == 0) {
                     boolean cas = unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, 0, from + 0x100);
-                    assert(cas);
+                    if(!cas)
+                        throw new RuntimeException("cas");
+                    //assert(cas);
 //                    h.__dj_class_manager.monitor_lock_count = 1;
                     h.__dj_class_manager.monitor_thread = Thread00DJ.dummy_lock;
                     return true;
@@ -1019,7 +1028,9 @@ public class DistributedObjectHelper {
                 }
             }
             boolean cas = unsafe.compareAndSwapInt(h.__dj_class_manager, ClassManager.class_manager_monitor_lock_offset, from + 0x100, 0);
-            assert(cas);
+            if(!cas)
+                throw new RuntimeException("cas");
+//            assert(cas);
             h.__dj_class_manager.monitor_thread = null;
 //            h.__dj_class_manager.monitor_lock_count = 0;
             h.__dj_class_manager.processNotifications();

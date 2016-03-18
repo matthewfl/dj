@@ -396,7 +396,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                         InternalInterface.getInternalInterface().sendNotifyOnObject(
                                 objectId().array(), i);
                         boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, 0, 0x100 + i);
-                        assert(cas);
+                        if(!cas)
+                            throw new RuntimeException("cas");
+//                        assert(cas);
                         monitor_thread = Thread00DJ.dummy_lock;
 //                        assert(monitor_lock_count == 0);
 //                        monitor_lock_count = 1;
@@ -447,11 +449,15 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                 assert(monitor_thread == Thread00DJ.currentThread());
                 monitor_thread = null;
                 boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, cnt, 0);
-                assert(cas);
+                if(!cas)
+                    throw new RuntimeException("cas");
+//                assert(cas);
 //                monitor_lock_count = 0;
                 //assert(notifications_to_send == 0);
                 managedObject.wait();
                 cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, 0, cnt);
+                if(!cas)
+                    throw new RuntimeException("cas");
                 assert(cas);
 //                monitor_lock_count = cnt;
                 monitor_thread = Thread00DJ.currentThread();
@@ -468,13 +474,17 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                 assert(monitor_thread == Thread00DJ.currentThread());
                 int cnt = monitor_lock_count;
                 boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, cnt, 0);
-                assert(cas);
+                if(!cas)
+                    throw new RuntimeException("cas");
+//                assert(cas);
                 monitor_thread = null;
                 managedObject.wait();
                 // TODO: something else could attempt to get the lock here
                 // I guess that would be a thread that first acquires the local lock, and then attempts to grab the global lock
                 cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, 0, cnt);
-                assert(cas);
+                if(!cas)
+                    throw new RuntimeException("cas");
+//                assert(cas);
                 monitor_thread = Thread00DJ.currentThread();
             }
         }
@@ -513,7 +523,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
 //                        monitor_lock_count++;
                         int v = monitor_lock_count;
                         boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1);
-                        assert(cas);
+                        if(!cas)
+                            throw new RuntimeException("cas");
+//                        assert(cas);
                         Thread00DJ ct = Thread00DJ.currentThread();
                         // then this thread already owns this lock
                         // so we don't need to relock it again
@@ -534,7 +546,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
 //                        monitor_lock_count++;
                         int v = monitor_lock_count;
                         boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v+1);
-                        assert(cas);
+                        if(!cas)
+                            throw new RuntimeException("cas");
+//                        assert(cas);
                         Thread00DJ ct =  Thread00DJ.currentThread();
                         if(monitor_thread == ct)
                             return;
@@ -556,7 +570,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
 //                    monitor_lock_count--;
                     int v = monitor_lock_count;
                     boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1);
-                    assert(cas);
+                    if(!cas)
+                        throw new RuntimeException("cas");
+//                    assert(cas);
                     if(v == 1) {
                         monitor_thread = null;
                         InternalInterface.getInternalInterface().releaseObjectMonitor(objectId(), owning_machine, notifications_to_send);
@@ -568,7 +584,9 @@ final public class ClassManager extends WeakReference<ObjectBase> {
                     assert(monitor_lock_count > 0 && monitor_thread == Thread00DJ.currentThread());
                     int v = monitor_lock_count;
                     boolean cas = unsafe.compareAndSwapInt(this, class_manager_monitor_lock_offset, v, v-1);
-                    assert(cas);
+                    if(!cas)
+                        throw new RuntimeException("cas");
+//                    assert(cas);
 //                    monitor_lock_count--;
                     if(v == 1) {
                         monitor_thread = null;

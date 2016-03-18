@@ -299,6 +299,8 @@ Error message and password prompt
 
 <li>JIT</li>
 
+<li>JIT Policies</li>
+
 <li>matthewfl</li>
 
 <li>Namespace rewriter</li>
@@ -5972,7 +5974,7 @@ Presentations</pre>
     }
 }</pre>
 </div>
-<div created="20150503220247168" modified="20150503220256624" title="$:/SiteSubtitle">
+<div created="20150503220247168" creator="matthewfl" modified="20160317002020368" modifier="matthewfl" title="$:/SiteSubtitle">
 <pre>[[https://github.com/matthewfl/dj]]</pre>
 </div>
 <div created="20150503220243013" modified="20150503220246285" title="$:/SiteTitle">
@@ -5993,20 +5995,20 @@ Presentations</pre>
 <div modified="20151224090457184" modifier="matthewfl" title="$:/state/tab--1963855381">
 <pre>$:/core/ui/ControlPanel/Palette</pre>
 </div>
-<div modified="20151224090539606" modifier="matthewfl" title="$:/state/tab--86143343">
-<pre>$:/core/ui/ControlPanel/Plugins/Installed/Themes</pre>
+<div modified="20160317002109915" modifier="matthewfl" title="$:/state/tab--86143343">
+<pre>$:/core/ui/ControlPanel/Plugins/Installed/Plugins</pre>
 </div>
 <div modified="20151224090640008" modifier="matthewfl" title="$:/state/tab-1342078386">
 <pre>$:/core/ui/ControlPanel/Plugins/Add/Themes</pre>
 </div>
-<div modified="20160118190416632" modifier="matthewfl" title="$:/state/tab-1749438307">
+<div modified="20160317002118698" modifier="matthewfl" title="$:/state/tab-1749438307">
 <pre>$:/core/ui/ControlPanel/Info</pre>
 </div>
 <div modified="20160118200623267" modifier="matthewfl" title="$:/state/tab/moresidebar-401116514">
 <pre>$:/core/ui/MoreSideBar/System</pre>
 </div>
-<div modified="20160118200657925" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
-<pre>$:/core/ui/SideBar/Open</pre>
+<div modified="20160317002149739" modifier="matthewfl" title="$:/state/tab/sidebar--1835078512">
+<pre>$:/core/ui/SideBar/Recent</pre>
 </div>
 <div modified="20150522084850108" modifier="matthewfl" title="$:/state/tabs/controlpanel/toolbars-1345989671">
 <pre>$:/core/ui/ControlPanel/Toolbars/PageControls</pre>
@@ -6014,7 +6016,7 @@ Presentations</pre>
 <div created="20150503222101126" creator="m" modified="20150503222101989" modifier="matthewf" title="$:/status/UserName">
 <pre>matthewfl</pre>
 </div>
-<div list="[[Previous work]] Introduction Documentation Presentations" title="$:/StoryList">
+<div list="[[JIT Policies]] Introduction Documentation Internals JIT Presentations" title="$:/StoryList">
 <pre></pre>
 </div>
 <div modified="20150503222119373" modifier="matthewfl" title="$:/temp/advancedsearch">
@@ -6256,7 +6258,7 @@ At this point it is largely for experimentation by @zooko.
 <div author="JeremyRuston" core-version="&gt;=5.0.0" created="20150503222212011" creator="matthewfl" dependents="" description="Basic theme" modified="20150503222212011" modifier="matthewfl" name="Vanilla" original-plugin-type="theme" original-tags="" original-title="$:/themes/tiddlywiki/vanilla" original-type="application/json" server-url="http://tiddlywiki.com/library/v5.1.8/index.html" tags="$:/tags/RemoteAssetInfo" title="$:/temp/RemoteAssetInfo/http://tiddlywiki.com/library/v5.1.8/index.html/$:/themes/tiddlywiki/vanilla" type="text/vnd.tiddlywiki" version="5.1.8">
 <pre></pre>
 </div>
-<div created="20160118194955954" creator="matthewfl" modified="20160118195002301" modifier="matthewfl" title="$:/temp/search">
+<div created="20160118194955954" creator="matthewfl" modified="20160317001742594" modifier="matthewfl" title="$:/temp/search">
 <pre></pre>
 </div>
 <div created="20150602172622771" creator="matthewfl" modified="20150602172622771" modifier="matthewfl" tags="$:/tags/ServerConnection" title="$:/temp/ServerConnection/http://tiddlywiki.com/library/v5.1.8/index.html" url="http://tiddlywiki.com/library/v5.1.8/index.html">
@@ -6447,9 +6449,11 @@ DJ's smallest unit of operation is an object.  This is due to being built on top
 ** is a proxy to an object
 ** contains a complete cached copy of an object</pre>
 </div>
-<div created="20150503220345237" creator="matthewfl" modified="20151224085356885" modifier="matthewfl" tags="Documentation" title="Documentation">
+<div created="20150503220345237" creator="matthewfl" modified="20160317001739026" modifier="matthewfl" tags="Documentation" title="Documentation">
 <pre>* [[Basic usage]]
 * [[Internals]]
+* [[JIT Policies]]
+
 &lt;!--* [[Optimizations]] --&gt;</pre>
 </div>
 <div created="20150521204305668" creator="matthewfl" modified="20150521212459119" modifier="matthewfl" title="Function call redirector">
@@ -6495,6 +6499,29 @@ Because the JIT is decoupled from the runtime, we are able to run the JIT on top
 * [[JIT Interface|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/JITInterface.java]]
 * [[JIT Commands|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/internal/JITCommands.java]]
 * [[Minimal nop JIT example|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/SimpleJIT.java]]</pre>
+</div>
+<div created="20160317000735811" creator="matthewfl" modified="20160317002354818" modifier="matthewfl" tags="JIT" title="JIT Policies">
+<pre>!!! NOP JIT [[source|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/SimpleJIT.java]]
+* performs no optimizations or responses.  Each operation will behave as a remote read or write.
+* Since objects aren't relocated objects will always be found where they were first created and thus avoid costly request redirects
+
+
+!!! Simple Move JIT [[source|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/MoveOnUseJIT.java]]
+* This replicates other works [[IBM|Previous work]]
+* The machine that receives a remote read or write operations will issue the relocation command to the machine performing the request
+* The advantage here is that only one place where requests are getting issued.
+
+!!! Field prediction JIT [[source|https://github.com/matthewfl/dj/blob/master/src/main/scala/edu/berkeley/dj/jit/PredictFieldAccessJIT.java]]
+* Attempts to predict which field on an object will be accessed next.  This field is then requested by the machine that is issuing the request
+* Also the machine receiving the request ends up being responsible for sending the object itself
+* Currently has the issue that there are two locations where relocation requests are coming from, and from different machines.
+** Could issuing machine only record data for predictions and then have the receiving machine perform movement requests for all the related objects.
+** Maybe change the system such that a machine can only issue move requests of objects that it currently owns otherwise it needs to send a message to the other JIT
+*** Need an RPC marker
+*** Async RPC requests marker such that requests don't block on the sending end
+
+
+</pre>
 </div>
 <div created="20150521214252927" creator="matthewfl" modified="20150521214351092" modifier="matthewfl" title="matthewfl">
 <pre>*Name: Matthew Francis-Landau

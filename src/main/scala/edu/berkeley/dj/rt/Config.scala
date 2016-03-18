@@ -23,6 +23,8 @@ case class Config (val uuid: String="DJ"+java.util.UUID.randomUUID.toString.repl
 
   final val arrayprefix = internalPrefix + "arrayclazz."
 
+  final val rpccontrolprefix = internalPrefix + "rpccontrol."
+
   // don't think used
   final val proxysubclasses = internalPrefix + "proxysubclazz."
 

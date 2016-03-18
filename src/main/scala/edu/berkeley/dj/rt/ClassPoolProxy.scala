@@ -19,6 +19,8 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
     cache get classname orNull
   }
 
+  def HackGetCached(classname: String): CtClass = cache get classname orNull
+
   override protected def cacheCtClass(classname: String, c: CtClass, dynamic: Boolean) = {
     cache += (classname -> c)
   }
@@ -40,6 +42,10 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
       // WTF: there is some bug were we can get a request for a class like: [Ljava/lang/Object;
       return Descriptor.toCtClass(classname, this)
     }*/
+
+    // we want to always be using the cache I guess
+    assert(useCache)
+
     if(classname.contains("/") || classname.startsWith("[")) {
       // this is a jvm qualified name
       return Descriptor.toCtClass(classname, this)
@@ -55,7 +61,7 @@ class ClassPoolProxy (private val manager: MasterManager, private val rewriter :
     }
     val res = try {
 
-      rewriter.createCtClass(classname, if(useCache) setClass(classname, _) else c => {})
+      rewriter.createCtClass(classname, if(useCache) setClass(classname, _) else c => {}, this)
     } catch {
       case e: RuntimeException => {
         println("runtime failure with class with rt error:" + e)
