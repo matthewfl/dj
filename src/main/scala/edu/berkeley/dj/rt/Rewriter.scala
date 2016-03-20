@@ -945,7 +945,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     for(mth <- cls.getDeclaredMethods) {
       for(ann <- mth.getAnnotations) {
         var asyncCall = false
-        var rpc_pos = -2
+        var rpc_pos = -3
         ann match {
           case _: RewriteAsyncCall => {
             asyncCall = true
@@ -955,7 +955,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
           }
           case _ => {}
         }
-        if(asyncCall || rpc_pos != -2) {
+        if(asyncCall || rpc_pos != -3) {
           // Then we need to rework this method somehow
 
         }
@@ -1961,8 +1961,11 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
       // we only need to know the methods and their signatures
       // we should have that information by this point
       val base = proxypool.HackGetCached(orgName)
-      if(base != null)
-        return makeRPCControllerClass(classname, base)
+      if(base != null) {
+        val r = makeRPCControllerClass(classname, base)
+        addToCache(r)
+        return r
+      }
       return null
     }
 

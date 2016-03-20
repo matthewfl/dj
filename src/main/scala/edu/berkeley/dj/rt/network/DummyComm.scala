@@ -2,6 +2,8 @@ package edu.berkeley.dj.rt.network
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.sun.corba.se.impl.orbutil.threadpool.TimeoutException
+
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -138,13 +140,19 @@ class DummyHost(val man: NetworkManager) extends NetworkHost {
   override def runClient(man: NetworkManager) = {
     var exit = false
     while(!exit) {
-      val act = Await.result(waitLock.future, 120 seconds)
-      if(act == "exit") exit = true
-      else {
-        val rc = man.makeClientApplication(act)
-        val comm = getApplicationComm(act, false, rc)
-        waitLock = Promise[String]()
-        Future { rc.start(comm) }
+      try {
+        val act = Await.result(waitLock.future, 600 seconds)
+        if (act == "exit") exit = true
+        else {
+          val rc = man.makeClientApplication(act)
+          val comm = getApplicationComm(act, false, rc)
+          waitLock = Promise[String]()
+          Future {
+            rc.start(comm)
+          }
+        }
+      } catch {
+        case e: TimeoutException => {}
       }
     }
   }
