@@ -576,7 +576,7 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
 
   }
 
-  def modifyStaticInit(cls: CtClass, mana: MethodAnalysis): Unit = {
+  private def modifyStaticInit(cls: CtClass, mana: MethodAnalysis): Unit = {
     if(cls.isInterface)
       return
     // the method init is already going to exist in the case that there are static variables
@@ -611,7 +611,47 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     }
   }
 
-  def addRPCRedirectMethod(cls: CtClass, mth: CtMethod, mode: ClassMode, fieldPlaceOverride: Int = -3): Unit = {
+
+  private def addRPCRedirectMethod(cls: CtClass, mth: CtMethod, mode: ClassMode, fieldPlaceOverride: Int = -3, async: Boolean = false): Unit = {
+    val mth_name = if(async) {
+      mth.getName + "_dj_async"
+    } else {
+      mth.getName
+    }
+    val code = generateRPCRedirectCode(cls, mth, mode, fieldPlaceOverride, async, mth_name)
+    if(async) {
+      if(mth.getReturnType != CtClass.voidType) {
+        throw new DJError("can not have a non void async method")
+      }
+      // have to construct a new method which will contain the async calling body
+      val args = mth.getParameterTypes.zipWithIndex.map(p => getUsableName(p._1) + " a"+p._2).mkString(", ")
+      val ctrl = getAccessControl(mth.getModifiers)
+
+      val mth_code =
+        s"""
+           ${ctrl} ${if(Modifier.isStatic(mth.getModifiers)) "static" else ""} void ${mth.getName} ($args) {
+           $code
+           }
+         """
+
+      // set the new name
+      mth.setName(mth_name)
+
+      // construct the new method
+      cls.addMethod(CtMethod.make(mth_code, cls))
+
+    } else {
+      try {
+        mth.insertBefore(code)
+      } catch {
+        case e: CannotCompileException => {
+          println("failed to compile rpc: ")
+        }
+      }
+    }
+  }
+
+  private def generateRPCRedirectCode(cls: CtClass, mth: CtMethod, mode: ClassMode, fieldPlaceOverride: Int, async: Boolean, method_name: String): String = {
     val (cls_mode, cls_manager) = if (Modifier.isInterface(cls.getModifiers)) {
       ("this.__dj_getClassMode()", "this.__dj_getManager()")
     } else {
@@ -643,30 +683,33 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     }
 
     val code = new scala.StringBuilder()
-    if(check) {
+    if(check && !async) {
       code append s"if($mode_field_cls.$mode_field_name != -3)"
     }
     code append "{\n"
 
 
     // then the field that is used for controlling the item could dynamically change
-    code append "if("
-    if(fieldPlace == -3) {
-      // dynamically checking if it should perform the rpc call
-      if(!Modifier.isStatic(mth.getModifiers)) {
-        // check if should redirect using the this value
-        code append s"($mode_field_cls.$mode_field_name == -1 && ($cls_mode & 0x04) != 0) || \n"
-      }
-      code append s"($mode_field_cls.$mode_field_name >= 0 && (((${config.internalPrefix}ObjectBase)$$args[$mode_field_cls.$mode_field_name]).__dj_class_mode & 0x4) != 0)\n"
-    } else {
-      // we know exactly which field we are going to read from for the rpc call, so we don't have to dynamically check
-      if(fieldPlace == -1) {
-        code append s"($cls_mode & 0x4) != 0"
+    if(!async) {
+      code append "if("
+      if (fieldPlace == -3) {
+        // dynamically checking if it should perform the rpc call
+        if (!Modifier.isStatic(mth.getModifiers)) {
+          // check if should redirect using the this value
+          code append s"($mode_field_cls.$mode_field_name == -1 && ($cls_mode & 0x04) != 0) || \n"
+        }
+        code append s"($mode_field_cls.$mode_field_name >= 0 && (((${config.internalPrefix}ObjectBase)$$args[$mode_field_cls.$mode_field_name]).__dj_class_mode & 0x4) != 0)\n"
       } else {
-        code append s"((((${config.internalPrefix}ObjectBase)$$$fieldPlace).__dj_class_mode & 0x4) != 0)"
+        // we know exactly which field we are going to read from for the rpc call, so we don't have to dynamically check
+        if (fieldPlace == -1) {
+          code append s"($cls_mode & 0x4) != 0"
+        } else {
+          code append s"((((${config.internalPrefix}ObjectBase)$$$fieldPlace).__dj_class_mode & 0x4) != 0)"
+        }
       }
+      code append ") "
     }
-    code append ") {\n"
+    code append "{\n"
 
     val fieldPlaceA = if(fieldPlace == -3)
       mode_field_cls+"."+mode_field_name
@@ -675,8 +718,13 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     val this_val = if(Modifier.isStatic(mth.getModifiers))
       "null" else "this"
 
+    val rpc_help_method = if(async)
+      "call_V_async"
+    else
+      s"call_${return_type}"
+
     code append s"""
-    ${if(mth.getReturnType == CtClass.voidType) "" else s"return ${return_cast}"} edu.berkeley.dj.internal.RPCHelpers.call_${return_type} ($this_val, "${cls.getName}", "${mth.getName}", ${params}, $$args, $fieldPlaceA);
+    ${if(mth.getReturnType == CtClass.voidType) "" else s"return ${return_cast}"} edu.berkeley.dj.internal.RPCHelpers.$rpc_help_method ($this_val, "${cls.getName}", "${method_name}", ${params}, $$args, $fieldPlaceA);
     ${if(mth.getReturnType == CtClass.voidType) "return ;" else  "" }
     """
 
@@ -686,14 +734,16 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     // global enable check }
     code append "}"
 
-    try {
-      mth.insertBefore(code.toString)
-    } catch {
-      case e: CannotCompileException => {
-        println("failed to compile rpc: "+e)
-        throw e
-      }
-    }
+    code.toString
+//
+//    try {
+//      mth.insertBefore(code.toString)
+//    } catch {
+//      case e: CannotCompileException => {
+//        println("failed to compile rpc: "+e)
+//        throw e
+//      }
+//    }
   }
 
   def makeRPCControllerClass(clsname: String, base: CtClass): CtClass = {
@@ -728,7 +778,38 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     for(mth <- cls.getDeclaredMethods) {
       val modifiers = mth.getModifiers
       if (/*!Modifier.isStatic(modifiers) && */!Modifier.isAbstract(modifiers) && !mth.getName.startsWith(config.fieldPrefix)) {
-        addRPCRedirectMethod(cls, mth, mode)
+
+        try {
+          var asyncCall = false
+          var rpc_pos = -3
+//          for (ann <- mth.getAnnotations) {
+//            ann match {
+//              case _: RewriteAsyncCall => {
+//                asyncCall = true
+//              }
+//              case pos: RewriteMakeRPC => {
+//                rpc_pos = pos.value()
+//              }
+//              case _ => {}
+//            }
+//          }
+          val asyncAnn = mth.getAnnotation(classOf[RewriteAsyncCall]).asInstanceOf[RewriteAsyncCall]
+          val posAnn = mth.getAnnotation(classOf[RewriteMakeRPC]).asInstanceOf[RewriteMakeRPC]
+          if(asyncAnn != null)
+            asyncCall = true
+          if(posAnn != null)
+            rpc_pos = posAnn.value()
+          addRPCRedirectMethod(cls, mth, mode, rpc_pos, asyncCall)
+        } catch {
+          case e: Throwable => {
+            println("rpc failed: ")
+            e.printStackTrace()
+            throw e
+          }
+        }
+
+
+
         /*val id = mth.getName + mth.getSignature
         if (mode.addMethodRedirect(id)) {
           val (return_cast, return_type) = if (mth.getReturnType.isPrimitive) {
@@ -943,22 +1024,27 @@ private[rt] class Rewriter (private val manager : MasterManager) extends Rewrite
     val classMode = manager.classMode.getMode(cls.getName)
 
     for(mth <- cls.getDeclaredMethods) {
-      for(ann <- mth.getAnnotations) {
-        var asyncCall = false
-        var rpc_pos = -3
-        ann match {
-          case _: RewriteAsyncCall => {
-            asyncCall = true
-          }
-          case pos: RewriteMakeRPC => {
-            rpc_pos = pos.value()
-          }
-          case _ => {}
-        }
-        if(asyncCall || rpc_pos != -3) {
-          // Then we need to rework this method somehow
-
-        }
+      var asyncCall = false
+      var rpc_pos = -3
+//      for(ann <- mth.getAnnotations) {
+//        ann match {
+//          case _: RewriteAsyncCall => {
+//            asyncCall = true
+//          }
+//          case pos: RewriteMakeRPC => {
+//            rpc_pos = pos.value()
+//          }
+//          case _ => {}
+//        }
+//      }
+      val asyncAnn = mth.getAnnotation(classOf[RewriteAsyncCall]).asInstanceOf[RewriteAsyncCall]
+      val posAnn = mth.getAnnotation(classOf[RewriteMakeRPC]).asInstanceOf[RewriteMakeRPC]
+      if(asyncAnn != null)
+        asyncCall = true
+      if(posAnn != null)
+        rpc_pos = posAnn.value()
+      if(rpc_pos != -3 || asyncCall) {
+        addRPCRedirectMethod(cls, mth, classMode, rpc_pos, asyncCall)
       }
     }
 

@@ -215,6 +215,10 @@ class RunningInterface (private val config: Config, private val manager: Manager
     block(manager.networkInterface.sendWrpl(machine, 31, req))
   }
 
+  def redirectMethodAsync(req: ByteBuffer, machine: Int): Unit = {
+    manager.networkInterface.send(machine, 118, req)
+  }
+
   def sendMoveObject(req: ByteBuffer, machine: Int) = {
     // send msg to owning machine to move object
     manager.networkInterface.send(machine, 111, req)
@@ -289,15 +293,18 @@ class RunningInterface (private val config: Config, private val manager: Manager
     manager.asInstanceOf[MasterManager].startNetwork()
   }
 
-  def makeMethodRPC(clsname: String, methodSignature: String): Unit = {
+  def makeMethodRPC(clsname: String, methodSignature: String, fieldPlace: Int): Unit = {
     if(manager.isMaster) {
-      ???
+      val mode = manager.asInstanceOf[MasterManager].classMode.getMode(clsname)
+      mode.setRedirect(methodSignature, fieldPlace)
+
     } else {
       val b1 = clsname.getBytes()
       val b2 = methodSignature.getBytes()
-      val buf = ByteBuffer.allocate(b1.length + b2.length + 8)
+      val buf = ByteBuffer.allocate(b1.length + b2.length + 12)
       buf.putInt(b1.length)
       buf.putInt(b2.length)
+      buf.putInt(fieldPlace)
       buf.put(b1)
       buf.put(b2)
       manager.networkInterface.send(0, 117, buf)

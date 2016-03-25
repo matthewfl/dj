@@ -146,6 +146,8 @@ public class InternalInterface {
 
     public ByteBuffer redirectMethod(ByteBuffer req, int machine) { throw new InterfaceException(); }
 
+    public void redirectMethodAsync(ByteBuffer req, int machine) { throw new InterfaceException(); }
+
     public void sendMoveObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
 
     public void sendSerializedObject(ByteBuffer req, int machine) { throw new InterfaceException(); }
@@ -365,6 +367,11 @@ final class InternalInterfaceWrap extends InternalInterface {
     @Override
     public ByteBuffer redirectMethod(ByteBuffer req, int machine) {
         return (ByteBuffer)invoke("redirectMethod", new Class[]{ByteBuffer.class,int.class}, req, machine);
+    }
+
+    @Override
+    public void redirectMethodAsync(ByteBuffer req, int machine) {
+        invoke("redirectMethodAsync", new Class[]{ByteBuffer.class, int.class}, req, machine);
     }
 
     @Override

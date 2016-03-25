@@ -1075,7 +1075,7 @@ public class DistributedObjectHelper {
 
 
     // TODO: there should be a worker thread that does the serialization instead of using the JIT thread
-    static public void moveObject(ObjectBase obj, int to) {
+    static public void moveObject(ObjectBase obj, int to, boolean performRedirect) {
         DistributedObjectId id = getDistributedId(obj);
         if(obj.__dj_class_manager.owning_machine == to || id.isFinalObj()) {
             // object is already on desired machine or is final
@@ -1084,12 +1084,18 @@ public class DistributedObjectHelper {
         if(!obj.__dj_class_manager.isLocal() /*owning_machine != -1*/) {
             // we don't own this object, send a message to the owning machine to move it
             int owner = obj.__dj_class_manager.owning_machine;
-            byte[] ida = id.toArr();
-            ByteBuffer b = ByteBuffer.allocate(ida.length + 4);
-            b.putInt(to);
-            b.put(ida);
-            if(owner != -1)
-                InternalInterface.getInternalInterface().sendMoveObject(b, owner);
+            if(owner != -1) {
+                if (performRedirect) {
+                    byte[] ida = id.toArr();
+                    ByteBuffer b = ByteBuffer.allocate(ida.length + 4);
+                    b.putInt(to);
+                    b.put(ida);
+                    if (owner != -1)
+                        InternalInterface.getInternalInterface().sendMoveObject(b, owner);
+                } else {
+                    throw new ObjectNotLocal(obj, owner);
+                }
+            }
         } else {
             if(to == InternalInterface.getInternalInterface().getSelfId()) {
                 // already on desired machine
@@ -1152,7 +1158,7 @@ public class DistributedObjectHelper {
             }
         }
         if(fieldVal instanceof ObjectBase)
-            moveObject((ObjectBase)fieldVal, target);
+            moveObject((ObjectBase)fieldVal, target, true);
     }
 
     static int sendObjs = 0;
@@ -1213,7 +1219,7 @@ public class DistributedObjectHelper {
             InternalInterface.debug("failed to locate object to move: "+id);
         } else {
             if(h.__dj_class_manager.isLocal())
-                moveObject(h, to);
+                moveObject(h, to, true);
             // ignore otherwise
         }
     }
@@ -1237,7 +1243,7 @@ public class DistributedObjectHelper {
         int mode = h.__dj_class_mode;
         if((mode & CONSTS.REMOTE_READS) == 0 && val instanceof ObjectBase) {
             // the field read is valid, so we can try and move that object now
-            moveObject((ObjectBase)val, to);
+            moveObject((ObjectBase)val, to, true);
         }
         // don't try and redirect, since by this point the system likely has
         // already submitted another move request for this object

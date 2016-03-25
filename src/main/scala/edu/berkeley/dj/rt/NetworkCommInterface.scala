@@ -101,9 +101,16 @@ class NetworkCommInterface(private val man: Manager) extends NetworkRecever {
         val buf = ByteBuffer.wrap(msg)
         val len1 = buf.getInt()
         val len2 = buf.getInt()
+        val fieldPlace = buf.getInt()
         val cls = new String(msg, 8, len1)
         val mth = new String(msg, len1 + 8, len2)
-        man.runningInterface.makeMethodRPC(cls, mth)
+        man.runningInterface.makeMethodRPC(cls, mth, fieldPlace)
+      }
+      case 118 => {
+        // RPC async method
+        // use the same callIn code for normal RPC, but ignore the result
+        // will be a void method
+        man.runningInterface.callIn(13, ByteBuffer.wrap(msg))
       }
     }
   } catch {

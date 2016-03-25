@@ -1,11 +1,16 @@
 package edu.berkeley.dj.internal;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
 /**
  * Created by matthewfl
  */
+@RewriteClassRef(
+        oldName = "java.lang.Runnable",
+        newName = "edu.berkeley.dj.internal.coreclazz.java.lang.Runnable"
+)
 public class RPCHelpers {
 
     private RPCHelpers() {}
@@ -55,10 +60,80 @@ public class RPCHelpers {
         callRemote(self, clsname, name, params, args, targ);
     }
 
-    // TODO: make this more efficient and avoid so many copies
+    public static void call_V_async(Object self, String clsname, String name, String[] params, Object[] args, int targ) {
+        boolean asyn_only = false;
+        if(targ <= -2) {
+            asyn_only = true;
+        } else {
+            if (targ == -1) {
+                if (self instanceof ObjectBase) {
+                    if ((((ObjectBase) self).__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
+                        asyn_only = true;
+                } else
+                    asyn_only = true;
+            } else {
+                assert(args != null);
+                if(args[targ] instanceof ObjectBase) {
+                    if((((ObjectBase)args[targ]).__dj_class_mode & CONSTS.IS_NOT_MASTER) == 0)
+                        asyn_only = true;
+                } else {
+                    asyn_only = true;
+                }
+            }
+        }
+        if(asyn_only) {
+            // the argument that is controlling where we want to perform the operation is local, so we can use a shortcut
+            // and only get a new thread to execute this task
+            ThreadHelpers.runAsync(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Class<?> cls;
+                        if(self != null)
+                            cls = self.getClass();
+                        else
+                            cls = AugmentedClassLoader.getClassA(clsname);
+                        int params_length = 0;
+                        Object[] argsl = args;
+                        if (params != null) {
+                            params_length = params.length;
+                        } else {
+                            argsl = new Object[0];
+                        }
+                        Class<?> argsTypes[] = new Class<?>[params_length];
+                        for (int i = 0; i < params_length; i++) {
+                            argsTypes[i] = AugmentedClassLoader.getClassA(params[i]);
+                        }
+                        Method mth = cls.getDeclaredMethod(name, argsTypes);
+                        mth.setAccessible(true);
+                        Object res = mth.invoke(self, argsl);
+                        // ignore res as this must be a void method
+                    } catch(NoSuchMethodException|ClassNotFoundException|
+                            InvocationTargetException|IllegalAccessException e) {
+                        InternalInterface.debug("failed with async call: "+e);
+                    }
+                }
+            });
+        } else {
+            // then we need to send this request somewhere else
+            byte[][] sendreq = generateCallRemoteRequest(self, clsname, name, params, args, targ);
+            int target_machine;
+            if(targ == -1)
+                target_machine = ((ObjectBase)self).__dj_class_manager.owning_machine;
+            else
+                target_machine = ((ObjectBase)args[targ]).__dj_class_manager.owning_machine;
+            assert(target_machine != -1);
 
-    public static ByteBuffer callRemote(Object self_, String clsname, String name, String[] params, Object[] args, int targ) {
-        InternalLogger.countRPC();
+            ByteBuffer buf = fromArrays(sendreq);
+
+            JITWrapper.recordRemoteRPC(self, name, target_machine);
+
+            InternalInterface.getInternalInterface().redirectMethodAsync(buf, target_machine);
+        }
+    }
+
+
+    private static byte[][] generateCallRemoteRequest(Object self_, String clsname, String name, String[] params, Object[] args, int targ) {
         ObjectBase self = (ObjectBase)self_;
 
         int params_length = 0;
@@ -74,7 +149,7 @@ public class RPCHelpers {
         DistributedObjectHelper.DistributedObjectId selfId = DistributedObjectHelper.getDistributedId(self);
 
         sendreq[0] = selfId.toArr();
-        sendreq[1] = clsname.getBytes();
+        sendreq[1] = clsname.getBytes(); // TODO: remove this is redundant
         sendreq[2] = name.getBytes();
 
         for(int i = 0; i < params_length; i++) {
@@ -82,6 +157,16 @@ public class RPCHelpers {
             sendreq[i + 3] = params[i].getBytes();
             sendreq[i + 3 + params.length] = argId.toArr();
         }
+        return sendreq;
+    }
+
+
+    // TODO: make this more efficient and avoid so many copies
+    public static ByteBuffer callRemote(Object self_, String clsname, String name, String[] params, Object[] args, int targ) {
+        InternalLogger.countRPC();
+        ObjectBase self = (ObjectBase)self_;
+
+        byte[][] sendreq = generateCallRemoteRequest(self_, clsname, name, params, args, targ);
 
         int target_machine;// = self.__dj_class_manager.owning_machine;
         if(targ == -1) {
@@ -101,6 +186,31 @@ public class RPCHelpers {
 
         return ret;
     }
+
+    public static void callRemoteAsync(Object self_, String clsname, String name, String[] params, Object[] args, int targ) {
+        InternalLogger.countRPC();
+        ObjectBase self = (ObjectBase)self_;
+
+        byte[][] sendreq = generateCallRemoteRequest(self_, clsname, name, params, args, targ);
+
+        int target_machine;// = self.__dj_class_manager.owning_machine;
+        if(targ == -1) {
+            target_machine = self.__dj_class_manager.owning_machine;
+        } else {
+            // this must have a class manager to get to this point since we would have pass the IS_NOT_MASTER check
+            target_machine = ((ObjectBase)args[targ]).__dj_class_manager.owning_machine;
+        }
+        assert(target_machine != -1);
+
+        ByteBuffer buf = fromArrays(sendreq);
+
+        // send notification to JIT
+        JITWrapper.recordRemoteRPC(self, name, target_machine);
+
+        // using a different method here as we do not want to block on this operation
+        InternalInterface.getInternalInterface().redirectMethodAsync(buf, target_machine);
+    }
+
 
     static ByteBuffer recvRemoteCall(ByteBuffer buf) {
         try {

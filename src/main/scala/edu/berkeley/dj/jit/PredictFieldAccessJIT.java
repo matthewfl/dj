@@ -1,7 +1,6 @@
 package edu.berkeley.dj.jit;
 
-import edu.berkeley.dj.internal.JITCommands;
-import edu.berkeley.dj.internal.StackRepresentation;
+import edu.berkeley.dj.internal.*;
 import edu.berkeley.dj.internal.coreclazz.RewriteLocalFieldOnly;
 
 import java.util.HashMap;
@@ -9,7 +8,18 @@ import java.util.HashMap;
 /**
  * Created by matthewfl
  */
-public class PredictFieldAccessJIT extends MoveOnUseJIT {
+public class PredictFieldAccessJIT extends SimpleJIT {
+
+    @RewriteMakeRPC(0)
+    @RewriteAsyncCall
+    private void performMoveTo(Object self, int target) {
+        try {
+            JITCommands.moveObject(self, target);
+        } catch (ObjectNotLocal e) {
+            // do nothing if the location of the object is wrong
+
+        }
+    }
 
     @RewriteLocalFieldOnly
     private HashMap<Class<?>, HashMap<Integer, Integer>> fidmap = null;
@@ -64,6 +74,20 @@ public class PredictFieldAccessJIT extends MoveOnUseJIT {
     @Override
     public void recordRemoteRead(Object self, int from_machine, int to_machine, int field_id, StackRepresentation stack) {
         determineNextField(self, field_id, to_machine);
+    }
+
+    @Override
+    public void recordReceiveRemoteRead(Object self, int from_machine, int to_machine, int field_id) {
+        try {
+            JITCommands.moveObject(self, from_machine);
+        } catch (ObjectNotLocal e) {}
+    }
+
+    @Override
+    public void recordReceiveRemoteWrite(Object self, int from_machine, int to_machine, int field_id) {
+        try {
+            JITCommands.moveObject(self, from_machine);
+        } catch (ObjectNotLocal e) {}
     }
 
 }
